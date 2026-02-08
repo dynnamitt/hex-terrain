@@ -14,6 +14,10 @@ use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
 use crate::visuals::ActiveNeonMaterials;
 
+/// Marker for height-indicator pole entities.
+#[derive(Component)]
+pub struct HeightPole;
+
 /// Number of hex rings around the origin (~1200 hexes total).
 pub const GRID_RADIUS: u32 = 20;
 /// Distance in world-units between adjacent hex centers.
@@ -28,12 +32,15 @@ const RADIUS_NOISE_SEED: u32 = 137;
 /// Vertical offset of the camera above the terrain surface.
 pub const CAMERA_HEIGHT_OFFSET: f32 = 6.0;
 
+pub const POLE_RADIUS_FACTOR: f32 = 0.06;
+
 /// Registers the [`generate_grid`] startup system.
 pub struct GridPlugin;
 
 impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, generate_grid.after(crate::visuals::setup_visuals));
+        app.add_systems(Startup, generate_grid.after(crate::visuals::setup_visuals))
+            .add_systems(Update, fade_nearby_poles);
     }
 }
 
@@ -55,6 +62,7 @@ pub struct HexGrid {
 pub fn generate_grid(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     neon: Res<ActiveNeonMaterials>,
 ) {
     let layout = HexLayout {
@@ -138,15 +146,23 @@ pub fn generate_grid(
         ));
 
         // Height indicator pole: from y=0 up to just below the hex face
-        let pole_radius = radius * 0.05;
+        let pole_radius = radius * POLE_RADIUS_FACTOR;
         let pole_gap = 0.05;
         let pole_height = face_height - pole_gap;
         if pole_height > 0.0 {
+            // Each pole gets its own material so alpha can vary per-pole
+            let pole_mat = materials.add(StandardMaterial {
+                base_color: Color::srgb(0.0, 1.0, 0.2),
+                emissive: LinearRgba::rgb(0.0, 30.0, 6.0),
+                unlit: true,
+                ..default()
+            });
             commands.spawn((
                 Mesh3d(pole_mesh_handle.clone()),
-                MeshMaterial3d(neon.pole_material.clone()),
+                MeshMaterial3d(pole_mat),
                 Transform::from_xyz(center_2d.x, pole_height / 2.0, center_2d.y)
                     .with_scale(Vec3::new(pole_radius / 0.5, pole_height, pole_radius / 0.5)),
+                HeightPole,
             ));
         }
     }
@@ -157,4 +173,33 @@ pub fn generate_grid(
         radii,
         vertex_positions,
     });
+}
+
+/// Distance at which poles reach full opacity.
+const POLE_FADE_DISTANCE: f32 = 40.0;
+/// Minimum alpha when the camera is right on top of a pole.
+const POLE_MIN_ALPHA: f32 = 0.05;
+
+/// Adjusts pole material alpha based on horizontal distance to the camera.
+fn fade_nearby_poles(
+    camera_q: Query<&Transform, With<crate::camera::TerrainCamera>>,
+    pole_q: Query<(&Transform, &MeshMaterial3d<StandardMaterial>), With<HeightPole>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let Ok(cam_tf) = camera_q.single() else {
+        return;
+    };
+    let cam_xz = Vec2::new(cam_tf.translation.x, cam_tf.translation.z);
+
+    for (pole_tf, mat_handle) in &pole_q {
+        let pole_xz = Vec2::new(pole_tf.translation.x, pole_tf.translation.z);
+        let dist = cam_xz.distance(pole_xz);
+        let t = (dist / POLE_FADE_DISTANCE).clamp(0.0, 1.0);
+        let brightness = 1.0 - t * (1.0 - POLE_MIN_ALPHA);
+
+        if let Some(mat) = materials.get_mut(&mat_handle.0) {
+            mat.base_color = Color::srgb(0.0, brightness, 0.2 * brightness);
+            mat.emissive = LinearRgba::rgb(0.0, 30.0 * brightness, 6.0 * brightness);
+        }
+    }
 }
