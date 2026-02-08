@@ -7,6 +7,7 @@ use hexx::{EdgeDirection, Hex, VertexDirection};
 
 use crate::camera::CameraCell;
 use crate::grid::HexGrid;
+use crate::intro::IntroSequence;
 use crate::visuals::NeonMaterials;
 use crate::{AppConfig, RenderMode};
 
@@ -15,8 +16,13 @@ pub struct EdgesPlugin;
 impl Plugin for EdgesPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<DrawnCells>()
-            .add_systems(Startup, draw_initial_cell.after(crate::grid::generate_grid))
-            .add_systems(Update, spawn_cell_geometry.after(crate::camera::track_camera_cell));
+            .add_systems(
+                Update,
+                (
+                    draw_initial_cell,
+                    spawn_cell_geometry.after(crate::camera::track_camera_cell),
+                ),
+            );
     }
 }
 
@@ -41,7 +47,13 @@ fn draw_initial_cell(
     neon: Res<NeonMaterials>,
     config: Res<AppConfig>,
     drawn: ResMut<DrawnCells>,
+    intro: Res<IntroSequence>,
+    mut done: Local<bool>,
 ) {
+    if *done || !intro.initial_draw_triggered {
+        return;
+    }
+    *done = true;
     let Some(grid) = grid else { return };
     spawn_geometry_for_cell(
         commands,

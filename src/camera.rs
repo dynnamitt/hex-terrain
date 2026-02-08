@@ -2,14 +2,23 @@ use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use hexx::Hex;
 
+use bevy::window::{CursorGrabMode, CursorOptions};
+
 use crate::grid::{HexGrid, CAMERA_HEIGHT_OFFSET};
+use crate::intro::IntroSequence;
 
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CameraCell>()
-            .add_systems(Update, (move_camera, track_camera_cell).chain());
+            .add_systems(Startup, hide_cursor)
+            .add_systems(
+                Update,
+                (move_camera, track_camera_cell)
+                    .chain()
+                    .run_if(|intro: Res<IntroSequence>| intro.done),
+            );
     }
 }
 
@@ -38,13 +47,23 @@ fn move_camera(
         return;
     };
 
-    // Mouse yaw
+    // Mouse look: yaw (horizontal) + pitch (vertical)
     let mut yaw = 0.0;
+    let mut pitch = 0.0;
     for ev in mouse_motion.read() {
         yaw -= ev.delta.x * MOUSE_SENSITIVITY;
+        pitch -= ev.delta.y * MOUSE_SENSITIVITY;
     }
     if yaw != 0.0 {
         transform.rotate_y(yaw);
+    }
+    if pitch != 0.0 {
+        // Apply pitch on local X axis, clamped to avoid flipping
+        let (_, current_pitch, _) = transform.rotation.to_euler(EulerRot::YXZ);
+        let clamped_pitch =
+            (current_pitch + pitch).clamp(-std::f32::consts::FRAC_PI_2 + 0.05, std::f32::consts::FRAC_PI_2 - 0.05);
+        let pitch_delta = clamped_pitch - current_pitch;
+        transform.rotate_local_x(pitch_delta);
     }
 
     // WASD movement in the camera's forward/right plane (XZ only)
@@ -81,7 +100,7 @@ fn move_camera(
     transform.translation.y += (target_height - transform.translation.y) * 0.1;
 }
 
-fn interpolate_height(grid: &HexGrid, pos: Vec2) -> f32 {
+pub fn interpolate_height(grid: &HexGrid, pos: Vec2) -> f32 {
     // Find nearest vertices by distance and inverse-distance weight
     let mut weighted_sum = 0.0;
     let mut weight_total = 0.0;
@@ -139,3 +158,11 @@ pub fn track_camera_cell(
         cell.changed = false;
     }
 }
+
+fn hide_cursor(mut cursor_q: Query<&mut CursorOptions>) {
+    for mut opts in &mut cursor_q {
+        opts.visible = false;
+        opts.grab_mode = CursorGrabMode::Locked;
+    }
+}
+

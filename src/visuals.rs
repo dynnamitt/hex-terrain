@@ -53,6 +53,7 @@ pub fn setup_visuals(mut commands: Commands, mut materials: ResMut<Assets<Standa
     let gap_face_material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.02, 0.03, 0.05),
         emissive: LinearRgba::rgb(0.03, 0.06, 0.1),
+        cull_mode: None,
         ..default()
     });
 
