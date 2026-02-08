@@ -14,14 +14,21 @@ use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
 use crate::visuals::ActiveNeonMaterials;
 
+/// Number of hex rings around the origin (~1200 hexes total).
 pub const GRID_RADIUS: u32 = 20;
+/// Distance in world-units between adjacent hex centers.
 pub const POINT_SPACING: f32 = 4.0;
+/// Maximum terrain elevation produced by the noise function.
 pub const MAX_HEIGHT: f32 = 10.0;
+/// Smallest visual hex radius (noise-derived per cell).
 pub const MIN_HEX_RADIUS: f32 = 0.2;
+/// Largest visual hex radius (noise-derived per cell).
 pub const MAX_HEX_RADIUS: f32 = 2.6;
 const RADIUS_NOISE_SEED: u32 = 137;
+/// Vertical offset of the camera above the terrain surface.
 pub const CAMERA_HEIGHT_OFFSET: f32 = 6.0;
 
+/// Registers the [`generate_grid`] startup system.
 pub struct GridPlugin;
 
 impl Plugin for GridPlugin {
@@ -30,15 +37,21 @@ impl Plugin for GridPlugin {
     }
 }
 
+/// Central resource holding the hex layout, per-cell noise data, and vertex positions.
 #[derive(Resource)]
 pub struct HexGrid {
+    /// Hex-to-world coordinate mapping (spacing, orientation).
     pub layout: HexLayout,
+    /// Noise-derived terrain height for each hex cell.
     pub heights: HashMap<Hex, f32>,
+    /// Noise-derived visual radius for each hex cell.
     #[expect(dead_code, reason = "stored for future edge/camera use")]
     pub radii: HashMap<Hex, f32>,
+    /// World-space position of each hex vertex, keyed by `(hex, vertex_index 0..5)`.
     pub vertex_positions: HashMap<(Hex, u8), Vec3>,
 }
 
+/// Builds the [`HexGrid`] resource and spawns a flat face mesh for every hex cell.
 pub fn generate_grid(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -106,6 +119,9 @@ pub fn generate_grid(
     .with_inserted_indices(Indices::U16(hex_mesh_info.indices));
     let hex_mesh_handle = meshes.add(hex_mesh);
 
+    // Unit cylinder (radius 0.5, height 1) — scaled per hex
+    let pole_mesh_handle = meshes.add(Cylinder::new(0.5, 1.0));
+
     for hex in shapes::hexagon(Hex::ZERO, GRID_RADIUS) {
         let center_2d = layout.hex_to_world_pos(hex);
         let center_height = heights[&hex];
@@ -120,6 +136,19 @@ pub fn generate_grid(
             Transform::from_xyz(center_2d.x, face_height, center_2d.y)
                 .with_scale(Vec3::new(radius, 1.0, radius)),
         ));
+
+        // Height indicator pole: from y=0 up to just below the hex face
+        let pole_radius = radius * 0.05;
+        let pole_gap = 0.05;
+        let pole_height = face_height - pole_gap;
+        if pole_height > 0.0 {
+            commands.spawn((
+                Mesh3d(pole_mesh_handle.clone()),
+                MeshMaterial3d(neon.pole_material.clone()),
+                Transform::from_xyz(center_2d.x, pole_height / 2.0, center_2d.y)
+                    .with_scale(Vec3::new(pole_radius / 0.5, pole_height, pole_radius / 0.5)),
+            ));
+        }
     }
 
     commands.insert_resource(HexGrid {

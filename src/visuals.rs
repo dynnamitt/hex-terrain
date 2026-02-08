@@ -22,6 +22,8 @@ pub struct ActiveNeonMaterials {
     pub edge_material: Handle<StandardMaterial>,
     pub hex_face_material: Handle<StandardMaterial>,
     pub gap_face_material: Handle<StandardMaterial>,
+    /// Green emissive material for height-indicator poles.
+    pub pole_material: Handle<StandardMaterial>,
 }
 
 pub fn setup_visuals(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>) {
@@ -64,9 +66,17 @@ pub fn setup_visuals(mut commands: Commands, mut materials: ResMut<Assets<Standa
         ..default()
     });
 
+    let pole_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.0, 1.0, 0.2),
+        emissive: LinearRgba::rgb(0.0, 30.0, 6.0),
+        unlit: true,
+        ..default()
+    });
+
     commands.insert_resource(ActiveNeonMaterials {
         edge_material,
         hex_face_material,
         gap_face_material,
+        pole_material,
     });
 }
