@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::camera::{TerrainCamera, interpolate_height};
-use crate::grid::{HexGrid, CAMERA_HEIGHT_OFFSET};
+use crate::grid::{CAMERA_HEIGHT_OFFSET, HexGrid};
 
 pub struct IntroPlugin;
 
@@ -32,8 +32,9 @@ enum IntroPhase {
 }
 
 const TILT_UP_DURATION: f32 = 1.5;
-const HIGHLIGHT_DELAY: f32 = 0.7;
-const TILT_DOWN_DURATION: f32 = 0.8;
+const HIGHLIGHT_DELAY: f32 = 0.4;
+const TILT_DOWN_DURATION: f32 = 0.4;
+const TILT_DOWN_ANGLE: f32 = 10.0_f32;
 
 impl IntroSequence {
     fn new() -> Self {
@@ -113,8 +114,8 @@ fn run_intro(
             let t = (intro.timer / TILT_DOWN_DURATION).min(1.0);
             let eased = ease_out_cubic(t);
 
-            // Tilt down 20 degrees from horizontal
-            let pitch = -20.0_f32.to_radians() * eased;
+            // Tilt down 10 degrees from horizontal
+            let pitch = -TILT_DOWN_ANGLE.to_radians() * eased;
             transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
 
             if t >= 1.0 {

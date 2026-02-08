@@ -43,6 +43,12 @@ clap = { version = "4", features = ["derive"] }
 bevy-inspector-egui = "0.36"
 bevy_egui = "0.39"
 
+[lints.rust]
+unused = { level = "deny" }
+
+[lints.clippy]
+all = { level = "deny" }
+
 [profile.dev]
 opt-level = 1
 

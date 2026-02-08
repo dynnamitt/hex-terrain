@@ -40,6 +40,7 @@ struct DrawnCells {
 const EDGE_THICKNESS: f32 = 0.03;
 const REVEAL_RADIUS: u32 = 2;
 
+#[allow(clippy::too_many_arguments)]
 fn draw_initial_cell(
     commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
@@ -159,16 +160,16 @@ fn spawn_cross_gap_geometry(
         // For pointy-top: edge direction i corresponds to vertices between corners
         // EdgeDirection i has vertex_directions which give the two corner vertices
         let vertex_dirs = dir.vertex_directions();
-        let v0_idx = vertex_dirs[0].index() as u8;
-        let v1_idx = vertex_dirs[1].index() as u8;
+        let v0_idx = vertex_dirs[0].index();
+        let v1_idx = vertex_dirs[1].index();
 
         // Find the facing vertices on the neighbor hex
         // The opposite edge direction on the neighbor
         let opp_dir = dir.const_neg();
         let opp_vertex_dirs = opp_dir.vertex_directions();
         // The facing vertices are swapped (cw becomes ccw from other side)
-        let n0_idx = opp_vertex_dirs[1].index() as u8;
-        let n1_idx = opp_vertex_dirs[0].index() as u8;
+        let n0_idx = opp_vertex_dirs[1].index();
+        let n1_idx = opp_vertex_dirs[0].index();
 
         let Some(&va0) = grid.vertex_positions.get(&(hex, v0_idx)) else {
             continue;
@@ -211,7 +212,7 @@ fn spawn_cross_gap_geometry(
         }
 
         // Get one vertex from each of the 3 hexes at this junction
-        let v_idx = dir.index() as u8;
+        let v_idx = dir.index();
 
         // The vertex on hex at direction `dir`
         let Some(&v0) = grid.vertex_positions.get(&(coords[0], v_idx)) else {
@@ -248,7 +249,7 @@ fn find_equivalent_vertex(
             direction: dir,
         };
         if candidate.equivalent(target) {
-            return grid.vertex_positions.get(&(hex, dir.index() as u8)).copied();
+            return grid.vertex_positions.get(&(hex, dir.index())).copied();
         }
     }
     None
