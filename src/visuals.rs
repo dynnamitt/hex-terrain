@@ -18,7 +18,7 @@ impl Plugin for VisualsPlugin {
 }
 
 #[derive(Resource)]
-pub struct NeonMaterials {
+pub struct ActiveNeonMaterials {
     pub edge_material: Handle<StandardMaterial>,
     pub hex_face_material: Handle<StandardMaterial>,
     pub gap_face_material: Handle<StandardMaterial>,
@@ -57,13 +57,14 @@ pub fn setup_visuals(mut commands: Commands, mut materials: ResMut<Assets<Standa
     });
 
     let gap_face_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.02, 0.03, 0.05),
+        base_color: Color::srgb(0.12, 0.03, 0.05),
+        // channel?
         emissive: LinearRgba::rgb(0.03, 0.06, 0.1),
         cull_mode: None,
         ..default()
     });
 
-    commands.insert_resource(NeonMaterials {
+    commands.insert_resource(ActiveNeonMaterials {
         edge_material,
         hex_face_material,
         gap_face_material,

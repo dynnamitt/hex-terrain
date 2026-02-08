@@ -143,6 +143,7 @@ pub fn interpolate_height(grid: &HexGrid, pos: Vec2) -> f32 {
     }
 }
 
+/// Updates [`CameraCell`] when the camera crosses into a new hex.
 pub fn track_camera_cell(
     grid: Option<Res<HexGrid>>,
     mut cell: ResMut<CameraCell>,

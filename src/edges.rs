@@ -8,21 +8,20 @@ use hexx::{EdgeDirection, Hex, VertexDirection};
 use crate::camera::CameraCell;
 use crate::grid::HexGrid;
 use crate::intro::IntroSequence;
-use crate::visuals::NeonMaterials;
+use crate::visuals::ActiveNeonMaterials;
 use crate::{AppConfig, RenderMode};
 
 pub struct EdgesPlugin;
 
 impl Plugin for EdgesPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<DrawnCells>()
-            .add_systems(
-                Update,
-                (
-                    draw_initial_cell,
-                    spawn_cell_geometry.after(crate::camera::track_camera_cell),
-                ),
-            );
+        app.init_resource::<DrawnCells>().add_systems(
+            Update,
+            (
+                draw_initial_cell,
+                spawn_cell_geometry.after(crate::camera::track_camera_cell),
+            ),
+        );
     }
 }
 
@@ -45,7 +44,7 @@ fn draw_initial_cell(
     commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     grid: Option<Res<HexGrid>>,
-    neon: Res<NeonMaterials>,
+    neon: Res<ActiveNeonMaterials>,
     config: Res<AppConfig>,
     drawn: ResMut<DrawnCells>,
     intro: Res<IntroSequence>,
@@ -56,22 +55,14 @@ fn draw_initial_cell(
     }
     *done = true;
     let Some(grid) = grid else { return };
-    spawn_geometry_for_cell(
-        commands,
-        meshes,
-        &grid,
-        &neon,
-        &config,
-        drawn,
-        Hex::ZERO,
-    );
+    spawn_geometry_for_cell(commands, meshes, &grid, &neon, &config, drawn, Hex::ZERO);
 }
 
 fn spawn_cell_geometry(
     commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     grid: Option<Res<HexGrid>>,
-    neon: Res<NeonMaterials>,
+    neon: Res<ActiveNeonMaterials>,
     config: Res<AppConfig>,
     cell: Res<CameraCell>,
     drawn: ResMut<DrawnCells>,
@@ -80,22 +71,14 @@ fn spawn_cell_geometry(
         return;
     }
     let Some(grid) = grid else { return };
-    spawn_geometry_for_cell(
-        commands,
-        meshes,
-        &grid,
-        &neon,
-        &config,
-        drawn,
-        cell.current,
-    );
+    spawn_geometry_for_cell(commands, meshes, &grid, &neon, &config, drawn, cell.current);
 }
 
 fn spawn_geometry_for_cell(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     grid: &HexGrid,
-    neon: &NeonMaterials,
+    neon: &ActiveNeonMaterials,
     config: &AppConfig,
     mut drawn: ResMut<DrawnCells>,
     center: Hex,
@@ -126,7 +109,7 @@ fn spawn_perimeter_edges(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     grid: &HexGrid,
-    neon: &NeonMaterials,
+    neon: &ActiveNeonMaterials,
     hex: Hex,
 ) {
     // 6 edges around the hex perimeter
@@ -146,7 +129,7 @@ fn spawn_cross_gap_geometry(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     grid: &HexGrid,
-    neon: &NeonMaterials,
+    neon: &ActiveNeonMaterials,
     hex: Hex,
 ) {
     // For each edge direction, connect facing vertices to neighbor hex
@@ -238,11 +221,7 @@ fn spawn_cross_gap_geometry(
     }
 }
 
-fn find_equivalent_vertex(
-    grid: &HexGrid,
-    hex: Hex,
-    target: &hexx::GridVertex,
-) -> Option<Vec3> {
+fn find_equivalent_vertex(grid: &HexGrid, hex: Hex, target: &hexx::GridVertex) -> Option<Vec3> {
     for dir in VertexDirection::ALL_DIRECTIONS {
         let candidate = hexx::GridVertex {
             origin: hex,
@@ -258,7 +237,7 @@ fn find_equivalent_vertex(
 fn spawn_edge_line(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    neon: &NeonMaterials,
+    neon: &ActiveNeonMaterials,
     from: Vec3,
     to: Vec3,
 ) {
@@ -287,19 +266,14 @@ fn spawn_edge_line(
 fn spawn_quad_face(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    neon: &NeonMaterials,
+    neon: &ActiveNeonMaterials,
     v0: Vec3,
     v1: Vec3,
     v2: Vec3,
     v3: Vec3,
 ) {
     // Two triangles: v0-v1-v2 and v0-v2-v3
-    let positions = vec![
-        v0.to_array(),
-        v1.to_array(),
-        v2.to_array(),
-        v3.to_array(),
-    ];
+    let positions = vec![v0.to_array(), v1.to_array(), v2.to_array(), v3.to_array()];
 
     let normal = compute_normal(v0, v1, v2);
     let normals = vec![normal.to_array(); 4];
@@ -325,7 +299,7 @@ fn spawn_quad_face(
 fn spawn_tri_face(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    neon: &NeonMaterials,
+    neon: &ActiveNeonMaterials,
     v0: Vec3,
     v1: Vec3,
     v2: Vec3,
@@ -357,4 +331,3 @@ fn compute_normal(v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
     let edge2 = v2 - v0;
     edge1.cross(edge2).normalize_or_zero()
 }
-

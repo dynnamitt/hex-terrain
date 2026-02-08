@@ -12,16 +12,15 @@ use bevy::render::render_resource::PrimitiveTopology;
 use hexx::{Hex, HexLayout, PlaneMeshBuilder, VertexDirection, shapes};
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
-use crate::visuals::NeonMaterials;
-use crate::{AppConfig, HeightMode};
+use crate::visuals::ActiveNeonMaterials;
 
 pub const GRID_RADIUS: u32 = 20;
 pub const POINT_SPACING: f32 = 4.0;
 pub const MAX_HEIGHT: f32 = 10.0;
 pub const MIN_HEX_RADIUS: f32 = 0.2;
-pub const MAX_HEX_RADIUS: f32 = 1.9;
+pub const MAX_HEX_RADIUS: f32 = 2.6;
 const RADIUS_NOISE_SEED: u32 = 137;
-pub const CAMERA_HEIGHT_OFFSET: f32 = 2.0;
+pub const CAMERA_HEIGHT_OFFSET: f32 = 6.0;
 
 pub struct GridPlugin;
 
@@ -43,8 +42,7 @@ pub struct HexGrid {
 pub fn generate_grid(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    neon: Res<NeonMaterials>,
-    config: Res<AppConfig>,
+    neon: Res<ActiveNeonMaterials>,
 ) {
     let layout = HexLayout {
         scale: Vec2::splat(POINT_SPACING),
@@ -55,7 +53,7 @@ pub fn generate_grid(
         ..default()
     };
 
-    // Generate noise heights
+    // Generate noise for heights and sizes
     let height_fbm: Fbm<Perlin> = Fbm::new(42).set_octaves(4);
     let radius_fbm: Fbm<Perlin> = Fbm::new(RADIUS_NOISE_SEED).set_octaves(3);
     let mut heights: HashMap<Hex, f32> = HashMap::new();
@@ -85,35 +83,12 @@ pub fn generate_grid(
         let center_height = heights[&hex];
         let radius = radii[&hex];
 
-        for (i, dir) in VertexDirection::ALL_DIRECTIONS.iter().enumerate() {
+        for (i, _dir) in VertexDirection::ALL_DIRECTIONS.iter().enumerate() {
             let offset_2d = unit_offsets[i] * radius;
             let world_x = center_2d.x + offset_2d.x;
             let world_z = center_2d.y + offset_2d.y;
 
-            let vertex_height = match config.height_mode {
-                HeightMode::Blocky => center_height,
-                HeightMode::Smooth => {
-                    // Find the hexes that share this vertex
-                    let grid_vertex = hexx::GridVertex {
-                        origin: hex,
-                        direction: *dir,
-                    };
-                    let coords = grid_vertex.coordinates();
-                    let mut sum = 0.0;
-                    let mut count = 0;
-                    for coord in &coords {
-                        if let Some(&h) = heights.get(coord) {
-                            sum += h;
-                            count += 1;
-                        }
-                    }
-                    if count > 0 {
-                        sum / count as f32
-                    } else {
-                        center_height
-                    }
-                }
-            };
+            let vertex_height = center_height;
 
             vertex_positions.insert((hex, i as u8), Vec3::new(world_x, vertex_height, world_z));
         }
@@ -137,15 +112,7 @@ pub fn generate_grid(
         let radius = radii[&hex];
 
         // For smooth mode, use average of the 6 vertex heights as face center
-        let face_height = if config.height_mode == HeightMode::Smooth {
-            let mut sum = 0.0;
-            for i in 0..6u8 {
-                sum += vertex_positions[&(hex, i)].y;
-            }
-            sum / 6.0
-        } else {
-            center_height
-        };
+        let face_height = center_height;
 
         commands.spawn((
             Mesh3d(hex_mesh_handle.clone()),
