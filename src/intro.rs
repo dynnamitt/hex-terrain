@@ -1,3 +1,9 @@
+//! Intro camera sequence played at startup.
+//!
+//! Tilts the camera from its initial downward-looking orientation to horizontal,
+//! triggers the first geometry draw, then settles into a slight downward angle
+//! before handing control to [`crate::camera`].
+
 use bevy::prelude::*;
 
 use crate::camera::{TerrainCamera, interpolate_height};

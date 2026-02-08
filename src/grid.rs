@@ -1,3 +1,9 @@
+//! Hex grid generation: noise heights, per-hex radii, and vertex positions.
+//!
+//! Builds the [`HexGrid`] resource at startup using Perlin-based fractal noise
+//! for terrain heights and per-hex radii. Each hex also gets a flat face mesh
+//! spawned here; edge/gap geometry is handled by [`crate::edges`].
+
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
 use bevy::platform::collections::HashMap;

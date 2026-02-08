@@ -1,3 +1,9 @@
+//! Hex terrain viewer with neon edge lighting.
+//!
+//! Renders a hexagonal grid with noise-derived terrain heights, progressive
+//! edge/face reveal as the camera moves, and bloom post-processing. CLI flags
+//! select the [`RenderMode`] and [`HeightMode`].
+
 mod camera;
 mod edges;
 mod grid;

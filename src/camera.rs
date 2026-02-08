@@ -1,3 +1,9 @@
+//! First-person camera controller and hex-cell tracking.
+//!
+//! WASD + mouse look with terrain-height interpolation. [`CameraCell`] reports
+//! which hex the camera currently occupies; downstream systems in `edges` use
+//! its change flag to spawn geometry and restyle visited cells.
+
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use hexx::Hex;

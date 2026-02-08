@@ -1,3 +1,9 @@
+//! Scene visuals: camera, bloom, tonemapping, and shared materials.
+//!
+//! Sets up the `Camera3d` with HDR + bloom post-processing and creates the
+//! [`NeonMaterials`] resource consumed by `grid` and `edges` when spawning
+//! geometry.
+
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::post_process::bloom::{Bloom, BloomCompositeMode};
 use bevy::prelude::*;
