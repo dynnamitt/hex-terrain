@@ -3,14 +3,23 @@
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "command": "cargo fmt -- --check 2>&1 || cargo fmt",
-        "description": "Auto-format Rust files after edits"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cargo fmt -- --check 2>&1 || cargo fmt"
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
-        "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '\\[lints'; then echo 'BLOCKED: Do not modify lint configuration'; exit 1; fi"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '\\[lints'; then echo 'BLOCKED: Do not modify lint configuration'; exit 1; fi"
+          }
+        ]
       }
     ]
   }
