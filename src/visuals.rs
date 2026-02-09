@@ -1,7 +1,7 @@
 //! Scene visuals: camera, bloom, tonemapping, and shared materials.
 //!
 //! Sets up the `Camera3d` with HDR + bloom post-processing and creates the
-//! [`NeonMaterials`] resource consumed by `grid` and `edges` when spawning
+//! [`ActiveNeonMaterials`] resource consumed by `grid` and `edges` when spawning
 //! geometry.
 
 use bevy::core_pipeline::tonemapping::Tonemapping;
@@ -9,6 +9,7 @@ use bevy::post_process::bloom::{Bloom, BloomCompositeMode};
 use bevy::prelude::*;
 use bevy::render::view::Hdr;
 
+/// Sets up the camera, bloom, tonemapping, and shared neon materials.
 pub struct VisualsPlugin;
 
 impl Plugin for VisualsPlugin {
@@ -17,13 +18,18 @@ impl Plugin for VisualsPlugin {
     }
 }
 
+/// Shared material handles for the neon visual theme.
 #[derive(Resource)]
 pub struct ActiveNeonMaterials {
+    /// Bright emissive cyan used for edge lines.
     pub edge_material: Handle<StandardMaterial>,
+    /// Dark surface material applied to hex face meshes.
     pub hex_face_material: Handle<StandardMaterial>,
+    /// Slightly warm dark material for gap-fill quads and triangles.
     pub gap_face_material: Handle<StandardMaterial>,
 }
 
+/// Spawns the camera entity and inserts [`ActiveNeonMaterials`].
 pub fn setup_visuals(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>) {
     // Camera with bloom and tonemapping
     commands.spawn((

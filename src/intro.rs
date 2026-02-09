@@ -10,6 +10,7 @@ use crate::camera::{TerrainCamera, interpolate_height};
 use crate::grid::{CAMERA_HEIGHT_OFFSET, HexGrid};
 use crate::math;
 
+/// Startup camera animation that tilts from looking down to horizontal.
 pub struct IntroPlugin;
 
 impl Plugin for IntroPlugin {
@@ -19,14 +20,18 @@ impl Plugin for IntroPlugin {
     }
 }
 
+/// State machine driving the intro camera animation.
 #[derive(Resource)]
 pub struct IntroSequence {
     phase: IntroPhase,
     timer: f32,
     start_pitch: Option<f32>,
     yaw: Option<f32>,
+    /// Whether edge-highlight styling is active (set after tilt-up completes).
     pub highlighting_enabled: bool,
+    /// Fires once to trigger the first geometry draw at the origin.
     pub initial_draw_triggered: bool,
+    /// `true` once the full intro sequence has finished.
     pub done: bool,
 }
 

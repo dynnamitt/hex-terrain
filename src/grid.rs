@@ -33,6 +33,7 @@ const RADIUS_NOISE_SEED: u32 = 137;
 /// Vertical offset of the camera above the terrain surface.
 pub const CAMERA_HEIGHT_OFFSET: f32 = 6.0;
 
+/// Pole cylinder radius as a fraction of the hex's visual radius.
 pub const POLE_RADIUS_FACTOR: f32 = 0.06;
 
 /// Registers the [`generate_grid`] startup system.

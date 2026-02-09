@@ -1,8 +1,9 @@
+#![warn(missing_docs)]
 //! Hex terrain viewer with neon edge lighting.
 //!
 //! Renders a hexagonal grid with noise-derived terrain heights, progressive
 //! edge/face reveal as the camera moves, and bloom post-processing. CLI flags
-//! select the [`RenderMode`] and [`HeightMode`].
+//! select the [`RenderMode`].
 
 mod camera;
 mod edges;
@@ -18,6 +19,7 @@ use bevy::window::{CursorGrabMode, CursorOptions};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use clap::Parser;
 
+/// Which edge categories to render on the hex grid.
 #[derive(Clone, Copy, clap::ValueEnum, Default, Debug, PartialEq, Eq)]
 pub enum RenderMode {
     /// Only hex perimeter edges (6 edges per hex)
@@ -37,13 +39,19 @@ struct Cli {
     mode: RenderMode,
 }
 
+/// Top-level configuration derived from CLI arguments.
 #[derive(Resource, Debug)]
 pub struct AppConfig {
+    /// Which edge categories are drawn each frame.
     pub render_mode: RenderMode,
 }
 
+/// Whether the `bevy-inspector-egui` world inspector overlay is visible.
 #[derive(Resource, Default)]
-pub struct InspectorActive(pub bool);
+pub struct InspectorActive(
+    /// `true` while the inspector panel is shown.
+    pub bool,
+);
 
 fn main() {
     let cli = Cli::parse();

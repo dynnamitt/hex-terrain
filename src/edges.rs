@@ -12,6 +12,7 @@ use crate::math;
 use crate::visuals::ActiveNeonMaterials;
 use crate::{AppConfig, RenderMode};
 
+/// Progressive edge and gap-face spawning as the camera reveals new cells.
 pub struct EdgesPlugin;
 
 impl Plugin for EdgesPlugin {

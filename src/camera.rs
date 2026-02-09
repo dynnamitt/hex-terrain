@@ -15,6 +15,7 @@ use crate::grid::{CAMERA_HEIGHT_OFFSET, HexGrid};
 use crate::intro::IntroSequence;
 use crate::math;
 
+/// First-person camera controller with WASD movement, mouse look, and terrain following.
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
@@ -37,13 +38,18 @@ impl Plugin for CameraPlugin {
     }
 }
 
+/// Marker component for the player-controlled camera entity.
 #[derive(Component)]
 pub struct TerrainCamera;
 
+/// Tracks which hex cell the camera currently occupies.
 #[derive(Resource, Default)]
 pub struct CameraCell {
+    /// Hex coordinate directly below the camera.
     pub current: Hex,
+    /// The cell the camera occupied last frame (if it moved).
     pub previous: Option<Hex>,
+    /// `true` for exactly one frame after a cell transition.
     pub changed: bool,
 }
 
@@ -127,6 +133,11 @@ fn move_camera(
     transform.translation.y += (target_height - transform.translation.y) * 0.1;
 }
 
+/// Inverse-distance-weighted height interpolation from nearby hex vertices.
+///
+/// Samples the six vertices of the hex under `pos` plus all neighbouring
+/// hexes, then blends their heights by `1/dist²`. Returns the hex centre
+/// height as a fallback when no vertices are in range.
 pub fn interpolate_height(grid: &HexGrid, pos: Vec2) -> f32 {
     // Find nearest vertices by distance and inverse-distance weight
     let mut weighted_sum = 0.0;
