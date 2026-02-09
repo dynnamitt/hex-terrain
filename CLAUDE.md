@@ -25,10 +25,20 @@ src/
   edges.rs     # Progressive edge/face spawning, DrawnCells, perimeter/cross-gap/full render modes
 ```
 
-### Key Resources
-- `AppConfig` — render mode + height mode (from CLI)
+### Per-Plugin Config Resources
+Each plugin takes a config struct via its constructor (e.g. `GridPlugin(GridConfig::default())`).
+Configs are inserted as ECS resources and read by systems via `Res<XxxConfig>`.
+
+- `GridConfig` — grid radius, spacing, noise seeds/octaves/scales, pole params
+- `CameraConfig` — move speed, mouse sensitivity, height offset/lerp, edge margin
+- `EdgesConfig` — edge thickness, reveal radius
+- `IntroConfig` — tilt-up/down durations, highlight delay, tilt-down angle
+- `VisualsConfig` — bloom intensity
+
+### Other Key Resources
+- `AppConfig` — render mode (from CLI)
 - `HexGrid` — layout, heights map, vertex_positions map
-- `NeonMaterials` — edge (emissive cyan), hex face (dark), gap face (dark) materials
+- `ActiveNeonMaterials` — edge (emissive cyan), hex face (dark), gap face (dark) materials
 - `CameraCell` — current hex under camera, change detection
 - `DrawnCells` — tracks revealed hex cells to avoid duplicate spawning
 
@@ -52,15 +62,10 @@ These differ from earlier Bevy tutorials/docs:
 - Events: `MessageReader<T>`, not `EventReader<T>`
 - Imports: `bevy::platform::collections::{HashMap, HashSet}`
 
-## Constants (grid.rs)
+## Key Default Values
 
-| Constant | Value | Meaning |
-|---|---|---|
-| `GRID_RADIUS` | 20 | ~1200 hexes |
-| `POINT_SPACING` | 4.0 | 4m between hex centers |
-| `HEX_RENDER_SIZE` | 1.0 | 1m visual hex radius |
-| `MAX_HEIGHT` | 10.0 | Max terrain elevation |
-| `CAMERA_HEIGHT_OFFSET` | 2.0 | Camera hovers 2m above terrain |
+All constants are now fields on per-plugin config structs with `Default` impls.
+See `GridConfig`, `CameraConfig`, `EdgesConfig`, `IntroConfig`, `VisualsConfig`.
 
 ## Formatting
 

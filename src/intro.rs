@@ -6,16 +6,41 @@
 
 use bevy::prelude::*;
 
-use crate::camera::{TerrainCamera, interpolate_height};
-use crate::grid::{CAMERA_HEIGHT_OFFSET, HexGrid};
+use crate::camera::{CameraConfig, TerrainCamera, interpolate_height};
+use crate::grid::HexGrid;
 use crate::math;
 
+/// Per-plugin configuration for the intro camera animation.
+#[derive(Resource, Clone, Debug)]
+pub struct IntroConfig {
+    /// Duration of the initial tilt-up animation (seconds).
+    pub tilt_up_duration: f32,
+    /// Pause between tilt-up and tilt-down (seconds).
+    pub highlight_delay: f32,
+    /// Duration of the settling tilt-down (seconds).
+    pub tilt_down_duration: f32,
+    /// Downward tilt angle at the end of the intro (degrees).
+    pub tilt_down_angle: f32,
+}
+
+impl Default for IntroConfig {
+    fn default() -> Self {
+        Self {
+            tilt_up_duration: 1.5,
+            highlight_delay: 0.4,
+            tilt_down_duration: 0.4,
+            tilt_down_angle: 10.0,
+        }
+    }
+}
+
 /// Startup camera animation that tilts from looking down to horizontal.
-pub struct IntroPlugin;
+pub struct IntroPlugin(pub IntroConfig);
 
 impl Plugin for IntroPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(IntroSequence::new())
+        app.insert_resource(self.0.clone())
+            .insert_resource(IntroSequence::new())
             .add_systems(Update, run_intro);
     }
 }
@@ -43,11 +68,6 @@ enum IntroPhase {
     Done,
 }
 
-const TILT_UP_DURATION: f32 = 1.5;
-const HIGHLIGHT_DELAY: f32 = 0.4;
-const TILT_DOWN_DURATION: f32 = 0.4;
-const TILT_DOWN_ANGLE: f32 = 10.0_f32;
-
 impl IntroSequence {
     fn new() -> Self {
         Self {
@@ -67,6 +87,8 @@ fn run_intro(
     mut intro: ResMut<IntroSequence>,
     grid: Option<Res<HexGrid>>,
     mut query: Query<&mut Transform, With<TerrainCamera>>,
+    intro_cfg: Res<IntroConfig>,
+    cam_cfg: Res<CameraConfig>,
 ) {
     if intro.phase == IntroPhase::Done {
         return;
@@ -79,8 +101,8 @@ fn run_intro(
     // Interpolate camera height to match terrain during intro
     if let Some(ref grid) = grid {
         let cam_xz = Vec2::new(transform.translation.x, transform.translation.z);
-        let target_height = interpolate_height(grid, cam_xz) + CAMERA_HEIGHT_OFFSET;
-        transform.translation.y += (target_height - transform.translation.y) * 0.1;
+        let target_height = interpolate_height(grid, cam_xz) + cam_cfg.height_offset;
+        transform.translation.y += (target_height - transform.translation.y) * cam_cfg.height_lerp;
     }
 
     // Capture initial orientation on first frame
@@ -96,7 +118,7 @@ fn run_intro(
     match intro.phase {
         IntroPhase::TiltUp => {
             intro.timer += time.delta_secs();
-            let t = (intro.timer / TILT_UP_DURATION).min(1.0);
+            let t = (intro.timer / intro_cfg.tilt_up_duration).min(1.0);
             let eased = math::ease_out_cubic(t);
 
             // Interpolate pitch from start (looking down) to 0 (horizontal)
@@ -112,18 +134,18 @@ fn run_intro(
         }
         IntroPhase::HighlightDelay => {
             intro.timer += time.delta_secs();
-            if intro.timer >= HIGHLIGHT_DELAY {
+            if intro.timer >= intro_cfg.highlight_delay {
                 intro.phase = IntroPhase::TiltDown;
                 intro.timer = 0.0;
             }
         }
         IntroPhase::TiltDown => {
             intro.timer += time.delta_secs();
-            let t = (intro.timer / TILT_DOWN_DURATION).min(1.0);
+            let t = (intro.timer / intro_cfg.tilt_down_duration).min(1.0);
             let eased = math::ease_out_cubic(t);
 
-            // Tilt down 10 degrees from horizontal
-            let pitch = -TILT_DOWN_ANGLE.to_radians() * eased;
+            // Tilt down by configured angle from horizontal
+            let pitch = -intro_cfg.tilt_down_angle.to_radians() * eased;
             transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
 
             if t >= 1.0 {

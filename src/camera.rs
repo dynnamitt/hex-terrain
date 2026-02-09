@@ -11,16 +11,50 @@ use hexx::Hex;
 use bevy::window::{CursorGrabMode, CursorOptions, WindowFocused};
 
 use crate::InspectorActive;
-use crate::grid::{CAMERA_HEIGHT_OFFSET, HexGrid};
+use crate::grid::HexGrid;
 use crate::intro::IntroSequence;
 use crate::math;
 
+/// Per-plugin configuration for the camera controller.
+#[derive(Resource, Clone, Debug)]
+pub struct CameraConfig {
+    /// WASD movement speed in world-units per second.
+    pub move_speed: f32,
+    /// Horizontal mouse sensitivity (radians per pixel).
+    pub mouse_sensitivity_x: f32,
+    /// Vertical mouse sensitivity (radians per pixel).
+    pub mouse_sensitivity_y: f32,
+    /// Pixel margin from window edge that triggers cursor recentering.
+    pub edge_margin: f32,
+    /// Margin from vertical to prevent camera flip (radians).
+    pub pitch_margin: f32,
+    /// Lerp factor for smooth height transitions per frame.
+    pub height_lerp: f32,
+    /// Vertical offset of the camera above the terrain surface.
+    pub height_offset: f32,
+}
+
+impl Default for CameraConfig {
+    fn default() -> Self {
+        Self {
+            move_speed: 15.0,
+            mouse_sensitivity_x: 0.003,
+            mouse_sensitivity_y: 0.002,
+            edge_margin: 100.0,
+            pitch_margin: 0.05,
+            height_lerp: 0.1,
+            height_offset: 6.0,
+        }
+    }
+}
+
 /// First-person camera controller with WASD movement, mouse look, and terrain following.
-pub struct CameraPlugin;
+pub struct CameraPlugin(pub CameraConfig);
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<CameraCell>()
+        app.insert_resource(self.0.clone())
+            .init_resource::<CameraCell>()
             .init_resource::<CursorRecentered>()
             .add_systems(Startup, hide_cursor)
             .add_systems(
@@ -53,12 +87,6 @@ pub struct CameraCell {
     pub changed: bool,
 }
 
-/// Pixel margin from window edge that triggers cursor recentering.
-const EDGE_MARGIN: f32 = 100.0;
-const MOVE_SPEED: f32 = 15.0;
-const MOUSE_SENSITIVITY_X: f32 = 0.003;
-const MOUSE_SENSITIVITY_Y: f32 = 0.002;
-
 /// Set to `true` on frames where the cursor was warped back to center,
 /// so [`move_camera`] can discard any synthetic mouse-motion delta.
 #[derive(Resource, Default)]
@@ -72,6 +100,7 @@ fn move_camera(
     grid: Option<Res<HexGrid>>,
     mut query: Query<&mut Transform, With<TerrainCamera>>,
     recentered: Res<CursorRecentered>,
+    cfg: Res<CameraConfig>,
 ) {
     let Some(grid) = grid else { return };
     let Ok(mut transform) = query.single_mut() else {
@@ -86,8 +115,8 @@ fn move_camera(
         for _ in mouse_motion.read() {}
     } else {
         for ev in mouse_motion.read() {
-            yaw -= ev.delta.x * MOUSE_SENSITIVITY_X;
-            pitch -= ev.delta.y * MOUSE_SENSITIVITY_Y;
+            yaw -= ev.delta.x * cfg.mouse_sensitivity_x;
+            pitch -= ev.delta.y * cfg.mouse_sensitivity_y;
         }
     }
     if yaw != 0.0 {
@@ -95,7 +124,7 @@ fn move_camera(
     }
     if pitch != 0.0 {
         let (_, current_pitch, _) = transform.rotation.to_euler(EulerRot::YXZ);
-        let pitch_delta = math::clamp_pitch(current_pitch, pitch, 0.05);
+        let pitch_delta = math::clamp_pitch(current_pitch, pitch, cfg.pitch_margin);
         transform.rotate_local_x(pitch_delta);
     }
 
@@ -121,16 +150,16 @@ fn move_camera(
 
     if direction != Vec3::ZERO {
         direction = direction.normalize();
-        let delta = direction * MOVE_SPEED * time.delta_secs();
+        let delta = direction * cfg.move_speed * time.delta_secs();
         transform.translation.x += delta.x;
         transform.translation.z += delta.z;
     }
 
     // Height interpolation from nearest vertices
     let cam_xz = Vec2::new(transform.translation.x, transform.translation.z);
-    let target_height = interpolate_height(&grid, cam_xz) + CAMERA_HEIGHT_OFFSET;
+    let target_height = interpolate_height(&grid, cam_xz) + cfg.height_offset;
     // Smooth height transition
-    transform.translation.y += (target_height - transform.translation.y) * 0.1;
+    transform.translation.y += (target_height - transform.translation.y) * cfg.height_lerp;
 }
 
 /// Inverse-distance-weighted height interpolation from nearby hex vertices.
@@ -212,6 +241,7 @@ fn recenter_cursor(
     mut windows: Query<&mut Window>,
     mut focus_events: MessageReader<WindowFocused>,
     mut recentered: ResMut<CursorRecentered>,
+    cfg: Res<CameraConfig>,
 ) {
     recentered.0 = false;
 
@@ -234,10 +264,10 @@ fn recenter_cursor(
         }
 
         if let Some(pos) = window.cursor_position()
-            && (pos.x < EDGE_MARGIN
-                || pos.x > w - EDGE_MARGIN
-                || pos.y < EDGE_MARGIN
-                || pos.y > h - EDGE_MARGIN)
+            && (pos.x < cfg.edge_margin
+                || pos.x > w - cfg.edge_margin
+                || pos.y < cfg.edge_margin
+                || pos.y > h - cfg.edge_margin)
         {
             window.set_cursor_position(Some(center));
             recentered.0 = true;
