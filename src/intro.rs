@@ -8,6 +8,7 @@ use bevy::prelude::*;
 
 use crate::camera::{TerrainCamera, interpolate_height};
 use crate::grid::{CAMERA_HEIGHT_OFFSET, HexGrid};
+use crate::math;
 
 pub struct IntroPlugin;
 
@@ -56,10 +57,6 @@ impl IntroSequence {
     }
 }
 
-fn ease_out_cubic(t: f32) -> f32 {
-    1.0 - (1.0 - t).powi(3)
-}
-
 fn run_intro(
     time: Res<Time>,
     mut intro: ResMut<IntroSequence>,
@@ -95,7 +92,7 @@ fn run_intro(
         IntroPhase::TiltUp => {
             intro.timer += time.delta_secs();
             let t = (intro.timer / TILT_UP_DURATION).min(1.0);
-            let eased = ease_out_cubic(t);
+            let eased = math::ease_out_cubic(t);
 
             // Interpolate pitch from start (looking down) to 0 (horizontal)
             let pitch = start_pitch * (1.0 - eased);
@@ -118,7 +115,7 @@ fn run_intro(
         IntroPhase::TiltDown => {
             intro.timer += time.delta_secs();
             let t = (intro.timer / TILT_DOWN_DURATION).min(1.0);
-            let eased = ease_out_cubic(t);
+            let eased = math::ease_out_cubic(t);
 
             // Tilt down 10 degrees from horizontal
             let pitch = -TILT_DOWN_ANGLE.to_radians() * eased;

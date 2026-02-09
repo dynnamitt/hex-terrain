@@ -8,6 +8,7 @@ use hexx::{EdgeDirection, Hex, VertexDirection};
 use crate::camera::CameraCell;
 use crate::grid::HexGrid;
 use crate::intro::IntroSequence;
+use crate::math;
 use crate::visuals::ActiveNeonMaterials;
 use crate::{AppConfig, RenderMode};
 
@@ -275,7 +276,7 @@ fn spawn_quad_face(
     // Two triangles: v0-v1-v2 and v0-v2-v3
     let positions = vec![v0.to_array(), v1.to_array(), v2.to_array(), v3.to_array()];
 
-    let normal = compute_normal(v0, v1, v2);
+    let normal = math::compute_normal(v0, v1, v2);
     let normals = vec![normal.to_array(); 4];
     let uvs = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
     let indices = vec![0u16, 1, 2, 0, 2, 3];
@@ -305,7 +306,7 @@ fn spawn_tri_face(
     v2: Vec3,
 ) {
     let positions = vec![v0.to_array(), v1.to_array(), v2.to_array()];
-    let normal = compute_normal(v0, v1, v2);
+    let normal = math::compute_normal(v0, v1, v2);
     let normals = vec![normal.to_array(); 3];
     let uvs = vec![[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]];
     let indices = vec![0u16, 1, 2];
@@ -324,10 +325,4 @@ fn spawn_tri_face(
         Mesh3d(meshes.add(mesh)),
         MeshMaterial3d(neon.gap_face_material.clone()),
     ));
-}
-
-fn compute_normal(v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
-    let edge1 = v1 - v0;
-    let edge2 = v2 - v0;
-    edge1.cross(edge2).normalize_or_zero()
 }

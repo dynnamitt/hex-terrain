@@ -12,6 +12,7 @@ use bevy::render::render_resource::PrimitiveTopology;
 use hexx::{Hex, HexLayout, PlaneMeshBuilder, VertexDirection, shapes};
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
+use crate::math;
 use crate::visuals::ActiveNeonMaterials;
 
 /// Marker for height-indicator pole entities.
@@ -84,14 +85,11 @@ pub fn generate_grid(
         let pos = layout.hex_to_world_pos(hex);
 
         let noise_val = height_fbm.get([pos.x as f64 / 50.0, pos.y as f64 / 50.0]);
-        // Map noise from [-1, 1] to [0, MAX_HEIGHT]
-        let h = ((noise_val as f32 + 1.0) / 2.0) * MAX_HEIGHT;
+        let h = math::map_noise_to_range(noise_val, 0.0, MAX_HEIGHT);
         heights.insert(hex, h);
 
         let radius_noise = radius_fbm.get([pos.x as f64 / 30.0, pos.y as f64 / 30.0]);
-        // Map noise from [-1, 1] to [MIN_HEX_RADIUS, MAX_HEX_RADIUS]
-        let r = MIN_HEX_RADIUS
-            + ((radius_noise as f32 + 1.0) / 2.0) * (MAX_HEX_RADIUS - MIN_HEX_RADIUS);
+        let r = math::map_noise_to_range(radius_noise, MIN_HEX_RADIUS, MAX_HEX_RADIUS);
         radii.insert(hex, r);
     }
 
@@ -146,10 +144,8 @@ pub fn generate_grid(
         ));
 
         // Height indicator pole: from y=0 up to just below the hex face
-        let pole_radius = radius * POLE_RADIUS_FACTOR;
-        let pole_gap = 0.05;
-        let pole_height = face_height - pole_gap;
-        if pole_height > 0.0 {
+        if let Some(pg) = math::pole_geometry(radius, face_height, POLE_RADIUS_FACTOR, 0.05) {
+            let pole_radius = pg.radius;
             // Each pole gets its own material so alpha can vary per-pole
             let pole_mat = materials.add(StandardMaterial {
                 base_color: Color::srgb(0.0, 1.0, 0.2),
@@ -160,8 +156,11 @@ pub fn generate_grid(
             commands.spawn((
                 Mesh3d(pole_mesh_handle.clone()),
                 MeshMaterial3d(pole_mat),
-                Transform::from_xyz(center_2d.x, pole_height / 2.0, center_2d.y)
-                    .with_scale(Vec3::new(pole_radius / 0.5, pole_height, pole_radius / 0.5)),
+                Transform::from_xyz(center_2d.x, pg.y_center, center_2d.y).with_scale(Vec3::new(
+                    pole_radius / 0.5,
+                    pg.height,
+                    pole_radius / 0.5,
+                )),
                 HeightPole,
             ));
         }
@@ -194,8 +193,7 @@ fn fade_nearby_poles(
     for (pole_tf, mat_handle) in &pole_q {
         let pole_xz = Vec2::new(pole_tf.translation.x, pole_tf.translation.z);
         let dist = cam_xz.distance(pole_xz);
-        let t = (dist / POLE_FADE_DISTANCE).clamp(0.0, 1.0);
-        let brightness = 1.0 - t * (1.0 - POLE_MIN_ALPHA);
+        let brightness = math::pole_fade_brightness(dist, POLE_FADE_DISTANCE, POLE_MIN_ALPHA);
 
         if let Some(mat) = materials.get_mut(&mat_handle.0) {
             mat.base_color = Color::srgb(0.0, brightness, 0.2 * brightness);

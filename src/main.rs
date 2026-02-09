@@ -8,11 +8,14 @@ mod camera;
 mod edges;
 mod grid;
 mod intro;
+pub mod math;
 mod visuals;
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy::remote::{RemotePlugin, http::RemoteHttpPlugin};
+use bevy::window::{CursorGrabMode, CursorOptions};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use clap::Parser;
 
 #[derive(Clone, Copy, clap::ValueEnum, Default, Debug, PartialEq, Eq)]
@@ -39,6 +42,9 @@ pub struct AppConfig {
     pub render_mode: RenderMode,
 }
 
+#[derive(Resource, Default)]
+pub struct InspectorActive(pub bool);
+
 fn main() {
     let cli = Cli::parse();
 
@@ -56,14 +62,37 @@ fn main() {
         .add_plugins(RemotePlugin::default())
         .add_plugins(RemoteHttpPlugin::default())
         .add_plugins(bevy_egui::EguiPlugin::default())
-        .add_plugins(bevy_inspector_egui::DefaultInspectorConfigPlugin)
+        .add_plugins(WorldInspectorPlugin::new().run_if(|active: Res<InspectorActive>| active.0))
         .add_plugins(visuals::VisualsPlugin)
         .add_plugins(grid::GridPlugin)
         .add_plugins(intro::IntroPlugin)
         .add_plugins(camera::CameraPlugin)
         .add_plugins(edges::EdgesPlugin)
+        .init_resource::<InspectorActive>()
+        .add_systems(Update, toggle_inspector)
         .add_systems(Update, exit_on_esc)
         .run();
+}
+
+fn toggle_inspector(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut active: ResMut<InspectorActive>,
+    mut windows: Query<(&mut CursorOptions, &mut Window)>,
+) {
+    if keys.just_pressed(KeyCode::KeyI) {
+        active.0 = !active.0;
+        for (mut opts, mut window) in &mut windows {
+            if active.0 {
+                opts.visible = true;
+                opts.grab_mode = CursorGrabMode::None;
+            } else {
+                opts.visible = false;
+                opts.grab_mode = CursorGrabMode::Confined;
+                let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
+                window.set_cursor_position(Some(center));
+            }
+        }
+    }
 }
 
 fn exit_on_esc(keys: Res<ButtonInput<KeyCode>>, mut exit: MessageWriter<AppExit>) {
