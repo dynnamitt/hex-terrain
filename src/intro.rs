@@ -11,7 +11,7 @@ use crate::grid::HexGrid;
 use crate::math;
 
 /// Per-plugin configuration for the intro camera animation.
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Debug, Reflect)]
 pub struct IntroConfig {
     /// Duration of the initial tilt-up animation (seconds).
     pub tilt_up_duration: f32,
@@ -39,7 +39,8 @@ pub struct IntroPlugin(pub IntroConfig);
 
 impl Plugin for IntroPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.0.clone())
+        app.register_type::<IntroConfig>()
+            .insert_resource(self.0.clone())
             .insert_resource(IntroSequence::new())
             .add_systems(Update, run_intro);
     }

@@ -16,7 +16,7 @@ use crate::intro::IntroSequence;
 use crate::math;
 
 /// Per-plugin configuration for the camera controller.
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Debug, Reflect)]
 pub struct CameraConfig {
     /// WASD movement speed in world-units per second.
     pub move_speed: f32,
@@ -53,7 +53,9 @@ pub struct CameraPlugin(pub CameraConfig);
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.0.clone())
+        app.register_type::<TerrainCamera>()
+            .register_type::<CameraConfig>()
+            .insert_resource(self.0.clone())
             .init_resource::<CameraCell>()
             .init_resource::<CursorRecentered>()
             .add_systems(Startup, hide_cursor)
@@ -73,7 +75,7 @@ impl Plugin for CameraPlugin {
 }
 
 /// Marker component for the player-controlled camera entity.
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct TerrainCamera;
 
 /// Tracks which hex cell the camera currently occupies.

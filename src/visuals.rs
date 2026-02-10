@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use bevy::render::view::Hdr;
 
 /// Per-plugin configuration for the visual setup.
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Debug, Reflect)]
 pub struct VisualsConfig {
     /// Bloom post-processing intensity.
     pub bloom_intensity: f32,
@@ -29,7 +29,8 @@ pub struct VisualsPlugin(pub VisualsConfig);
 
 impl Plugin for VisualsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.0.clone())
+        app.register_type::<VisualsConfig>()
+            .insert_resource(self.0.clone())
             .add_systems(Startup, setup_visuals);
     }
 }

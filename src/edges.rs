@@ -13,7 +13,7 @@ use crate::visuals::ActiveNeonMaterials;
 use crate::{AppConfig, RenderMode};
 
 /// Per-plugin configuration for edge and gap-face spawning.
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Debug, Reflect)]
 pub struct EdgesConfig {
     /// Thickness of edge line cuboids.
     pub edge_thickness: f32,
@@ -35,7 +35,10 @@ pub struct EdgesPlugin(pub EdgesConfig);
 
 impl Plugin for EdgesPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.0.clone())
+        app.register_type::<EdgeLine>()
+            .register_type::<GapFace>()
+            .register_type::<EdgesConfig>()
+            .insert_resource(self.0.clone())
             .init_resource::<DrawnCells>()
             .add_systems(
                 Update,
@@ -47,10 +50,10 @@ impl Plugin for EdgesPlugin {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct EdgeLine;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct GapFace;
 
 #[derive(Resource, Default)]

@@ -16,15 +16,15 @@ use crate::math;
 use crate::visuals::ActiveNeonMaterials;
 
 /// Marker for height-indicator pole entities.
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct HeightPole;
 
 /// Marker for hex face mesh entities.
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct HexFace;
 
 /// Per-plugin configuration for the hex grid generator.
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Debug, Reflect)]
 pub struct GridConfig {
     /// Number of hex rings around the origin (~1200 hexes at 20).
     pub grid_radius: u32,
@@ -85,7 +85,10 @@ pub struct GridPlugin(pub GridConfig);
 
 impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.0.clone())
+        app.register_type::<HeightPole>()
+            .register_type::<HexFace>()
+            .register_type::<GridConfig>()
+            .insert_resource(self.0.clone())
             .add_systems(Startup, generate_grid.after(crate::visuals::setup_visuals))
             .add_systems(Update, fade_nearby_poles);
     }
