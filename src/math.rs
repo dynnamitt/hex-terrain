@@ -43,15 +43,13 @@ pub fn compute_normal(v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
 /// Brightness multiplier for height-indicator poles based on camera distance.
 ///
 /// Returns a value in `[min_alpha, 1.0]`:
-/// - At `distance = 0` the pole is dimmest (`min_alpha`).
-/// - At `distance >= fade_distance` the pole is fully bright (`1.0`).
+/// - At `distance = 0` the pole is fully bright (`1.0`).
+/// - At `distance >= fade_distance` the pole is dimmest (`min_alpha`).
 ///
-/// The intent is to fade poles that are directly under the camera so they
-/// don't obscure the terrain.
+/// Poles near the camera glow brightly; distant poles fade to reduce clutter.
 pub fn pole_fade_brightness(distance: f32, fade_distance: f32, min_alpha: f32) -> f32 {
     let t = (distance / fade_distance).clamp(0.0, 1.0);
-    // Inverted: close = dim, far = bright
-    min_alpha + t * (1.0 - min_alpha)
+    1.0 - t * (1.0 - min_alpha)
 }
 
 /// Clamps a pitch angle so the camera cannot flip past vertical.
@@ -181,21 +179,21 @@ mod tests {
     // ── pole_fade_brightness ────────────────────────────────────────
 
     #[test]
-    fn at_zero_distance_returns_min_alpha() {
+    fn at_zero_distance_returns_full_brightness() {
         let b = pole_fade_brightness(0.0, 40.0, 0.05);
+        assert!((b - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn at_fade_distance_returns_min_alpha() {
+        let b = pole_fade_brightness(40.0, 40.0, 0.05);
         assert!((b - 0.05).abs() < 1e-6);
     }
 
     #[test]
-    fn at_fade_distance_returns_one() {
-        let b = pole_fade_brightness(40.0, 40.0, 0.05);
-        assert!((b - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn beyond_fade_distance_clamps_to_one() {
+    fn beyond_fade_distance_clamps_to_min_alpha() {
         let b = pole_fade_brightness(100.0, 40.0, 0.05);
-        assert!((b - 1.0).abs() < 1e-6);
+        assert!((b - 0.05).abs() < 1e-6);
     }
 
     #[test]

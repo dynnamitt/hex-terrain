@@ -12,34 +12,54 @@ use crate::math;
 use crate::visuals::ActiveNeonMaterials;
 use crate::{AppConfig, RenderMode};
 
-/// Progressive edge and gap-face spawning as the camera reveals new cells.
-pub struct EdgesPlugin;
+/// Per-plugin configuration for edge and gap-face spawning.
+#[derive(Resource, Clone, Debug, Reflect)]
+pub struct EdgesConfig {
+    /// Thickness of edge line cuboids.
+    pub edge_thickness: f32,
+    /// How many hex rings around the camera to reveal per cell transition.
+    pub reveal_radius: u32,
+}
 
-impl Plugin for EdgesPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<DrawnCells>().add_systems(
-            Update,
-            (
-                draw_initial_cell,
-                spawn_cell_geometry.after(crate::camera::track_camera_cell),
-            ),
-        );
+impl Default for EdgesConfig {
+    fn default() -> Self {
+        Self {
+            edge_thickness: 0.03,
+            reveal_radius: 2,
+        }
     }
 }
 
-#[derive(Component)]
+/// Progressive edge and gap-face spawning as the camera reveals new cells.
+pub struct EdgesPlugin(pub EdgesConfig);
+
+impl Plugin for EdgesPlugin {
+    fn build(&self, app: &mut App) {
+        app.register_type::<EdgeLine>()
+            .register_type::<GapFace>()
+            .register_type::<EdgesConfig>()
+            .insert_resource(self.0.clone())
+            .init_resource::<DrawnCells>()
+            .add_systems(
+                Update,
+                (
+                    draw_initial_cell,
+                    spawn_cell_geometry.after(crate::camera::track_camera_cell),
+                ),
+            );
+    }
+}
+
+#[derive(Component, Reflect)]
 struct EdgeLine;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct GapFace;
 
 #[derive(Resource, Default)]
 struct DrawnCells {
     cells: HashSet<Hex>,
 }
-
-const EDGE_THICKNESS: f32 = 0.03;
-const REVEAL_RADIUS: u32 = 2;
 
 #[allow(clippy::too_many_arguments)]
 fn draw_initial_cell(
@@ -50,6 +70,7 @@ fn draw_initial_cell(
     config: Res<AppConfig>,
     drawn: ResMut<DrawnCells>,
     intro: Res<IntroSequence>,
+    edges_cfg: Res<EdgesConfig>,
     mut done: Local<bool>,
 ) {
     if *done || !intro.initial_draw_triggered {
@@ -57,9 +78,19 @@ fn draw_initial_cell(
     }
     *done = true;
     let Some(grid) = grid else { return };
-    spawn_geometry_for_cell(commands, meshes, &grid, &neon, &config, drawn, Hex::ZERO);
+    spawn_geometry_for_cell(
+        commands,
+        meshes,
+        &grid,
+        &neon,
+        &config,
+        drawn,
+        &edges_cfg,
+        Hex::ZERO,
+    );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_cell_geometry(
     commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
@@ -68,14 +99,25 @@ fn spawn_cell_geometry(
     config: Res<AppConfig>,
     cell: Res<CameraCell>,
     drawn: ResMut<DrawnCells>,
+    edges_cfg: Res<EdgesConfig>,
 ) {
     if !cell.changed {
         return;
     }
     let Some(grid) = grid else { return };
-    spawn_geometry_for_cell(commands, meshes, &grid, &neon, &config, drawn, cell.current);
+    spawn_geometry_for_cell(
+        commands,
+        meshes,
+        &grid,
+        &neon,
+        &config,
+        drawn,
+        &edges_cfg,
+        cell.current,
+    );
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_geometry_for_cell(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -83,9 +125,10 @@ fn spawn_geometry_for_cell(
     neon: &ActiveNeonMaterials,
     config: &AppConfig,
     mut drawn: ResMut<DrawnCells>,
+    edges_cfg: &EdgesConfig,
     center: Hex,
 ) {
-    let hexes_to_draw: Vec<Hex> = hexx::shapes::hexagon(center, REVEAL_RADIUS)
+    let hexes_to_draw: Vec<Hex> = hexx::shapes::hexagon(center, edges_cfg.reveal_radius)
         .filter(|h| grid.heights.contains_key(h))
         .collect();
 
@@ -97,12 +140,12 @@ fn spawn_geometry_for_cell(
 
         // Perimeter edges
         if matches!(config.render_mode, RenderMode::Perimeter | RenderMode::Full) {
-            spawn_perimeter_edges(&mut commands, &mut meshes, grid, neon, hex);
+            spawn_perimeter_edges(&mut commands, &mut meshes, grid, neon, edges_cfg, hex);
         }
 
         // Cross-gap edges and faces
         if matches!(config.render_mode, RenderMode::CrossGap | RenderMode::Full) {
-            spawn_cross_gap_geometry(&mut commands, &mut meshes, grid, neon, hex);
+            spawn_cross_gap_geometry(&mut commands, &mut meshes, grid, neon, edges_cfg, hex);
         }
     }
 }
@@ -112,6 +155,7 @@ fn spawn_perimeter_edges(
     meshes: &mut ResMut<Assets<Mesh>>,
     grid: &HexGrid,
     neon: &ActiveNeonMaterials,
+    edges_cfg: &EdgesConfig,
     hex: Hex,
 ) {
     // 6 edges around the hex perimeter
@@ -123,7 +167,15 @@ fn spawn_perimeter_edges(
         let Some(&v_b) = grid.vertex_positions.get(&(hex, next)) else {
             continue;
         };
-        spawn_edge_line(commands, meshes, neon, v_a, v_b);
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            v_a,
+            v_b,
+            Name::new(format!("Edge({},{})", hex.x, hex.y)),
+        );
     }
 }
 
@@ -132,6 +184,7 @@ fn spawn_cross_gap_geometry(
     meshes: &mut ResMut<Assets<Mesh>>,
     grid: &HexGrid,
     neon: &ActiveNeonMaterials,
+    edges_cfg: &EdgesConfig,
     hex: Hex,
 ) {
     // For each edge direction, connect facing vertices to neighbor hex
@@ -170,11 +223,40 @@ fn spawn_cross_gap_geometry(
         };
 
         // Cross-gap edge lines (connecting facing vertices)
-        spawn_edge_line(commands, meshes, neon, va0, vb0);
-        spawn_edge_line(commands, meshes, neon, va1, vb1);
+        let edge_name = format!("Edge({},{})↔({},{})", hex.x, hex.y, neighbor.x, neighbor.y);
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            va0,
+            vb0,
+            Name::new(edge_name.clone()),
+        );
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            va1,
+            vb1,
+            Name::new(edge_name),
+        );
 
         // Rectangle face between the 4 vertices
-        spawn_quad_face(commands, meshes, neon, va0, va1, vb1, vb0);
+        spawn_quad_face(
+            commands,
+            meshes,
+            neon,
+            va0,
+            va1,
+            vb1,
+            vb0,
+            Name::new(format!(
+                "GapQuad({},{})↔({},{})",
+                hex.x, hex.y, neighbor.x, neighbor.y
+            )),
+        );
     }
 
     // Triangle faces at triple-hex junctions (vertex directions)
@@ -214,12 +296,56 @@ fn spawn_cross_gap_geometry(
         };
 
         // Triangle edge lines
-        spawn_edge_line(commands, meshes, neon, v0, v1);
-        spawn_edge_line(commands, meshes, neon, v1, v2);
-        spawn_edge_line(commands, meshes, neon, v2, v0);
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            v0,
+            v1,
+            Name::new(format!(
+                "Edge({},{})↔({},{})",
+                coords[0].x, coords[0].y, coords[1].x, coords[1].y
+            )),
+        );
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            v1,
+            v2,
+            Name::new(format!(
+                "Edge({},{})↔({},{})",
+                coords[1].x, coords[1].y, coords[2].x, coords[2].y
+            )),
+        );
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            v2,
+            v0,
+            Name::new(format!(
+                "Edge({},{})↔({},{})",
+                coords[2].x, coords[2].y, coords[0].x, coords[0].y
+            )),
+        );
 
         // Triangle face
-        spawn_tri_face(commands, meshes, neon, v0, v1, v2);
+        spawn_tri_face(
+            commands,
+            meshes,
+            neon,
+            v0,
+            v1,
+            v2,
+            Name::new(format!(
+                "GapTri({},{})↔({},{})↔({},{})",
+                coords[0].x, coords[0].y, coords[1].x, coords[1].y, coords[2].x, coords[2].y
+            )),
+        );
     }
 }
 
@@ -240,8 +366,10 @@ fn spawn_edge_line(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     neon: &ActiveNeonMaterials,
+    edges_cfg: &EdgesConfig,
     from: Vec3,
     to: Vec3,
+    name: Name,
 ) {
     let midpoint = (from + to) / 2.0;
     let diff = to - from;
@@ -251,7 +379,11 @@ fn spawn_edge_line(
     }
 
     // Create a thin cuboid stretched along the edge
-    let mesh = meshes.add(Cuboid::new(length, EDGE_THICKNESS, EDGE_THICKNESS));
+    let mesh = meshes.add(Cuboid::new(
+        length,
+        edges_cfg.edge_thickness,
+        edges_cfg.edge_thickness,
+    ));
 
     // Rotation to align the cuboid's X axis with the edge direction
     let direction = diff.normalize();
@@ -259,12 +391,14 @@ fn spawn_edge_line(
 
     commands.spawn((
         EdgeLine,
+        name,
         Mesh3d(mesh),
         MeshMaterial3d(neon.edge_material.clone()),
         Transform::from_translation(midpoint).with_rotation(rotation),
     ));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_quad_face(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -273,6 +407,7 @@ fn spawn_quad_face(
     v1: Vec3,
     v2: Vec3,
     v3: Vec3,
+    name: Name,
 ) {
     // Two triangles: v0-v1-v2 and v0-v2-v3
     let positions = vec![v0.to_array(), v1.to_array(), v2.to_array(), v3.to_array()];
@@ -293,6 +428,7 @@ fn spawn_quad_face(
 
     commands.spawn((
         GapFace,
+        name,
         Mesh3d(meshes.add(mesh)),
         MeshMaterial3d(neon.gap_face_material.clone()),
     ));
@@ -305,6 +441,7 @@ fn spawn_tri_face(
     v0: Vec3,
     v1: Vec3,
     v2: Vec3,
+    name: Name,
 ) {
     let positions = vec![v0.to_array(), v1.to_array(), v2.to_array()];
     let normal = math::compute_normal(v0, v1, v2);
@@ -323,6 +460,7 @@ fn spawn_tri_face(
 
     commands.spawn((
         GapFace,
+        name,
         Mesh3d(meshes.add(mesh)),
         MeshMaterial3d(neon.gap_face_material.clone()),
     ));

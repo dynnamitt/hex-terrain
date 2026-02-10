@@ -20,7 +20,7 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use clap::Parser;
 
 /// Which edge categories to render on the hex grid.
-#[derive(Clone, Copy, clap::ValueEnum, Default, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, clap::ValueEnum, Default, Debug, PartialEq, Eq, Reflect)]
 pub enum RenderMode {
     /// Only hex perimeter edges (6 edges per hex)
     Perimeter,
@@ -40,14 +40,14 @@ struct Cli {
 }
 
 /// Top-level configuration derived from CLI arguments.
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Reflect)]
 pub struct AppConfig {
     /// Which edge categories are drawn each frame.
     pub render_mode: RenderMode,
 }
 
 /// Whether the `bevy-inspector-egui` world inspector overlay is visible.
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
 pub struct InspectorActive(
     /// `true` while the inspector panel is shown.
     pub bool,
@@ -57,6 +57,9 @@ fn main() {
     let cli = Cli::parse();
 
     App::new()
+        .register_type::<RenderMode>()
+        .register_type::<AppConfig>()
+        .register_type::<InspectorActive>()
         .insert_resource(AppConfig {
             render_mode: cli.mode,
         })
@@ -71,11 +74,11 @@ fn main() {
         .add_plugins(RemoteHttpPlugin::default())
         .add_plugins(bevy_egui::EguiPlugin::default())
         .add_plugins(WorldInspectorPlugin::new().run_if(|active: Res<InspectorActive>| active.0))
-        .add_plugins(visuals::VisualsPlugin)
-        .add_plugins(grid::GridPlugin)
-        .add_plugins(intro::IntroPlugin)
-        .add_plugins(camera::CameraPlugin)
-        .add_plugins(edges::EdgesPlugin)
+        .add_plugins(visuals::VisualsPlugin(visuals::VisualsConfig::default()))
+        .add_plugins(grid::GridPlugin(grid::GridConfig::default()))
+        .add_plugins(intro::IntroPlugin(intro::IntroConfig::default()))
+        .add_plugins(camera::CameraPlugin(camera::CameraConfig::default()))
+        .add_plugins(edges::EdgesPlugin(edges::EdgesConfig::default()))
         .init_resource::<InspectorActive>()
         .add_systems(Update, toggle_inspector)
         .add_systems(Update, exit_on_esc)

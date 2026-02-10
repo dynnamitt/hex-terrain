@@ -9,12 +9,29 @@ use bevy::post_process::bloom::{Bloom, BloomCompositeMode};
 use bevy::prelude::*;
 use bevy::render::view::Hdr;
 
+/// Per-plugin configuration for the visual setup.
+#[derive(Resource, Clone, Debug, Reflect)]
+pub struct VisualsConfig {
+    /// Bloom post-processing intensity.
+    pub bloom_intensity: f32,
+}
+
+impl Default for VisualsConfig {
+    fn default() -> Self {
+        Self {
+            bloom_intensity: 0.3,
+        }
+    }
+}
+
 /// Sets up the camera, bloom, tonemapping, and shared neon materials.
-pub struct VisualsPlugin;
+pub struct VisualsPlugin(pub VisualsConfig);
 
 impl Plugin for VisualsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_visuals);
+        app.register_type::<VisualsConfig>()
+            .insert_resource(self.0.clone())
+            .add_systems(Startup, setup_visuals);
     }
 }
 
@@ -30,14 +47,19 @@ pub struct ActiveNeonMaterials {
 }
 
 /// Spawns the camera entity and inserts [`ActiveNeonMaterials`].
-pub fn setup_visuals(mut commands: Commands, mut materials: ResMut<Assets<StandardMaterial>>) {
+pub fn setup_visuals(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    cfg: Res<VisualsConfig>,
+) {
     // Camera with bloom and tonemapping
     commands.spawn((
+        Name::new("Camera"),
         Camera3d::default(),
         Hdr,
         Tonemapping::TonyMcMapface,
         Bloom {
-            intensity: 0.3,
+            intensity: cfg.bloom_intensity,
             composite_mode: BloomCompositeMode::Additive,
             ..Bloom::NATURAL
         },
