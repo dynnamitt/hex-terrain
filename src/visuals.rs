@@ -53,6 +53,7 @@ pub fn setup_visuals(
 ) {
     // Camera with bloom and tonemapping
     commands.spawn((
+        Name::new("Camera"),
         Camera3d::default(),
         Hdr,
         Tonemapping::TonyMcMapface,

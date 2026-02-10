@@ -164,7 +164,15 @@ fn spawn_perimeter_edges(
         let Some(&v_b) = grid.vertex_positions.get(&(hex, next)) else {
             continue;
         };
-        spawn_edge_line(commands, meshes, neon, edges_cfg, v_a, v_b);
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            v_a,
+            v_b,
+            Name::new(format!("Edge({},{})", hex.x, hex.y)),
+        );
     }
 }
 
@@ -212,11 +220,40 @@ fn spawn_cross_gap_geometry(
         };
 
         // Cross-gap edge lines (connecting facing vertices)
-        spawn_edge_line(commands, meshes, neon, edges_cfg, va0, vb0);
-        spawn_edge_line(commands, meshes, neon, edges_cfg, va1, vb1);
+        let edge_name = format!("Edge({},{})↔({},{})", hex.x, hex.y, neighbor.x, neighbor.y);
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            va0,
+            vb0,
+            Name::new(edge_name.clone()),
+        );
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            va1,
+            vb1,
+            Name::new(edge_name),
+        );
 
         // Rectangle face between the 4 vertices
-        spawn_quad_face(commands, meshes, neon, va0, va1, vb1, vb0);
+        spawn_quad_face(
+            commands,
+            meshes,
+            neon,
+            va0,
+            va1,
+            vb1,
+            vb0,
+            Name::new(format!(
+                "GapQuad({},{})↔({},{})",
+                hex.x, hex.y, neighbor.x, neighbor.y
+            )),
+        );
     }
 
     // Triangle faces at triple-hex junctions (vertex directions)
@@ -256,12 +293,56 @@ fn spawn_cross_gap_geometry(
         };
 
         // Triangle edge lines
-        spawn_edge_line(commands, meshes, neon, edges_cfg, v0, v1);
-        spawn_edge_line(commands, meshes, neon, edges_cfg, v1, v2);
-        spawn_edge_line(commands, meshes, neon, edges_cfg, v2, v0);
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            v0,
+            v1,
+            Name::new(format!(
+                "Edge({},{})↔({},{})",
+                coords[0].x, coords[0].y, coords[1].x, coords[1].y
+            )),
+        );
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            v1,
+            v2,
+            Name::new(format!(
+                "Edge({},{})↔({},{})",
+                coords[1].x, coords[1].y, coords[2].x, coords[2].y
+            )),
+        );
+        spawn_edge_line(
+            commands,
+            meshes,
+            neon,
+            edges_cfg,
+            v2,
+            v0,
+            Name::new(format!(
+                "Edge({},{})↔({},{})",
+                coords[2].x, coords[2].y, coords[0].x, coords[0].y
+            )),
+        );
 
         // Triangle face
-        spawn_tri_face(commands, meshes, neon, v0, v1, v2);
+        spawn_tri_face(
+            commands,
+            meshes,
+            neon,
+            v0,
+            v1,
+            v2,
+            Name::new(format!(
+                "GapTri({},{})↔({},{})↔({},{})",
+                coords[0].x, coords[0].y, coords[1].x, coords[1].y, coords[2].x, coords[2].y
+            )),
+        );
     }
 }
 
@@ -285,6 +366,7 @@ fn spawn_edge_line(
     edges_cfg: &EdgesConfig,
     from: Vec3,
     to: Vec3,
+    name: Name,
 ) {
     let midpoint = (from + to) / 2.0;
     let diff = to - from;
@@ -306,12 +388,14 @@ fn spawn_edge_line(
 
     commands.spawn((
         EdgeLine,
+        name,
         Mesh3d(mesh),
         MeshMaterial3d(neon.edge_material.clone()),
         Transform::from_translation(midpoint).with_rotation(rotation),
     ));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_quad_face(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -320,6 +404,7 @@ fn spawn_quad_face(
     v1: Vec3,
     v2: Vec3,
     v3: Vec3,
+    name: Name,
 ) {
     // Two triangles: v0-v1-v2 and v0-v2-v3
     let positions = vec![v0.to_array(), v1.to_array(), v2.to_array(), v3.to_array()];
@@ -340,6 +425,7 @@ fn spawn_quad_face(
 
     commands.spawn((
         GapFace,
+        name,
         Mesh3d(meshes.add(mesh)),
         MeshMaterial3d(neon.gap_face_material.clone()),
     ));
@@ -352,6 +438,7 @@ fn spawn_tri_face(
     v0: Vec3,
     v1: Vec3,
     v2: Vec3,
+    name: Name,
 ) {
     let positions = vec![v0.to_array(), v1.to_array(), v2.to_array()];
     let normal = math::compute_normal(v0, v1, v2);
@@ -370,6 +457,7 @@ fn spawn_tri_face(
 
     commands.spawn((
         GapFace,
+        name,
         Mesh3d(meshes.add(mesh)),
         MeshMaterial3d(neon.gap_face_material.clone()),
     ));

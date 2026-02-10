@@ -19,6 +19,10 @@ use crate::visuals::ActiveNeonMaterials;
 #[derive(Component)]
 pub struct HeightPole;
 
+/// Marker for hex face mesh entities.
+#[derive(Component)]
+pub struct HexFace;
+
 /// Per-plugin configuration for the hex grid generator.
 #[derive(Resource, Clone, Debug)]
 pub struct GridConfig {
@@ -189,6 +193,8 @@ pub fn generate_grid(
         let face_height = center_height;
 
         commands.spawn((
+            HexFace,
+            Name::new(format!("HexFace({},{})", hex.x, hex.y)),
             Mesh3d(hex_mesh_handle.clone()),
             MeshMaterial3d(neon.hex_face_material.clone()),
             Transform::from_xyz(center_2d.x, face_height, center_2d.y)
@@ -208,6 +214,8 @@ pub fn generate_grid(
                 ..default()
             });
             commands.spawn((
+                HeightPole,
+                Name::new(format!("Pole({},{})", hex.x, hex.y)),
                 Mesh3d(pole_mesh_handle.clone()),
                 MeshMaterial3d(pole_mat),
                 Transform::from_xyz(center_2d.x, pg.y_center, center_2d.y).with_scale(Vec3::new(
@@ -215,7 +223,6 @@ pub fn generate_grid(
                     pg.height,
                     pole_radius / 0.5,
                 )),
-                HeightPole,
             ));
         }
     }
