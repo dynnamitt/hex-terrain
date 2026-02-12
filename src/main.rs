@@ -6,10 +6,10 @@
 //! select the [`RenderMode`].
 
 mod camera;
-mod edges;
 mod grid;
 mod intro;
 pub mod math;
+mod petals;
 mod visuals;
 
 use bevy::app::AppExit;
@@ -78,7 +78,7 @@ fn main() {
         .add_plugins(grid::GridPlugin(grid::GridConfig::default()))
         .add_plugins(intro::IntroPlugin(intro::IntroConfig::default()))
         .add_plugins(camera::CameraPlugin(camera::CameraConfig::default()))
-        .add_plugins(edges::EdgesPlugin(edges::EdgesConfig::default()))
+        .add_plugins(petals::PetalsPlugin(petals::PetalsConfig::default()))
         .init_resource::<InspectorActive>()
         .add_systems(Update, toggle_inspector)
         .add_systems(Update, exit_on_esc)

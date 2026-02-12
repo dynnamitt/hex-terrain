@@ -2,7 +2,7 @@
 //!
 //! Builds the [`HexGrid`] resource at startup using Perlin-based fractal noise
 //! for terrain heights and per-hex radii. Each hex also gets a flat face mesh
-//! spawned here; edge/gap geometry is handled by [`crate::edges`].
+//! spawned here; petal geometry is handled by [`crate::petals`].
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
@@ -13,15 +13,12 @@ use hexx::{Hex, HexLayout, PlaneMeshBuilder, VertexDirection, shapes};
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
 use crate::math;
+use crate::petals::{HexEntities, HexSunDisc};
 use crate::visuals::ActiveNeonMaterials;
 
 /// Marker for height-indicator pole entities.
 #[derive(Component, Reflect)]
 pub struct HeightPole;
-
-/// Marker for hex face mesh entities.
-#[derive(Component, Reflect)]
-pub struct HexFace;
 
 /// Per-plugin configuration for the hex grid generator.
 #[derive(Resource, Clone, Debug, Reflect)]
@@ -86,7 +83,6 @@ pub struct GridPlugin(pub GridConfig);
 impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<HeightPole>()
-            .register_type::<HexFace>()
             .register_type::<GridConfig>()
             .insert_resource(self.0.clone())
             .add_systems(Startup, generate_grid.after(crate::visuals::setup_visuals))
@@ -102,7 +98,6 @@ pub struct HexGrid {
     /// Noise-derived terrain height for each hex cell.
     pub heights: HashMap<Hex, f32>,
     /// Noise-derived visual radius for each hex cell.
-    #[expect(dead_code, reason = "stored for future edge/camera use")]
     pub radii: HashMap<Hex, f32>,
     /// World-space position of each hex vertex, keyed by `(hex, vertex_index 0..5)`.
     pub vertex_positions: HashMap<(Hex, u8), Vec3>,
@@ -187,6 +182,8 @@ pub fn generate_grid(
     // Unit cylinder (radius 0.5, height 1) — scaled per hex
     let pole_mesh_handle = meshes.add(Cylinder::new(0.5, 1.0));
 
+    let mut hex_entity_map: HashMap<Hex, Entity> = HashMap::new();
+
     for hex in shapes::hexagon(Hex::ZERO, cfg.grid_radius) {
         let center_2d = layout.hex_to_world_pos(hex);
         let center_height = heights[&hex];
@@ -195,14 +192,17 @@ pub fn generate_grid(
         // For smooth mode, use average of the 6 vertex heights as face center
         let face_height = center_height;
 
-        commands.spawn((
-            HexFace,
-            Name::new(format!("HexFace({},{})", hex.x, hex.y)),
-            Mesh3d(hex_mesh_handle.clone()),
-            MeshMaterial3d(neon.hex_face_material.clone()),
-            Transform::from_xyz(center_2d.x, face_height, center_2d.y)
-                .with_scale(Vec3::new(radius, 1.0, radius)),
-        ));
+        let entity = commands
+            .spawn((
+                HexSunDisc { hex },
+                Name::new(format!("HexSunDisc({},{})", hex.x, hex.y)),
+                Mesh3d(hex_mesh_handle.clone()),
+                MeshMaterial3d(neon.hex_face_material.clone()),
+                Transform::from_xyz(center_2d.x, face_height, center_2d.y)
+                    .with_scale(Vec3::new(radius, 1.0, radius)),
+            ))
+            .id();
+        hex_entity_map.insert(hex, entity);
 
         // Height indicator pole: from y=0 up to just below the hex face
         if let Some(pg) =
@@ -235,6 +235,9 @@ pub fn generate_grid(
         heights,
         radii,
         vertex_positions,
+    });
+    commands.insert_resource(HexEntities {
+        map: hex_entity_map,
     });
 }
 

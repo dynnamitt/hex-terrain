@@ -5,24 +5,6 @@
 # the first geometry draw at Hex::ZERO with reveal_radius=2), then queries
 # component counts over BRP and compares against expected values.
 #
-# Derived expected values (grid_radius=20, reveal_radius=2, RenderMode::Full):
-#
-#   HexFace:    3*20*21+1 = 1261  (one per grid hex, spawned at startup)
-#   HeightPole: <= 1261           (noise-dependent, skip exact assertion)
-#
-#   Initial draw covers hexagon(ZERO,2) = 19 hexes, all interior to the
-#   radius-20 grid so every hex has all 6 neighbors.
-#
-#   Per interior hex with correct dedup:
-#     Perimeter edges:  6 EdgeLine  (hex outline, no sharing)
-#     Owned gap quads:  3 GapFace   (6 edges / 2-way sharing = 3)
-#     Owned gap tris:   2 GapFace   (6 vertices / 3-way sharing = 2)
-#     Cross-gap lines:  6 EdgeLine  (2 per owned edge; same lines border
-#                                    the triangles, no separate tri edges)
-#
-#   EdgeLine = 19 * (6 + 6)        = 228
-#   GapFace  = 19 * (3 + 2)        =  95
-#
 # Usage:
 #   ./tests/e2e_entity_count.sh           # run assertions
 #   ./tests/e2e_entity_count.sh --print   # print counts only
@@ -30,6 +12,13 @@ set -euo pipefail
 
 BRP="http://127.0.0.1:15702"
 INTRO_SETTLE=5          # seconds after BRP is up; intro takes ~2.3s
+
+# Component type paths
+COMP_SUNDISC="hex_terrain::petals::HexSunDisc"
+COMP_POLE="hex_terrain::grid::HeightPole"
+COMP_QUADLEAF="hex_terrain::petals::QuadLeaf"
+COMP_TRILEAF="hex_terrain::petals::TriLeaf"
+COMP_PETALEDGE="hex_terrain::petals::PetalEdge"
 
 # ---------------------------------------------------------------------------
 # BRP helpers
@@ -90,14 +79,16 @@ sleep "$INTRO_SETTLE"
 # ---------------------------------------------------------------------------
 
 echo "Querying entity counts..."
-HF=$(brp_count  "hex_terrain::grid::HexFace")
-HP=$(brp_count  "hex_terrain::grid::HeightPole")
-EL=$(brp_count  "hex_terrain::edges::EdgeLine")
-GF=$(brp_count  "hex_terrain::edges::GapFace")
+SD=$(brp_count  "$COMP_SUNDISC")
+HP=$(brp_count  "$COMP_POLE")
+QL=$(brp_count  "$COMP_QUADLEAF")
+TL=$(brp_count  "$COMP_TRILEAF")
+PE=$(brp_count  "$COMP_PETALEDGE")
 
 if [[ "${1:-}" == "--print" ]]; then
-    printf "\n%-14s %d\n%-14s %d\n%-14s %d\n%-14s %d\n" \
-        "HexFace" "$HF" "HeightPole" "$HP" "EdgeLine" "$EL" "GapFace" "$GF"
+    printf "\n%-14s %d\n%-14s %d\n%-14s %d\n%-14s %d\n%-14s %d\n" \
+        "HexSunDisc" "$SD" "HeightPole" "$HP" \
+        "QuadLeaf" "$QL" "TriLeaf" "$TL" "PetalEdge" "$PE"
     exit 0
 fi
 
@@ -135,17 +126,20 @@ assert_range() {
 echo ""
 echo "=== Entity counts (grid_radius=20, reveal_radius=2, mode=full) ==="
 
-# Startup: one HexFace per grid hex
-assert_eq    "HexFace"    "$HF"  1261
+# Startup: one HexSunDisc per grid hex
+assert_eq    "HexSunDisc"  "$SD"  1261
 
 # Startup: one HeightPole per hex where height > pole_gap (noise-dependent)
-assert_range "HeightPole" "$HP"  1200 1261
+assert_range "HeightPole"  "$HP"  1200 1261
 
-# Initial draw: 19 hexes * 12 EdgeLine each (6 perimeter + 6 cross-gap)
-assert_eq    "EdgeLine"   "$EL"  228
+# Initial draw: 19 hexes * 3 QuadLeafs each (even edges 0, 2, 4)
+assert_eq    "QuadLeaf"    "$QL"  57
 
-# Initial draw: 19 hexes * 5 GapFace each (3 quads + 2 triangles)
-assert_eq    "GapFace"    "$GF"  95
+# Initial draw: 19 hexes * 2 TriLeafs each (vertices 0 and 1, with dedup)
+assert_range "TriLeaf"     "$TL"  30 38
+
+# Initial draw: 4 PetalEdge per QuadLeaf (2 perimeter + 2 cross-gap in Full)
+assert_eq    "PetalEdge"   "$PE"  228
 
 echo ""
 echo "$PASS passed, $FAIL failed"

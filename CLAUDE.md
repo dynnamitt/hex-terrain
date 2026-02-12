@@ -18,11 +18,11 @@ cargo run -- --mode full --height-mode blocky # flat hex plateaus
 
 ```
 src/
-  main.rs      # CLI (clap), plugin registration, AppConfig resource, RenderMode/HeightMode enums
+  main.rs      # CLI (clap), plugin registration, AppConfig resource, RenderMode enums
   visuals.rs   # Camera3d + Hdr + Bloom + Tonemapping, NeonMaterials resource, clear color
-  grid.rs      # HexGrid resource, noise heights (Fbm<Perlin>), vertex positions, hex face meshes
+  grid.rs      # HexGrid + HexEntities resources, noise heights (Fbm<Perlin>), vertex positions, hex face meshes
   camera.rs    # TerrainCamera, WASD + mouse yaw, vertex-height interpolation, CameraCell tracking
-  edges.rs     # Progressive edge/face spawning, DrawnCells, perimeter/cross-gap/full render modes
+  petals.rs    # Petal entity hierarchy: HexSunDisc → QuadLeaf/TriLeaf → PetalEdge, progressive spawning
 ```
 
 ### Per-Plugin Config Resources
@@ -31,16 +31,17 @@ Configs are inserted as ECS resources and read by systems via `Res<XxxConfig>`.
 
 - `GridConfig` — grid radius, spacing, noise seeds/octaves/scales, pole params
 - `CameraConfig` — move speed, mouse sensitivity, height offset/lerp, edge margin
-- `EdgesConfig` — edge thickness, reveal radius
+- `PetalsConfig` — edge thickness, reveal radius
 - `IntroConfig` — tilt-up/down durations, highlight delay, tilt-down angle
 - `VisualsConfig` — bloom intensity
 
 ### Other Key Resources
 - `AppConfig` — render mode (from CLI)
 - `HexGrid` — layout, heights map, vertex_positions map
+- `HexEntities` — maps `Hex` → `Entity` for all HexSunDisc entities
 - `ActiveNeonMaterials` — edge (emissive cyan), hex face (dark), gap face (dark) materials
 - `CameraCell` — current hex under camera, change detection
-- `DrawnCells` — tracks revealed hex cells to avoid duplicate spawning
+- `DrawnCells` — tracks revealed hex cells to avoid duplicate petal spawning
 
 ### System Order
 **Startup**: `setup_visuals` -> `generate_grid` -> `draw_initial_cell`
@@ -49,7 +50,7 @@ Configs are inserted as ECS resources and read by systems via `Res<XxxConfig>`.
 ## Dependencies
 
 - `bevy` 0.18 — selective features, no default (see Cargo.toml for full list)
-- `hexx` — local path `../hexx`, features = ["bevy"]. Hex coordinates, layouts, mesh builders.
+- `hexx` 0.24 — hex coordinates, layouts, mesh builders
 - `noise` 0.9 — Fbm<Perlin> terrain generation
 - `clap` 4 — CLI argument parsing
 - `bevy-inspector-egui` 0.36 + `bevy_egui` 0.39 — dev inspection UI
@@ -65,7 +66,7 @@ These differ from earlier Bevy tutorials/docs:
 ## Key Default Values
 
 All constants are now fields on per-plugin config structs with `Default` impls.
-See `GridConfig`, `CameraConfig`, `EdgesConfig`, `IntroConfig`, `VisualsConfig`.
+See `GridConfig`, `CameraConfig`, `PetalsConfig`, `IntroConfig`, `VisualsConfig`.
 
 ## Formatting
 
