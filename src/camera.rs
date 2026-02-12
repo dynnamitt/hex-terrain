@@ -14,6 +14,7 @@ use crate::InspectorActive;
 use crate::grid::HexGrid;
 use crate::intro::IntroSequence;
 use crate::math;
+use crate::petals::HexEntities;
 
 /// Per-plugin configuration for the camera controller.
 #[derive(Resource, Clone, Debug, Reflect)]
@@ -43,7 +44,7 @@ impl Default for CameraConfig {
             edge_margin: 100.0,
             pitch_margin: 0.05,
             height_lerp: 0.1,
-            height_offset: 6.0,
+            height_offset: 16.0,
         }
     }
 }
@@ -99,12 +100,12 @@ fn move_camera(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     mut mouse_motion: MessageReader<MouseMotion>,
-    grid: Option<Res<HexGrid>>,
+    grid_q: Query<&HexGrid>,
     mut query: Query<&mut Transform, With<TerrainCamera>>,
     recentered: Res<CursorRecentered>,
     cfg: Res<CameraConfig>,
 ) {
-    let Some(grid) = grid else { return };
+    let Ok(grid) = grid_q.single() else { return };
     let Ok(mut transform) = query.single_mut() else {
         return;
     };
@@ -159,7 +160,7 @@ fn move_camera(
 
     // Height interpolation from nearest vertices
     let cam_xz = Vec2::new(transform.translation.x, transform.translation.z);
-    let target_height = interpolate_height(&grid, cam_xz) + cfg.height_offset;
+    let target_height = interpolate_height(grid, cam_xz) + cfg.height_offset;
     // Smooth height transition
     transform.translation.y += (target_height - transform.translation.y) * cfg.height_lerp;
 }
@@ -206,11 +207,13 @@ pub fn interpolate_height(grid: &HexGrid, pos: Vec2) -> f32 {
 
 /// Updates [`CameraCell`] when the camera crosses into a new hex.
 pub fn track_camera_cell(
-    grid: Option<Res<HexGrid>>,
+    grid_q: Query<&HexGrid>,
+    hex_entities: Option<Res<HexEntities>>,
+    names: Query<&Name>,
     mut cell: ResMut<CameraCell>,
     query: Query<&Transform, With<TerrainCamera>>,
 ) {
-    let Some(grid) = grid else { return };
+    let Ok(grid) = grid_q.single() else { return };
     let Ok(transform) = query.single() else {
         return;
     };
@@ -218,10 +221,20 @@ pub fn track_camera_cell(
     let pos = Vec2::new(transform.translation.x, transform.translation.z);
     let new_hex = grid.layout.world_pos_to_hex(pos);
 
-    if new_hex != cell.current {
+    let first_frame = cell.previous.is_none();
+    if new_hex != cell.current || first_frame {
         cell.previous = Some(cell.current);
         cell.current = new_hex;
         cell.changed = true;
+
+        if let Some(name) = hex_entities
+            .as_ref()
+            .and_then(|he| he.map.get(&new_hex))
+            .and_then(|&e| names.get(e).ok())
+        {
+            #[cfg(debug_assertions)]
+            println!("Camera over: {name}");
+        }
     } else {
         cell.changed = false;
     }
@@ -247,12 +260,7 @@ fn recenter_cursor(
 ) {
     recentered.0 = false;
 
-    let mut gained_focus = false;
-    for ev in focus_events.read() {
-        if ev.focused {
-            gained_focus = true;
-        }
-    }
+    let gained_focus = focus_events.read().any(|ev| ev.focused);
 
     for mut window in &mut windows {
         let w = window.width();

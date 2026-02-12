@@ -68,6 +68,26 @@ These differ from earlier Bevy tutorials/docs:
 All constants are now fields on per-plugin config structs with `Default` impls.
 See `GridConfig`, `CameraConfig`, `PetalsConfig`, `IntroConfig`, `VisualsConfig`.
 
+## Code Patterns
+
+### Guard-heavy helpers → `-> Option<()>` + `?`
+When a function has multiple early-return guards before side effects, use `-> Option<()>` with `?`:
+- `contains_key` → `.get(&key)?` (discard value)
+- `let Some(&x) = map.get(...) else { return }` → `let &x = map.get(...)?`
+- Boolean guards → `condition.then_some(())?`
+- Mode/enum guard at top: use explicit `return None` for clarity
+
+### Nested `if let` → chained `.and_then()`
+Flatten `if let { if let { if let {` pyramids into a single `if let` with `.and_then()`:
+```rust
+if let Some(name) = opt_res.as_ref().and_then(|r| r.map.get(&key)).and_then(|&e| query.get(e).ok()) {
+    println!("{name}");
+}
+```
+
+### `#[derive(SystemParam)]` for resource bundles
+Group related `Res<T>` params into a struct (e.g. `PetalRes`) to reduce system signature clutter.
+
 ## Formatting
 
 No project-specific formatter configured. Standard `cargo fmt`.

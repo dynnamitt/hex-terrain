@@ -86,7 +86,7 @@ impl IntroSequence {
 fn run_intro(
     time: Res<Time>,
     mut intro: ResMut<IntroSequence>,
-    grid: Option<Res<HexGrid>>,
+    grid_q: Query<&HexGrid>,
     mut query: Query<&mut Transform, With<TerrainCamera>>,
     intro_cfg: Res<IntroConfig>,
     cam_cfg: Res<CameraConfig>,
@@ -100,7 +100,7 @@ fn run_intro(
     };
 
     // Interpolate camera height to match terrain during intro
-    if let Some(ref grid) = grid {
+    if let Ok(grid) = grid_q.single() {
         let cam_xz = Vec2::new(transform.translation.x, transform.translation.z);
         let target_height = interpolate_height(grid, cam_xz) + cam_cfg.height_offset;
         transform.translation.y += (target_height - transform.translation.y) * cam_cfg.height_lerp;

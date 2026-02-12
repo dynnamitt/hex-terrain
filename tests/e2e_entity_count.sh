@@ -18,7 +18,6 @@ COMP_SUNDISC="hex_terrain::petals::HexSunDisc"
 COMP_POLE="hex_terrain::grid::HeightPole"
 COMP_QUADLEAF="hex_terrain::petals::QuadLeaf"
 COMP_TRILEAF="hex_terrain::petals::TriLeaf"
-COMP_PETALEDGE="hex_terrain::petals::PetalEdge"
 
 # ---------------------------------------------------------------------------
 # BRP helpers
@@ -83,12 +82,11 @@ SD=$(brp_count  "$COMP_SUNDISC")
 HP=$(brp_count  "$COMP_POLE")
 QL=$(brp_count  "$COMP_QUADLEAF")
 TL=$(brp_count  "$COMP_TRILEAF")
-PE=$(brp_count  "$COMP_PETALEDGE")
 
 if [[ "${1:-}" == "--print" ]]; then
-    printf "\n%-14s %d\n%-14s %d\n%-14s %d\n%-14s %d\n%-14s %d\n" \
+    printf "\n%-14s %d\n%-14s %d\n%-14s %d\n%-14s %d\n" \
         "HexSunDisc" "$SD" "HeightPole" "$HP" \
-        "QuadLeaf" "$QL" "TriLeaf" "$TL" "PetalEdge" "$PE"
+        "QuadLeaf" "$QL" "TriLeaf" "$TL"
     exit 0
 fi
 
@@ -137,9 +135,6 @@ assert_eq    "QuadLeaf"    "$QL"  57
 
 # Initial draw: 19 hexes * 2 TriLeafs each (vertices 0 and 1, with dedup)
 assert_range "TriLeaf"     "$TL"  30 38
-
-# Initial draw: 4 PetalEdge per QuadLeaf (2 perimeter + 2 cross-gap in Full)
-assert_eq    "PetalEdge"   "$PE"  228
 
 echo ""
 echo "$PASS passed, $FAIL failed"

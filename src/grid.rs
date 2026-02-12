@@ -1,8 +1,8 @@
 //! Hex grid generation: noise heights, per-hex radii, and vertex positions.
 //!
-//! Builds the [`HexGrid`] resource at startup using Perlin-based fractal noise
-//! for terrain heights and per-hex radii. Each hex also gets a flat face mesh
-//! spawned here; petal geometry is handled by [`crate::petals`].
+//! Spawns the [`HexGrid`] entity at startup using Perlin-based fractal noise
+//! for terrain heights and per-hex radii. All [`HexSunDisc`](crate::petals::HexSunDisc)
+//! entities are children of the grid entity; petal geometry is handled by [`crate::petals`].
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
@@ -11,6 +11,9 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use hexx::{Hex, HexLayout, PlaneMeshBuilder, VertexDirection, shapes};
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
+
+#[cfg(debug_assertions)]
+use bevy_egui::egui;
 
 use crate::math;
 use crate::petals::{HexEntities, HexSunDisc};
@@ -87,11 +90,16 @@ impl Plugin for GridPlugin {
             .insert_resource(self.0.clone())
             .add_systems(Startup, generate_grid.after(crate::visuals::setup_visuals))
             .add_systems(Update, fade_nearby_poles);
+
+        #[cfg(debug_assertions)]
+        app.add_systems(Update, draw_hex_labels);
     }
 }
 
-/// Central resource holding the hex layout, per-cell noise data, and vertex positions.
-#[derive(Resource)]
+/// Central component holding the hex layout, per-cell noise data, and vertex positions.
+///
+/// Spawned as a single entity that parents all [`HexSunDisc`] entities.
+#[derive(Component)]
 pub struct HexGrid {
     /// Hex-to-world coordinate mapping (spacing, orientation).
     pub layout: HexLayout,
@@ -103,7 +111,7 @@ pub struct HexGrid {
     pub vertex_positions: HashMap<(Hex, u8), Vec3>,
 }
 
-/// Builds the [`HexGrid`] resource and spawns a flat face mesh for every hex cell.
+/// Spawns the [`HexGrid`] entity and a flat face mesh for every hex cell.
 #[allow(clippy::too_many_arguments)]
 pub fn generate_grid(
     mut commands: Commands,
@@ -182,6 +190,14 @@ pub fn generate_grid(
     // Unit cylinder (radius 0.5, height 1) — scaled per hex
     let pole_mesh_handle = meshes.add(Cylinder::new(0.5, 1.0));
 
+    let grid_entity = commands
+        .spawn((
+            Name::new("HexGrid"),
+            Transform::default(),
+            Visibility::default(),
+        ))
+        .id();
+
     let mut hex_entity_map: HashMap<Hex, Entity> = HashMap::new();
 
     for hex in shapes::hexagon(Hex::ZERO, cfg.grid_radius) {
@@ -202,9 +218,10 @@ pub fn generate_grid(
                     .with_scale(Vec3::new(radius, 1.0, radius)),
             ))
             .id();
+        commands.entity(grid_entity).add_child(entity);
         hex_entity_map.insert(hex, entity);
 
-        // Height indicator pole: from y=0 up to just below the hex face
+        // Height indicator pole: child of its HexSunDisc
         if let Some(pg) =
             math::pole_geometry(radius, face_height, cfg.pole_radius_factor, cfg.pole_gap)
         {
@@ -216,21 +233,26 @@ pub fn generate_grid(
                 unlit: true,
                 ..default()
             });
-            commands.spawn((
-                HeightPole,
-                Name::new(format!("Pole({},{})", hex.x, hex.y)),
-                Mesh3d(pole_mesh_handle.clone()),
-                MeshMaterial3d(pole_mat),
-                Transform::from_xyz(center_2d.x, pg.y_center, center_2d.y).with_scale(Vec3::new(
-                    pole_radius / 0.5,
-                    pg.height,
-                    pole_radius / 0.5,
-                )),
-            ));
+            // Local transform relative to parent HexSunDisc
+            // Parent is at (center_2d.x, face_height, center_2d.y) with scale (radius, 1.0, radius)
+            let pole_entity = commands
+                .spawn((
+                    HeightPole,
+                    Name::new(format!("Pole({},{})", hex.x, hex.y)),
+                    Mesh3d(pole_mesh_handle.clone()),
+                    MeshMaterial3d(pole_mat),
+                    Transform::from_xyz(0.0, pg.y_center - face_height, 0.0).with_scale(Vec3::new(
+                        pole_radius / 0.5 / radius,
+                        pg.height,
+                        pole_radius / 0.5 / radius,
+                    )),
+                ))
+                .id();
+            commands.entity(entity).add_child(pole_entity);
         }
     }
 
-    commands.insert_resource(HexGrid {
+    commands.entity(grid_entity).insert(HexGrid {
         layout,
         heights,
         radii,
@@ -244,7 +266,7 @@ pub fn generate_grid(
 /// Adjusts pole material alpha based on horizontal distance to the camera.
 fn fade_nearby_poles(
     camera_q: Query<&Transform, With<crate::camera::TerrainCamera>>,
-    pole_q: Query<(&Transform, &MeshMaterial3d<StandardMaterial>), With<HeightPole>>,
+    pole_q: Query<(&GlobalTransform, &MeshMaterial3d<StandardMaterial>), With<HeightPole>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     cfg: Res<GridConfig>,
 ) {
@@ -254,7 +276,8 @@ fn fade_nearby_poles(
     let cam_xz = Vec2::new(cam_tf.translation.x, cam_tf.translation.z);
 
     for (pole_tf, mat_handle) in &pole_q {
-        let pole_xz = Vec2::new(pole_tf.translation.x, pole_tf.translation.z);
+        let pos = pole_tf.translation();
+        let pole_xz = Vec2::new(pos.x, pos.z);
         let dist = cam_xz.distance(pole_xz);
         let brightness =
             math::pole_fade_brightness(dist, cfg.pole_fade_distance, cfg.pole_min_alpha);
@@ -262,6 +285,46 @@ fn fade_nearby_poles(
         if let Some(mat) = materials.get_mut(&mat_handle.0) {
             mat.base_color = Color::srgb(0.0, brightness, 0.2 * brightness);
             mat.emissive = LinearRgba::rgb(0.0, 30.0 * brightness, 6.0 * brightness);
+        }
+    }
+}
+
+/// Draws the [`Name`] of each [`HexSunDisc`] as a screen-projected egui label.
+#[cfg(debug_assertions)]
+fn draw_hex_labels(
+    mut egui_ctx: Query<&mut bevy_egui::EguiContext>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<crate::camera::TerrainCamera>>,
+    hexes: Query<(&GlobalTransform, &Name), With<HexSunDisc>>,
+    mut ready: Local<bool>,
+) {
+    // Egui fonts aren't available until after the first Context::run() in the render pass.
+    if !*ready {
+        *ready = true;
+        return;
+    }
+    let Ok((camera, cam_gt)) = camera_q.single() else {
+        return;
+    };
+    let Ok(mut ctx) = egui_ctx.single_mut() else {
+        return;
+    };
+    let cam_pos = cam_gt.translation();
+
+    let painter = ctx.get_mut().layer_painter(egui::LayerId::background());
+
+    for (hex_gt, name) in &hexes {
+        let world_pos = hex_gt.translation();
+        if cam_pos.distance(world_pos) > 30.0 {
+            continue;
+        }
+        if let Ok(viewport) = camera.world_to_viewport(cam_gt, world_pos) {
+            painter.text(
+                egui::pos2(viewport.x, viewport.y),
+                egui::Align2::CENTER_CENTER,
+                name.as_str(),
+                egui::FontId::proportional(11.0),
+                egui::Color32::WHITE,
+            );
         }
     }
 }
