@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Bevy 0.18 hex terrain viewer with neon edge lighting. Renders a hexagonal grid with noise-derived terrain heights, progressive edge/face reveal as camera moves, and bloom post-processing. Uses local `hexx` library for hex math.
+Bevy 0.18 hex terrain viewer with neon edge lighting. Renders a hexagonal grid with noise-derived terrain heights, progressive edge/face reveal as camera moves, and bloom post-processing.
 
 ## Build & Run
 
@@ -16,13 +16,27 @@ cargo run -- --mode full --height-mode blocky # flat hex plateaus
 
 ## Architecture
 
+Each plugin is split into three files: module root (config + plugin), `entities.rs`, `systems.rs`.
+
 ```
 src/
-  main.rs      # CLI (clap), plugin registration, AppConfig resource, RenderMode enums
-  visuals.rs   # Camera3d + Hdr + Bloom + Tonemapping, NeonMaterials resource, clear color
-  grid.rs      # HexGrid + HexEntities resources, noise heights (Fbm<Perlin>), vertex positions, hex face meshes
-  camera.rs    # TerrainCamera, WASD + mouse yaw, vertex-height interpolation, CameraCell tracking
-  petals.rs    # Petal entity hierarchy: HexSunDisc → QuadLeaf/TriLeaf → PetalEdge, progressive spawning
+  main.rs            # CLI (clap), plugin registration, AppConfig, RenderMode
+  math.rs            # Pure math helpers (noise mapping, easing, pole geometry)
+  visuals.rs         # VisualsConfig, VisualsPlugin
+    visuals/entities # ActiveNeonMaterials
+    visuals/systems  # setup_visuals (Camera3d + Hdr + Bloom + materials)
+  grid.rs            # GridConfig, GridPlugin
+    grid/entities    # HexGrid (Component, parents all HexSunDiscs)
+    grid/systems     # generate_grid, fade_nearby_poles, draw_hex_labels (debug)
+  camera.rs          # CameraConfig, CameraPlugin
+    camera/entities  # TerrainCamera, CameraCell, CursorRecentered
+    camera/systems   # move_camera, track_camera_cell, interpolate_height, cursor mgmt
+  intro.rs           # IntroConfig, IntroPlugin
+    intro/entities   # IntroSequence, IntroPhase
+    intro/systems    # run_intro
+  petals.rs          # PetalsConfig, PetalsPlugin
+    petals/entities  # HeightPole, HexSunDisc, QuadLeaf, TriLeaf, PetalEdge, HexEntities, DrawnCells
+    petals/systems   # spawn_petals + leaf/mesh/pure helpers
 ```
 
 ### Per-Plugin Config Resources
@@ -37,20 +51,30 @@ Configs are inserted as ECS resources and read by systems via `Res<XxxConfig>`.
 
 ### Other Key Resources
 - `AppConfig` — render mode (from CLI)
-- `HexGrid` — layout, heights map, vertex_positions map
+- `HexGrid` — Component (not Resource), single entity parenting all HexSunDiscs
 - `HexEntities` — maps `Hex` → `Entity` for all HexSunDisc entities
 - `ActiveNeonMaterials` — edge (emissive cyan), hex face (dark), gap face (dark) materials
 - `CameraCell` — current hex under camera, change detection
 - `DrawnCells` — tracks revealed hex cells to avoid duplicate petal spawning
 
+### Entity Hierarchy
+```
+HexGrid (Component + Transform + Visibility)
+  └── HexSunDisc (per hex, scaled by radius)
+        ├── HeightPole (local-space child)
+        ├── QuadLeaf (even edges 0,2,4 → neighbor)
+        │     └── PetalEdge (cuboid mesh children)
+        └── TriLeaf (vertices 0,1 → two neighbors)
+```
+
 ### System Order
-**Startup**: `setup_visuals` -> `generate_grid` -> `draw_initial_cell`
-**Update**: `move_camera` -> `track_camera_cell` -> `spawn_cell_geometry`
+**Startup**: `setup_visuals` → `generate_grid`
+**Update**: `move_camera` → `track_camera_cell` → `spawn_petals`
 
 ## Dependencies
 
 - `bevy` 0.18 — selective features, no default (see Cargo.toml for full list)
-- `hexx` 0.24 — hex coordinates, layouts, mesh builders
+- `hexx` 0.24 — hex coordinates, layouts, mesh builders (with `bevy` feature for Reflect/Component derives)
 - `noise` 0.9 — Fbm<Perlin> terrain generation
 - `clap` 4 — CLI argument parsing
 - `bevy-inspector-egui` 0.36 + `bevy_egui` 0.39 — dev inspection UI

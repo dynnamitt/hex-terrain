@@ -90,7 +90,7 @@ fn toggle_inspector(
     mut active: ResMut<InspectorActive>,
     mut windows: Query<(&mut CursorOptions, &mut Window)>,
 ) {
-    if keys.just_pressed(KeyCode::KeyI) {
+    if keys.just_pressed(KeyCode::Tab) {
         active.0 = !active.0;
         for (mut opts, mut window) in &mut windows {
             if active.0 {

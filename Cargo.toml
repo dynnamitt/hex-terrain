@@ -42,7 +42,7 @@ noise = "0.9"
 clap = { version = "4", features = ["derive"] }
 bevy-inspector-egui = "0.36"
 bevy_egui = "0.39"
-hexx = "0.24.0"
+hexx = { version = "0.24.0", features = ["bevy"] }
 
 [lints.rust]
 unused = { level = "deny" }
