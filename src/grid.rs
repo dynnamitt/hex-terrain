@@ -16,12 +16,8 @@ use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 use bevy_egui::egui;
 
 use crate::math;
-use crate::petals::{HexEntities, HexSunDisc};
+use crate::petals::{HeightPole, HexEntities, HexSunDisc};
 use crate::visuals::ActiveNeonMaterials;
-
-/// Marker for height-indicator pole entities.
-#[derive(Component, Reflect)]
-pub struct HeightPole;
 
 /// Per-plugin configuration for the hex grid generator.
 #[derive(Resource, Clone, Debug, Reflect)]
@@ -85,8 +81,7 @@ pub struct GridPlugin(pub GridConfig);
 
 impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<HeightPole>()
-            .register_type::<GridConfig>()
+        app.register_type::<GridConfig>()
             .insert_resource(self.0.clone())
             .add_systems(Startup, generate_grid.after(crate::visuals::setup_visuals))
             .add_systems(Update, fade_nearby_poles);

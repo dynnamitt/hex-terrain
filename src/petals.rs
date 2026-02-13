@@ -42,7 +42,8 @@ pub struct PetalsPlugin(pub PetalsConfig);
 
 impl Plugin for PetalsPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<HexSunDisc>()
+        app.register_type::<HeightPole>()
+            .register_type::<HexSunDisc>()
             .register_type::<QuadLeaf>()
             .register_type::<TriLeaf>()
             .register_type::<PetalEdge>()
@@ -57,6 +58,10 @@ impl Plugin for PetalsPlugin {
             );
     }
 }
+
+/// Marker for height-indicator pole entities. Spawned by `grid.rs`.
+#[derive(Component, Reflect)]
+pub struct HeightPole;
 
 /// Marker on hex face entities. Spawned by `grid.rs`.
 #[derive(Component, Reflect)]
