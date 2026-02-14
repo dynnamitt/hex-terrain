@@ -1,15 +1,14 @@
 //! Intro camera sequence played at startup.
 //!
 //! Tilts the camera from its initial downward-looking orientation to horizontal,
-//! triggers the first geometry draw, then settles into a slight downward angle
-//! before handing control to [`crate::camera`].
+//! then settles into a slight downward angle before handing control to [`crate::drone`].
 
 mod entities;
 mod systems;
 
-pub use entities::IntroSequence;
-
 use bevy::prelude::*;
+
+use crate::GameState;
 
 /// Per-plugin configuration for the intro camera animation.
 #[derive(Resource, Clone, Debug, Reflect)]
@@ -42,7 +41,10 @@ impl Plugin for IntroPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<IntroConfig>()
             .insert_resource(self.0.clone())
-            .insert_resource(IntroSequence::new())
-            .add_systems(Update, systems::run_intro);
+            .insert_resource(entities::IntroTimer::new())
+            .add_systems(
+                Update,
+                systems::run_intro.run_if(in_state(GameState::Intro)),
+            );
     }
 }

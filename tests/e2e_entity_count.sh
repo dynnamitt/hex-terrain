@@ -14,10 +14,10 @@ BRP="http://127.0.0.1:15702"
 INTRO_SETTLE=5          # seconds after BRP is up; intro takes ~2.3s
 
 # Component type paths
-COMP_SUNDISC="hex_terrain::petals::HexSunDisc"
-COMP_POLE="hex_terrain::grid::HeightPole"
-COMP_QUADLEAF="hex_terrain::petals::QuadLeaf"
-COMP_TRILEAF="hex_terrain::petals::TriLeaf"
+COMP_SUNDISC="hex_terrain::terrain::entities::HexSunDisc"
+COMP_POLE="hex_terrain::terrain::entities::HeightPole"
+COMP_QUADLEAF="hex_terrain::terrain::entities::QuadLeaf"
+COMP_TRILEAF="hex_terrain::terrain::entities::TriLeaf"
 
 # ---------------------------------------------------------------------------
 # BRP helpers
@@ -64,7 +64,7 @@ cargo build --quiet 2>&1
 APP_LOG=$(mktemp /tmp/hex-terrain-e2e.XXXXXX.log)
 
 echo "Starting hex-terrain (log: $APP_LOG)..."
-cargo run --quiet -- --mode full >"$APP_LOG" 2>&1 &
+cargo run --quiet >"$APP_LOG" 2>&1 &
 APP_PID=$!
 trap 'kill "$APP_PID" 2>/dev/null; wait "$APP_PID" 2>/dev/null || true; rm -f "$APP_LOG"' EXIT
 
@@ -122,7 +122,7 @@ assert_range() {
 }
 
 echo ""
-echo "=== Entity counts (grid_radius=20, reveal_radius=2, mode=full) ==="
+echo "=== Entity counts (grid_radius=20, reveal_radius=2) ==="
 
 # Startup: one HexSunDisc per grid hex
 assert_eq    "HexSunDisc"  "$SD"  1261

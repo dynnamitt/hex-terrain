@@ -2,98 +2,82 @@
 //! Hex terrain viewer with neon edge lighting.
 //!
 //! Renders a hexagonal grid with noise-derived terrain heights, progressive
-//! edge/face reveal as the camera moves, and bloom post-processing. CLI flags
-//! select the [`RenderMode`].
+//! edge/face reveal as the drone moves, and bloom post-processing.
 
-mod camera;
-mod grid;
+mod drone;
 mod intro;
 pub mod math;
-mod petals;
-mod visuals;
+mod terrain;
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy::remote::{RemotePlugin, http::RemoteHttpPlugin};
 use bevy::window::{CursorGrabMode, CursorOptions};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use clap::Parser;
-
-/// Which edge categories to render on the hex grid.
-#[derive(Clone, Copy, clap::ValueEnum, Default, Debug, PartialEq, Eq, Reflect)]
-pub enum RenderMode {
-    /// Only hex perimeter edges (6 edges per hex)
-    Perimeter,
-    /// Only cross-gap edges (vertex-to-vertex between hexes)
-    CrossGap,
-    /// Both perimeter + cross-gap (full tessellation)
+/// Application-wide game state, used for system scheduling.
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect)]
+pub enum GameState {
+    /// Intro camera animation playing.
     #[default]
-    Full,
+    Intro,
+    /// Normal gameplay — drone movement + terrain reveal.
+    Running,
+    /// Debug overlay active (Tab to toggle).
+    Debugging,
 }
 
-#[derive(Parser, Debug)]
-#[command(name = "hex-terrain", about = "Hex terrain viewer with neon edges")]
-struct Cli {
-    /// Render mode for edge display
-    #[arg(long, default_value = "full")]
-    mode: RenderMode,
-}
-
-/// Top-level configuration derived from CLI arguments.
-#[derive(Resource, Debug, Reflect)]
-pub struct AppConfig {
-    /// Which edge categories are drawn each frame.
-    pub render_mode: RenderMode,
-}
-
-/// Whether the `bevy-inspector-egui` world inspector overlay is visible.
+/// Player world position. Drone/intro write xz + altitude; terrain writes y.
 #[derive(Resource, Default, Reflect)]
-pub struct InspectorActive(
-    /// `true` while the inspector panel is shown.
-    pub bool,
-);
+pub struct PlayerPos {
+    /// Final world position (terrain sets `.y`).
+    pub pos: Vec3,
+    /// User-controlled vertical offset (Q/E/scroll).
+    pub altitude: f32,
+}
 
 fn main() {
-    let cli = Cli::parse();
+    let mut app = App::new();
 
-    App::new()
-        .register_type::<RenderMode>()
-        .register_type::<AppConfig>()
-        .register_type::<InspectorActive>()
-        .insert_resource(AppConfig {
-            render_mode: cli.mode,
-        })
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Hex Terrain".into(),
-                ..default()
-            }),
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "Hex Terrain".into(),
             ..default()
-        }))
-        .add_plugins(RemotePlugin::default())
-        .add_plugins(RemoteHttpPlugin::default())
-        .add_plugins(bevy_egui::EguiPlugin::default())
-        .add_plugins(WorldInspectorPlugin::new().run_if(|active: Res<InspectorActive>| active.0))
-        .add_plugins(visuals::VisualsPlugin(visuals::VisualsConfig::default()))
-        .add_plugins(grid::GridPlugin(grid::GridConfig::default()))
-        .add_plugins(intro::IntroPlugin(intro::IntroConfig::default()))
-        .add_plugins(camera::CameraPlugin(camera::CameraConfig::default()))
-        .add_plugins(petals::PetalsPlugin(petals::PetalsConfig::default()))
-        .init_resource::<InspectorActive>()
-        .add_systems(Update, toggle_inspector)
-        .add_systems(Update, exit_on_esc)
-        .run();
+        }),
+        ..default()
+    }))
+    .register_type::<GameState>()
+    .register_type::<PlayerPos>()
+    .init_state::<GameState>()
+    .init_resource::<PlayerPos>()
+    .add_plugins(RemotePlugin::default())
+    .add_plugins(RemoteHttpPlugin::default())
+    .add_plugins(bevy_egui::EguiPlugin::default())
+    .add_plugins(terrain::TerrainPlugin(terrain::TerrainConfig::default()))
+    .add_plugins(drone::DronePlugin(drone::DroneConfig::default()))
+    .add_plugins(intro::IntroPlugin(intro::IntroConfig::default()))
+    .add_systems(Update, exit_on_esc)
+    .add_systems(Update, toggle_inspector)
+    .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Debugging)));
+
+    app.run();
 }
 
 fn toggle_inspector(
     keys: Res<ButtonInput<KeyCode>>,
-    mut active: ResMut<InspectorActive>,
+    state: Res<State<GameState>>,
+    mut next: ResMut<NextState<GameState>>,
     mut windows: Query<(&mut CursorOptions, &mut Window)>,
 ) {
     if keys.just_pressed(KeyCode::Tab) {
-        active.0 = !active.0;
+        let new_state = match state.get() {
+            GameState::Running => GameState::Debugging,
+            GameState::Debugging => GameState::Running,
+            _ => return,
+        };
+        let entering_debug = new_state == GameState::Debugging;
+        next.set(new_state);
         for (mut opts, mut window) in &mut windows {
-            if active.0 {
+            if entering_debug {
                 opts.visible = true;
                 opts.grab_mode = CursorGrabMode::None;
             } else {
