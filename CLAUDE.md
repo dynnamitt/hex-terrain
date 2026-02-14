@@ -8,53 +8,50 @@ Bevy 0.18 hex terrain viewer with neon edge lighting. Renders a hexagonal grid w
 
 ```bash
 cargo build
-cargo run                                    # defaults: --mode full --height-mode smooth
-cargo run -- --mode perimeter                # hex outlines only
-cargo run -- --mode cross-gap                # gap edges only
-cargo run -- --mode full --height-mode blocky # flat hex plateaus
+cargo run                # default: intro sequence then free-fly
+cargo run -- --debug     # start in GameState::Debugging (inspector via Tab)
 ```
 
 ## Architecture
 
-Each plugin is split into three files: module root (config + plugin), `entities.rs`, `systems.rs`.
+Four modules, each split into three files: module root (config + plugin), `entities.rs`, `systems.rs`.
 
 ```
 src/
-  main.rs            # CLI (clap), plugin registration, AppConfig, RenderMode
-  math.rs            # Pure math helpers (noise mapping, easing, pole geometry)
-  visuals.rs         # VisualsConfig, VisualsPlugin
-    visuals/entities # ActiveNeonMaterials
-    visuals/systems  # setup_visuals (Camera3d + Hdr + Bloom + materials)
-  grid.rs            # GridConfig, GridPlugin
-    grid/entities    # HexGrid (Component, parents all HexSunDiscs)
-    grid/systems     # generate_grid, fade_nearby_poles, draw_hex_labels (debug)
-  camera.rs          # CameraConfig, CameraPlugin
-    camera/entities  # TerrainCamera, CameraCell, CursorRecentered
-    camera/systems   # move_camera, track_camera_cell, interpolate_height, cursor mgmt
-  intro.rs           # IntroConfig, IntroPlugin
-    intro/entities   # IntroSequence, IntroPhase
-    intro/systems    # run_intro
-  petals.rs          # PetalsConfig, PetalsPlugin
-    petals/entities  # HeightPole, HexSunDisc, QuadLeaf, TriLeaf, PetalEdge, HexEntities, DrawnCells
-    petals/systems   # spawn_petals + leaf/mesh/pure helpers
+  main.rs              # CLI (clap), PlayerPos resource, GameState enum
+  math.rs              # Pure math helpers (noise mapping, easing, normals, pole geometry)
+  terrain.rs           # TerrainConfig (GridSettings + PetalSettings), TerrainPlugin
+    terrain/entities   # HexGrid, HexSunDisc, HeightPole, QuadLeaf, TriLeaf, PetalEdge,
+                       # HexEntities, DrawnCells, ActiveHex, NeonMaterials, PetalRes, LeafCtx
+    terrain/systems    # generate_grid, update_player_height, track_active_hex,
+                       # spawn_petals, highlight_nearby_poles, draw_hex_labels (debug)
+  drone.rs             # DroneConfig, DronePlugin
+    drone/entities     # Player, CursorRecentered, DroneInput
+    drone/systems      # spawn_drone, fly, hide_cursor, recenter_cursor, toggle_inspector
+  intro.rs             # IntroConfig, IntroPlugin
+    intro/entities     # IntroSequence, IntroPhase
+    intro/systems      # run_intro
 ```
 
-### Per-Plugin Config Resources
-Each plugin takes a config struct via its constructor (e.g. `GridPlugin(GridConfig::default())`).
-Configs are inserted as ECS resources and read by systems via `Res<XxxConfig>`.
+### Config Resources
+Each plugin takes a config struct (e.g. `TerrainPlugin(TerrainConfig::default())`).
 
-- `GridConfig` — grid radius, spacing, noise seeds/octaves/scales, pole params
-- `CameraConfig` — move speed, mouse sensitivity, height offset/lerp, edge margin
-- `PetalsConfig` — edge thickness, reveal radius
+- `TerrainConfig` — nested `GridSettings` (radius, spacing, noise, pole params) + `PetalSettings` (edge thickness, reveal radius)
+- `DroneConfig` — move speed, mouse sensitivity, spawn_altitude (default 12.0), height lerp, bloom intensity
 - `IntroConfig` — tilt-up/down durations, highlight delay, tilt-down angle
-- `VisualsConfig` — bloom intensity
+
+### SystemParam Bundles
+- `DroneInput` — bundles all `fly()` inputs (time, keys, mouse, scroll, config, player)
+- `PetalRes` — bundles `spawn_petals()` read-only params (grid query, hex entities, neon materials, config, active hex)
+- `LeafCtx` — plain struct passed to leaf spawn helpers (hex entities, neon, grid, config)
 
 ### Other Key Resources
-- `AppConfig` — render mode (from CLI)
+- `PlayerPos` — in main.rs: drone writes xz + altitude, terrain writes y
+- `GameState` — States enum: `Intro`, `Running`, `Debugging`
 - `HexGrid` — Component (not Resource), single entity parenting all HexSunDiscs
 - `HexEntities` — maps `Hex` → `Entity` for all HexSunDisc entities
-- `ActiveNeonMaterials` — edge (emissive cyan), hex face (dark), gap face (dark) materials
-- `CameraCell` — current hex under camera, change detection
+- `NeonMaterials` — edge (emissive cyan) + gap face (dark) materials
+- `ActiveHex` — current hex under player, with change detection
 - `DrawnCells` — tracks revealed hex cells to avoid duplicate petal spawning
 
 ### Entity Hierarchy
@@ -68,8 +65,8 @@ HexGrid (Component + Transform + Visibility)
 ```
 
 ### System Order
-**Startup**: `setup_visuals` → `generate_grid`
-**Update**: `move_camera` → `track_camera_cell` → `spawn_petals`
+**Startup**: `spawn_drone` → `generate_grid`
+**Update**: `fly` → `update_player_height` (Running only) → `track_active_hex` (Running | Intro) → `spawn_petals` (Running only) → `highlight_nearby_poles` (always)
 
 ## Dependencies
 
@@ -89,8 +86,8 @@ These differ from earlier Bevy tutorials/docs:
 
 ## Key Default Values
 
-All constants are now fields on per-plugin config structs with `Default` impls.
-See `GridConfig`, `CameraConfig`, `PetalsConfig`, `IntroConfig`, `VisualsConfig`.
+All constants are fields on per-plugin config structs with `Default` impls.
+See `TerrainConfig` (with `GridSettings` + `PetalSettings`), `DroneConfig`, `IntroConfig`.
 
 ## Code Patterns
 
@@ -115,6 +112,29 @@ Group related `Res<T>` params into a struct (e.g. `PetalRes`) to reduce system s
 ## Formatting
 
 No project-specific formatter configured. Standard `cargo fmt`.
+
+## Module Dependency Graph
+
+```
+    main (PlayerPos, GameState)
+    / \
+drone   terrain
+  |       |
+intro   math
+```
+
+## E2E Testing (BRP)
+
+Tests in `tests/e2e_entity_count.sh` query the running app via Bevy Remote Protocol (`http://127.0.0.1:15702`).
+
+BRP serialization notes (Bevy 0.18):
+- Transform `translation`: `[x, y, z]` array (not `{x, y, z}` object)
+- GlobalTransform: 12-float Affine3A array; translation at indices `[9, 10, 11]`
+- Name component path: `bevy_ecs::name::Name`
+- HexSunDisc data doesn't serialize (hexx `Hex` lacks `ReflectSerialize`) — use Name-based lookup
+- Material handles (`MeshMaterial3d<StandardMaterial>`) can't be read via BRP
+- `GameState` and custom resources not exposed via `world.list_resources`
+- QuadLeaf count used as indirect GameState proof (0 = Intro, 57 = Running)
 
 ## MCP Debugger
 
