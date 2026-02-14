@@ -1,6 +1,9 @@
+use bevy::ecs::system::SystemParam;
 use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 use hexx::Hex;
+
+use super::TerrainConfig;
 
 /// Central component holding the hex layout, per-cell noise data, and vertex positions.
 ///
@@ -88,4 +91,31 @@ pub struct NeonMaterials {
     pub edge_material: Handle<StandardMaterial>,
     /// Slightly warm dark material for gap-fill quads and triangles.
     pub gap_face_material: Handle<StandardMaterial>,
+}
+
+/// Bundled read-only system parameters for petal spawning.
+#[derive(SystemParam)]
+pub struct PetalRes<'w, 's> {
+    /// The hex grid component query.
+    pub grid_q: Query<'w, 's, &'static HexGrid>,
+    /// Hex coordinate → entity mapping.
+    pub hex_entities: Res<'w, HexEntities>,
+    /// Shared neon material handles.
+    pub neon: Res<'w, NeonMaterials>,
+    /// Terrain configuration.
+    pub cfg: Res<'w, TerrainConfig>,
+    /// Current hex under the player.
+    pub cell: Res<'w, ActiveHex>,
+}
+
+/// Shared immutable context passed to leaf spawn helpers.
+pub struct LeafCtx<'a> {
+    /// Hex entity lookup.
+    pub hex_entities: &'a HexEntities,
+    /// Material handles.
+    pub neon: &'a NeonMaterials,
+    /// Grid data (layout, heights, vertices).
+    pub grid: &'a HexGrid,
+    /// Terrain config (edge thickness, etc.).
+    pub cfg: &'a TerrainConfig,
 }

@@ -10,8 +10,8 @@ use bevy_egui::egui;
 
 use super::TerrainConfig;
 use super::entities::{
-    ActiveHex, DrawnCells, HeightPole, HexCtx, HexEntities, HexGrid, HexSunDisc, NeonMaterials,
-    PetalEdge, QuadLeaf, TriLeaf,
+    ActiveHex, DrawnCells, HeightPole, HexCtx, HexEntities, HexGrid, HexSunDisc, LeafCtx,
+    NeonMaterials, PetalEdge, PetalRes, QuadLeaf, TriLeaf,
 };
 use crate::PlayerPos;
 use crate::math;
@@ -184,8 +184,26 @@ pub fn generate_grid(
 // ── Update: player height + active hex ─────────────────────────────
 
 /// Sets `PlayerPos.pos.y` from terrain interpolation.
-pub fn update_player_height(grid_q: Query<&HexGrid>, mut player: ResMut<PlayerPos>) {
+///
+/// On the first frame, syncs [`PlayerPos::altitude`] from the camera's current
+/// Y position so the intro→running transition is seamless.
+pub fn update_player_height(
+    grid_q: Query<&HexGrid>,
+    mut player: ResMut<PlayerPos>,
+    cam_q: Query<&Transform, With<crate::drone::Player>>,
+    mut synced: Local<bool>,
+) {
     let Ok(grid) = grid_q.single() else { return };
+
+    if !*synced {
+        *synced = true;
+        if let Ok(cam_tf) = cam_q.single() {
+            let xz = Vec2::new(cam_tf.translation.x, cam_tf.translation.z);
+            let terrain_h = interpolate_height(grid, xz);
+            player.altitude = cam_tf.translation.y - terrain_h;
+        }
+    }
+
     let xz = Vec2::new(player.pos.x, player.pos.z);
     player.pos.y = interpolate_height(grid, xz) + player.altitude;
 }
@@ -225,37 +243,41 @@ pub fn track_active_hex(
 // ── Update: petal spawning ─────────────────────────────────────────
 
 /// Progressive petal reveal as the player moves.
-#[allow(clippy::too_many_arguments)]
 pub fn spawn_petals(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    grid_q: Query<&HexGrid>,
-    hex_entities: Res<HexEntities>,
-    neon: Res<NeonMaterials>,
-    cfg: Res<TerrainConfig>,
-    cell: Res<ActiveHex>,
+    res: PetalRes,
     mut drawn: ResMut<DrawnCells>,
     mut initial_done: Local<bool>,
 ) {
     let center = if !*initial_done {
         *initial_done = true;
         Some(Hex::ZERO)
-    } else if cell.changed {
-        Some(cell.current)
+    } else if res.cell.changed {
+        Some(res.cell.current)
     } else {
         None
     };
 
     let Some(center) = center else { return };
-    let Ok(grid) = grid_q.single() else { return };
+    let Ok(grid) = res.grid_q.single() else {
+        return;
+    };
 
-    for hex in shapes::hexagon(center, cfg.petals.reveal_radius) {
+    let leaf = LeafCtx {
+        hex_entities: &res.hex_entities,
+        neon: &res.neon,
+        grid,
+        cfg: &res.cfg,
+    };
+
+    for hex in shapes::hexagon(center, res.cfg.petals.reveal_radius) {
         if !grid.heights.contains_key(&hex) || drawn.cells.contains(&hex) {
             continue;
         }
         drawn.cells.insert(hex);
 
-        let Some(&owner_entity) = hex_entities.map.get(&hex) else {
+        let Some(&owner_entity) = res.hex_entities.map.get(&hex) else {
             continue;
         };
 
@@ -266,35 +288,18 @@ pub fn spawn_petals(
         };
 
         for &edge_idx in &[0u8, 2, 4] {
-            spawn_quad_leaf(
-                &mut commands,
-                &mut meshes,
-                &hex_entities,
-                &neon,
-                &cfg,
-                grid,
-                &ctx,
-                edge_idx,
-            );
+            spawn_quad_leaf(&mut commands, &mut meshes, &leaf, &ctx, edge_idx);
         }
         for &vtx_idx in &[0u8, 1] {
-            spawn_tri_leaf(
-                &mut commands,
-                &mut meshes,
-                &hex_entities,
-                &neon,
-                grid,
-                &ctx,
-                vtx_idx,
-            );
+            spawn_tri_leaf(&mut commands, &mut meshes, &leaf, &ctx, vtx_idx);
         }
     }
 }
 
 // ── Update: pole fading ────────────────────────────────────────────
 
-/// Adjusts pole material alpha based on horizontal distance to the player.
-pub fn fade_nearby_poles(
+/// Brightens poles near the player and dims distant ones based on horizontal distance.
+pub fn highlight_nearby_poles(
     player: Res<PlayerPos>,
     pole_q: Query<(&GlobalTransform, &MeshMaterial3d<StandardMaterial>), With<HeightPole>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -389,22 +394,18 @@ pub fn interpolate_height(grid: &HexGrid, pos: Vec2) -> f32 {
 
 // ── Leaf spawn helpers ─────────────────────────────────────────────
 
-#[allow(clippy::too_many_arguments)]
 fn spawn_quad_leaf(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    hex_entities: &HexEntities,
-    neon: &NeonMaterials,
-    cfg: &TerrainConfig,
-    grid: &HexGrid,
+    leaf: &LeafCtx,
     ctx: &HexCtx,
     edge_index: u8,
 ) -> Option<()> {
     let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
     let neighbor = ctx.hex.neighbor(dir);
 
-    grid.heights.get(&neighbor)?;
-    let &neighbor_entity = hex_entities.map.get(&neighbor)?;
+    leaf.grid.heights.get(&neighbor)?;
+    let &neighbor_entity = leaf.hex_entities.map.get(&neighbor)?;
 
     let vertex_dirs = dir.vertex_directions();
     let v0_idx = vertex_dirs[0].index();
@@ -415,10 +416,10 @@ fn spawn_quad_leaf(
     let n0_idx = opp_vertex_dirs[1].index();
     let n1_idx = opp_vertex_dirs[0].index();
 
-    let &va0 = grid.vertex_positions.get(&(ctx.hex, v0_idx))?;
-    let &va1 = grid.vertex_positions.get(&(ctx.hex, v1_idx))?;
-    let &vb0 = grid.vertex_positions.get(&(neighbor, n0_idx))?;
-    let &vb1 = grid.vertex_positions.get(&(neighbor, n1_idx))?;
+    let &va0 = leaf.grid.vertex_positions.get(&(ctx.hex, v0_idx))?;
+    let &va1 = leaf.grid.vertex_positions.get(&(ctx.hex, v1_idx))?;
+    let &vb0 = leaf.grid.vertex_positions.get(&(neighbor, n0_idx))?;
+    let &vb1 = leaf.grid.vertex_positions.get(&(neighbor, n1_idx))?;
 
     let leaf_name = format!(
         "QuadLeaf({},{})e{}↔({},{})",
@@ -438,14 +439,14 @@ fn spawn_quad_leaf(
         .id();
 
     // Perimeter edges
-    let edge_a = spawn_edge_line(commands, meshes, neon, cfg, va0, va1);
-    let edge_b = spawn_edge_line(commands, meshes, neon, cfg, vb0, vb1);
+    let edge_a = spawn_edge_line(commands, meshes, leaf.neon, leaf.cfg, va0, va1);
+    let edge_b = spawn_edge_line(commands, meshes, leaf.neon, leaf.cfg, vb0, vb1);
     commands.entity(leaf_entity).add_children(&[edge_a, edge_b]);
 
     // Cross-gap edges + quad face
-    let cross_a = spawn_edge_line(commands, meshes, neon, cfg, va0, vb0);
-    let cross_b = spawn_edge_line(commands, meshes, neon, cfg, va1, vb1);
-    let face = spawn_quad_face(commands, meshes, neon, va0, va1, vb1, vb0);
+    let cross_a = spawn_edge_line(commands, meshes, leaf.neon, leaf.cfg, va0, vb0);
+    let cross_b = spawn_edge_line(commands, meshes, leaf.neon, leaf.cfg, va1, vb1);
+    let face = spawn_quad_face(commands, meshes, leaf.neon, va0, va1, vb1, vb0);
     commands
         .entity(leaf_entity)
         .add_children(&[cross_a, cross_b, face]);
@@ -457,9 +458,7 @@ fn spawn_quad_leaf(
 fn spawn_tri_leaf(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    hex_entities: &HexEntities,
-    neon: &NeonMaterials,
-    grid: &HexGrid,
+    leaf: &LeafCtx,
     ctx: &HexCtx,
     vertex_index: u8,
 ) -> Option<()> {
@@ -472,17 +471,17 @@ fn spawn_tri_leaf(
 
     coords
         .iter()
-        .all(|c| grid.heights.contains_key(c))
+        .all(|c| leaf.grid.heights.contains_key(c))
         .then_some(())?;
     (coords[0] == ctx.hex).then_some(())?;
 
     let v_idx = dir.index();
-    let &v0 = grid.vertex_positions.get(&(coords[0], v_idx))?;
-    let v1 = find_equivalent_vertex(grid, coords[1], &grid_vertex)?;
-    let v2 = find_equivalent_vertex(grid, coords[2], &grid_vertex)?;
+    let &v0 = leaf.grid.vertex_positions.get(&(coords[0], v_idx))?;
+    let v1 = find_equivalent_vertex(leaf.grid, coords[1], &grid_vertex)?;
+    let v2 = find_equivalent_vertex(leaf.grid, coords[2], &grid_vertex)?;
 
-    let &neighbor1_entity = hex_entities.map.get(&coords[1])?;
-    let &neighbor2_entity = hex_entities.map.get(&coords[2])?;
+    let &neighbor1_entity = leaf.hex_entities.map.get(&coords[1])?;
+    let &neighbor2_entity = leaf.hex_entities.map.get(&coords[2])?;
 
     let leaf_name = format!(
         "TriLeaf({},{})v{}↔({},{})↔({},{})",
@@ -499,7 +498,7 @@ fn spawn_tri_leaf(
             },
             Name::new(leaf_name),
             Mesh3d(face_handle),
-            MeshMaterial3d(neon.gap_face_material.clone()),
+            MeshMaterial3d(leaf.neon.gap_face_material.clone()),
             ctx.inverse_tf,
         ))
         .id();

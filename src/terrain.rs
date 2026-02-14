@@ -113,8 +113,12 @@ impl Plugin for TerrainPlugin {
             .add_systems(Startup, systems::generate_grid)
             .add_systems(
                 Update,
-                (systems::update_player_height, systems::track_active_hex)
-                    .chain()
+                systems::update_player_height.run_if(in_state(GameState::Running)),
+            )
+            .add_systems(
+                Update,
+                systems::track_active_hex
+                    .after(systems::update_player_height)
                     .run_if(in_state(GameState::Running).or(in_state(GameState::Intro))),
             )
             .add_systems(
@@ -124,10 +128,7 @@ impl Plugin for TerrainPlugin {
                     .run_if(any_with_component::<HexGrid>)
                     .run_if(in_state(GameState::Running)),
             )
-            .add_systems(
-                Update,
-                systems::fade_nearby_poles.run_if(in_state(GameState::Running)),
-            );
+            .add_systems(Update, systems::highlight_nearby_poles);
 
         app.add_systems(
             Update,

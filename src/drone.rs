@@ -31,6 +31,8 @@ pub struct DroneConfig {
     pub bloom_intensity: f32,
     /// Height lerp factor for smooth camera Y transitions.
     pub height_lerp: f32,
+    /// Initial altitude offset above terrain when spawning.
+    pub spawn_altitude: f32,
 }
 
 impl Default for DroneConfig {
@@ -44,6 +46,7 @@ impl Default for DroneConfig {
             scroll_sensitivity: 3.0,
             bloom_intensity: 0.3,
             height_lerp: 0.1,
+            spawn_altitude: 12.0,
         }
     }
 }
