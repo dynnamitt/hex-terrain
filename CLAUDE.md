@@ -14,19 +14,21 @@ cargo run -- --debug     # start in GameState::Debugging (inspector via Tab)
 
 ## Architecture
 
-Four modules, each split into three files: module root (config + plugin), `entities.rs`, `systems.rs`.
+Four modules, each split into files: module root (config + plugin), `entities.rs`, `systems.rs`.
+The terrain module additionally has `startup_systems.rs` and `terrain_hex_layout.rs`.
 
 ```
 src/
   main.rs              # CLI (clap), PlayerPos resource, GameState enum
-  math.rs              # Pure math helpers (noise mapping, easing, normals, pole geometry)
+  math.rs              # Pure math helpers (noise mapping, easing, normals, stem geometry)
   terrain.rs               # TerrainConfig (GridSettings + FlowerSettings), TerrainPlugin
     terrain/terrain_hex_layout # TerrainHexLayout: encapsulates HexLayout + heights/radii,
                                # on-demand vertex computation, interpolation, inverse transforms
-    terrain/entities   # HexGrid, HexSunDisc, HeightPole, QuadLeaf, TriLeaf, PetalEdge,
-                       # HexEntities, DrawnCells, ActiveHex, NeonMaterials, PetalRes, LeafCtx
-    terrain/systems    # generate_grid, update_player_height, track_active_hex,
-                       # spawn_petals, highlight_nearby_poles, draw_hex_labels (debug)
+    terrain/entities           # HexGrid, HexSunDisc, Stem, QuadPetal, TriPetal, QuadLines,
+                               # FlowerState, HexEntities, HexCtx, NeonMaterials, PetalRes, PetalCtx
+    terrain/startup_systems    # generate_grid (Startup schedule)
+    terrain/systems            # update_player_height, track_player_hex,
+                               # reveal_nearby_hexes, highlight_nearby_stems, draw_hex_labels (debug)
   drone.rs             # DroneConfig, DronePlugin
     drone/entities     # Player, CursorRecentered, DroneInput
     drone/systems      # spawn_drone, fly, hide_cursor, recenter_cursor, toggle_inspector
@@ -38,14 +40,14 @@ src/
 ### Config Resources
 Each plugin takes a config struct (e.g. `TerrainPlugin(TerrainConfig::default())`).
 
-- `TerrainConfig` — nested `GridSettings` (radius, spacing, noise, hex radii) + `FlowerSettings` (pole params, edge thickness, reveal radius)
+- `TerrainConfig` — nested `GridSettings` (radius, spacing, noise, hex radii) + `FlowerSettings` (stem params, edge thickness, reveal radius)
 - `DroneConfig` — move speed, mouse sensitivity, spawn_altitude (default 12.0), height lerp, bloom intensity
 - `IntroConfig` — tilt-up/down durations, highlight delay, tilt-down angle
 
 ### SystemParam Bundles
 - `DroneInput` — bundles all `fly()` inputs (time, keys, mouse, scroll, config, player)
-- `PetalRes` — bundles `spawn_petals()` read-only params (grid query, hex entities, neon materials, config, active hex)
-- `LeafCtx` — plain struct passed to leaf spawn helpers (hex entities, neon, grid, config)
+- `PetalRes` — bundles `reveal_nearby_hexes()` read-only params (grid query, hex entities, neon materials, config)
+- `PetalCtx` — plain struct passed to petal spawn helpers (hex entities, neon, grid, config)
 
 ### Other Key Resources
 - `PlayerPos` — in main.rs: drone writes xz + altitude, terrain writes y
@@ -54,22 +56,21 @@ Each plugin takes a config struct (e.g. `TerrainPlugin(TerrainConfig::default())
 - `TerrainHexLayout` — encapsulates `HexLayout` + per-hex heights/radii; computes vertices on demand via `vertex(hex, index)`; provides `interpolate_height`, `inverse_transform`, `find_equivalent_vertex`
 - `HexEntities` — maps `Hex` → `Entity` for all HexSunDisc entities
 - `NeonMaterials` — edge (emissive cyan) + gap face (dark) materials
-- `ActiveHex` — current hex under player, with change detection
-- `DrawnCells` — tracks revealed hex cells to avoid duplicate petal spawning
+- `FlowerState` — per-hex reveal state: `Naked` → `Revealed` → `PlayerAbove`
 
 ### Entity Hierarchy
 ```
 HexGrid (Component + Transform + Visibility)
   └── HexSunDisc (per hex, scaled by radius)
-        ├── HeightPole (local-space child)
-        ├── QuadLeaf (even edges 0,2,4 → neighbor)
-        │     └── PetalEdge (cuboid mesh children)
-        └── TriLeaf (vertices 0,1 → two neighbors)
+        ├── Stem (local-space child)
+        ├── QuadPetal (even edges 0,2,4 → neighbor)
+        │     └── QuadLines (cuboid mesh children)
+        └── TriPetal (vertices 0,1 → two neighbors)
 ```
 
 ### System Order
 **Startup**: `spawn_drone` → `generate_grid`
-**Update**: `fly` → `update_player_height` (Running only) → `track_active_hex` (Running | Intro) → `spawn_petals` (Running only) → `highlight_nearby_poles` (always)
+**Update**: `fly` → `update_player_height` (Running only) → `track_player_hex` (Running | Intro) → `reveal_nearby_hexes` (Running only) → `highlight_nearby_stems` (always)
 
 ## Dependencies
 
@@ -137,7 +138,7 @@ BRP serialization notes (Bevy 0.18):
 - HexSunDisc data doesn't serialize (hexx `Hex` lacks `ReflectSerialize`) — use Name-based lookup
 - Material handles (`MeshMaterial3d<StandardMaterial>`) can't be read via BRP
 - `GameState` and custom resources not exposed via `world.list_resources`
-- QuadLeaf count used as indirect GameState proof (0 = Intro, 57 = Running)
+- QuadPetal count used as indirect GameState proof (0 = Intro, 57 = Running)
 
 ## MCP Debugger
 

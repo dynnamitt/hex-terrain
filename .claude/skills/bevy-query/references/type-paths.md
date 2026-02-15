@@ -18,9 +18,7 @@ hex_terrain::terrain::entities::HexSunDisc
 hex_terrain::terrain::entities::HeightPole
 hex_terrain::terrain::entities::QuadLeaf
 hex_terrain::terrain::entities::TriLeaf
-hex_terrain::terrain::entities::PetalEdge
-hex_terrain::terrain::entities::ActiveHex
-hex_terrain::terrain::entities::DrawnCells
+hex_terrain::terrain::entities::FlowerState
 hex_terrain::terrain::entities::HexEntities
 hex_terrain::terrain::entities::NeonMaterials
 ```

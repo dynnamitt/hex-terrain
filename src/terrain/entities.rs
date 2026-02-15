@@ -1,5 +1,5 @@
 use bevy::ecs::system::SystemParam;
-use bevy::platform::collections::{HashMap, HashSet};
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use hexx::Hex;
 
@@ -15,9 +15,9 @@ pub struct HexGrid {
     pub terrain: TerrainHexLayout,
 }
 
-/// Marker for height-indicator pole entities.
+/// Marker for height-indicator stem entities.
 #[derive(Component, Reflect)]
-pub struct HeightPole;
+pub struct Stem;
 
 /// Marker on hex face entities.
 #[derive(Component, Reflect)]
@@ -28,7 +28,7 @@ pub struct HexSunDisc {
 
 /// Gap quad between two adjacent hexes. Child of the owning `HexSunDisc`.
 #[derive(Component, Reflect)]
-pub struct QuadLeaf {
+pub struct QuadPetal {
     /// Even edge index on the owner hex (0, 2, or 4).
     pub edge_index: u8,
     /// Entity of the neighbor `HexSunDisc`.
@@ -37,16 +37,16 @@ pub struct QuadLeaf {
 
 /// Gap triangle at a 3-hex vertex junction. Child of the owning `HexSunDisc`.
 #[derive(Component, Reflect)]
-pub struct TriLeaf {
+pub struct TriPetal {
     /// Vertex index on the owner hex (0 or 1).
     pub vertex_index: u8,
     /// The other two `HexSunDisc` entities at this junction.
     pub neighbor_discs: [Entity; 2],
 }
 
-/// Edge cuboid mesh. Child of a `QuadLeaf`.
+/// Edge cuboid mesh. Child of a `QuadPetal`.
 #[derive(Component, Reflect)]
-pub struct PetalEdge;
+pub struct QuadLines;
 
 /// Maps hex coordinates to their spawned `HexSunDisc` entity IDs.
 #[derive(Resource)]
@@ -55,24 +55,22 @@ pub struct HexEntities {
     pub map: HashMap<Hex, Entity>,
 }
 
-/// Tracks which hexes have already had their petals spawned.
-#[derive(Resource, Default)]
-pub struct DrawnCells {
-    pub(super) cells: HashSet<Hex>,
+/// Per-hex reveal state, attached to each [`HexSunDisc`].
+///
+/// Transitions: `Naked` → `Revealed` (in reveal ring) → `PlayerAbove` (player enters).
+/// `PlayerAbove` demotes back to `Revealed` when the player leaves.
+#[derive(Component, Default, Reflect, Clone)]
+pub enum FlowerState {
+    /// No petals spawned yet.
+    #[default]
+    Naked,
+    /// Petals spawned; player is elsewhere.
+    Revealed { petals: Vec<Entity> },
+    /// Petals spawned; player is directly above this hex.
+    PlayerAbove { petals: Vec<Entity> },
 }
 
-/// Tracks which hex cell the player currently occupies.
-#[derive(Resource, Default)]
-pub struct ActiveHex {
-    /// Hex coordinate directly below the player.
-    pub current: Hex,
-    /// The cell occupied last frame (if it moved).
-    pub previous: Option<Hex>,
-    /// `true` for exactly one frame after a cell transition.
-    pub changed: bool,
-}
-
-/// Per-hex iteration data passed to leaf spawn helpers.
+/// Per-hex iteration data passed to petal spawn helpers.
 pub struct HexCtx {
     pub(super) hex: Hex,
     pub(super) owner_entity: Entity,
@@ -99,12 +97,10 @@ pub struct PetalRes<'w, 's> {
     pub neon: Res<'w, NeonMaterials>,
     /// Terrain configuration.
     pub cfg: Res<'w, TerrainConfig>,
-    /// Current hex under the player.
-    pub cell: Res<'w, ActiveHex>,
 }
 
-/// Shared immutable context passed to leaf spawn helpers.
-pub struct LeafCtx<'a> {
+/// Shared immutable context passed to petal spawn helpers.
+pub struct PetalCtx<'a> {
     /// Hex entity lookup.
     pub hex_entities: &'a HexEntities,
     /// Material handles.

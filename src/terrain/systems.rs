@@ -1,135 +1,18 @@
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
-use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
-use hexx::{EdgeDirection, Hex, HexLayout, PlaneMeshBuilder, VertexDirection, shapes};
+use hexx::{EdgeDirection, Hex, VertexDirection, shapes};
 
 use bevy_egui::egui;
 
 use super::TerrainConfig;
 use super::entities::{
-    ActiveHex, DrawnCells, HeightPole, HexCtx, HexEntities, HexGrid, HexSunDisc, LeafCtx,
-    NeonMaterials, PetalEdge, PetalRes, QuadLeaf, TriLeaf,
+    FlowerState, HexCtx, HexEntities, HexGrid, HexSunDisc, NeonMaterials, PetalCtx, PetalRes,
+    QuadLines, QuadPetal, Stem, TriPetal,
 };
-use super::terrain_hex_layout::TerrainHexLayout;
 use crate::PlayerPos;
 use crate::math;
-
-// ── Startup ─────────────────────────────────────────────────────────
-
-/// Spawns the [`HexGrid`] entity, neon materials, and a flat face mesh for every hex cell.
-pub fn generate_grid(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    cfg: Res<TerrainConfig>,
-) {
-    // Create neon materials
-    let edge_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.0, 0.5, 1.0),
-        emissive: LinearRgba::rgb(0.0, 20.0, 40.0),
-        unlit: true,
-        ..default()
-    });
-    let hex_face_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.02, 0.03, 0.05),
-        emissive: LinearRgba::rgb(0.02, 0.05, 0.08),
-        ..default()
-    });
-    let gap_face_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.12, 0.03, 0.05),
-        emissive: LinearRgba::rgb(0.03, 0.06, 0.1),
-        cull_mode: None,
-        ..default()
-    });
-    commands.insert_resource(NeonMaterials {
-        edge_material,
-        gap_face_material,
-    });
-
-    let g = &cfg.grid;
-    let f = &cfg.flower;
-    let terrain = TerrainHexLayout::from_settings(g);
-
-    // Spawn hex face meshes
-    let unit_layout = HexLayout {
-        scale: Vec2::splat(1.0),
-        ..default()
-    };
-    let hex_mesh_info = PlaneMeshBuilder::new(&unit_layout).build();
-    let hex_mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::RENDER_WORLD,
-    )
-    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, hex_mesh_info.vertices)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, hex_mesh_info.normals)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, hex_mesh_info.uvs)
-    .with_inserted_indices(Indices::U16(hex_mesh_info.indices));
-    let hex_mesh_handle = meshes.add(hex_mesh);
-
-    let pole_mesh_handle = meshes.add(Cylinder::new(0.5, 1.0));
-
-    let grid_entity = commands
-        .spawn((
-            Name::new("HexGrid"),
-            Transform::default(),
-            Visibility::default(),
-        ))
-        .id();
-
-    let mut hex_entity_map: HashMap<Hex, Entity> = HashMap::new();
-
-    for hex in shapes::hexagon(Hex::ZERO, g.radius) {
-        let center_2d = terrain.hex_to_world_pos(hex);
-        let height = terrain.height(&hex).unwrap();
-        let radius = terrain.radius(&hex).unwrap();
-
-        let entity = commands
-            .spawn((
-                HexSunDisc { hex },
-                Name::new(format!("HexSunDisc({},{})", hex.x, hex.y)),
-                Mesh3d(hex_mesh_handle.clone()),
-                MeshMaterial3d(hex_face_material.clone()),
-                Transform::from_xyz(center_2d.x, height, center_2d.y)
-                    .with_scale(Vec3::new(radius, 1.0, radius)),
-            ))
-            .id();
-        commands.entity(grid_entity).add_child(entity);
-        hex_entity_map.insert(hex, entity);
-
-        // Height indicator pole
-        if let Some(pg) = math::pole_geometry(radius, height, f.pole_radius_factor, f.pole_gap) {
-            let pole_radius = pg.radius;
-            let pole_mat = materials.add(StandardMaterial {
-                base_color: Color::srgb(0.0, 1.0, 0.2),
-                emissive: LinearRgba::rgb(0.0, 30.0, 6.0),
-                unlit: true,
-                ..default()
-            });
-            let pole_entity = commands
-                .spawn((
-                    HeightPole,
-                    Name::new(format!("Pole({},{})", hex.x, hex.y)),
-                    Mesh3d(pole_mesh_handle.clone()),
-                    MeshMaterial3d(pole_mat),
-                    Transform::from_xyz(0.0, pg.y_center - height, 0.0).with_scale(Vec3::new(
-                        pole_radius / 0.5 / radius,
-                        pg.height,
-                        pole_radius / 0.5 / radius,
-                    )),
-                ))
-                .id();
-            commands.entity(entity).add_child(pole_entity);
-        }
-    }
-
-    commands.entity(grid_entity).insert(HexGrid { terrain });
-    commands.insert_resource(HexEntities {
-        map: hex_entity_map,
-    });
-    commands.init_resource::<ActiveHex>();
-}
 
 // ── Update: player height + active hex ─────────────────────────────
 
@@ -158,63 +41,102 @@ pub fn update_player_height(
     player.pos.y = grid.terrain.interpolate_height(xz) + player.altitude;
 }
 
-/// Updates [`ActiveHex`] when the player crosses into a new hex.
-pub fn track_active_hex(
+/// Promotes/demotes [`FlowerState`] as the player crosses hex boundaries.
+///
+/// Uses `Local<Option<Hex>>` to detect hex transitions without a global resource.
+pub fn track_player_hex(
     grid_q: Query<&HexGrid>,
     hex_entities: Option<Res<HexEntities>>,
+    mut flower_q: Query<&mut FlowerState, With<HexSunDisc>>,
     names: Query<&Name>,
-    mut cell: ResMut<ActiveHex>,
     player: Res<PlayerPos>,
+    mut prev_hex: Local<Option<Hex>>,
 ) {
     let Ok(grid) = grid_q.single() else { return };
 
     let pos = Vec2::new(player.pos.x, player.pos.z);
     let new_hex = grid.terrain.world_pos_to_hex(pos);
 
-    let first_frame = cell.previous.is_none();
-    if new_hex != cell.current || first_frame {
-        cell.previous = Some(cell.current);
-        cell.current = new_hex;
-        cell.changed = true;
+    if *prev_hex == Some(new_hex) {
+        return;
+    }
 
-        if let Some(name) = hex_entities
-            .as_ref()
-            .and_then(|he| he.map.get(&new_hex))
-            .and_then(|&e| names.get(e).ok())
-        {
+    let he = hex_entities.as_ref();
+
+    // Demote old PlayerAbove → Revealed
+    if let Some(old_entity) = prev_hex.and_then(|h| he.and_then(|he| he.map.get(&h).copied()))
+        && let Ok(mut state) = flower_q.get_mut(old_entity)
+        && let FlowerState::PlayerAbove { petals } = &*state
+    {
+        let petals = petals.clone();
+        *state = FlowerState::Revealed { petals };
+    }
+
+    // Promote new hex → PlayerAbove
+    if let Some(&new_entity) = he.and_then(|he| he.map.get(&new_hex)) {
+        if let Ok(mut state) = flower_q.get_mut(new_entity) {
+            match &*state {
+                FlowerState::Naked => {
+                    *state = FlowerState::PlayerAbove { petals: vec![] };
+                }
+                FlowerState::Revealed { petals } => {
+                    let petals = petals.clone();
+                    *state = FlowerState::PlayerAbove { petals };
+                }
+                FlowerState::PlayerAbove { .. } => {}
+            }
+        }
+
+        if let Ok(name) = names.get(new_entity) {
             #[cfg(debug_assertions)]
             println!("Player over: {name}");
         }
-    } else {
-        cell.changed = false;
     }
+
+    *prev_hex = Some(new_hex);
 }
 
 // ── Update: petal spawning ─────────────────────────────────────────
 
-/// Progressive petal reveal as the player moves.
-pub fn spawn_petals(
+/// Progressive petal reveal around the player's current hex.
+///
+/// On the first frame (or when `PlayerAbove` changes hex), iterates the reveal
+/// ring and promotes each `Naked` hex to `Revealed`, spawning petal geometry.
+/// Also fills petals on a freshly-promoted `PlayerAbove { petals: [] }`.
+pub fn reveal_nearby_hexes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     res: PetalRes,
-    mut drawn: ResMut<DrawnCells>,
+    mut flower_q: Query<(&HexSunDisc, &mut FlowerState)>,
+    mut prev_center: Local<Option<Hex>>,
     mut initial_done: Local<bool>,
 ) {
-    let center = if !*initial_done {
+    // Find the single PlayerAbove hex
+    let Some((center_disc, _)) = flower_q
+        .iter()
+        .find(|(_, s)| matches!(**s, FlowerState::PlayerAbove { .. }))
+    else {
+        return;
+    };
+    let center = center_disc.hex;
+
+    let trigger = if !*initial_done {
         *initial_done = true;
-        Some(Hex::ZERO)
-    } else if res.cell.changed {
-        Some(res.cell.current)
+        true
     } else {
-        None
+        *prev_center != Some(center)
     };
 
-    let Some(center) = center else { return };
+    if !trigger {
+        return;
+    }
+    *prev_center = Some(center);
+
     let Ok(grid) = res.grid_q.single() else {
         return;
     };
 
-    let leaf = LeafCtx {
+    let petal = PetalCtx {
         hex_entities: &res.hex_entities,
         neon: &res.neon,
         grid,
@@ -222,14 +144,26 @@ pub fn spawn_petals(
     };
 
     for hex in shapes::hexagon(center, res.cfg.flower.reveal_radius) {
-        if !grid.terrain.contains(&hex) || drawn.cells.contains(&hex) {
+        if !grid.terrain.contains(&hex) {
             continue;
         }
-        drawn.cells.insert(hex);
 
         let Some(&owner_entity) = res.hex_entities.map.get(&hex) else {
             continue;
         };
+
+        // Only spawn for Naked hexes or empty PlayerAbove
+        let Ok((_, state)) = flower_q.get(owner_entity) else {
+            continue;
+        };
+        let needs_petals = match state {
+            FlowerState::Naked => true,
+            FlowerState::PlayerAbove { petals } if petals.is_empty() => true,
+            _ => false,
+        };
+        if !needs_petals {
+            continue;
+        }
 
         let ctx = HexCtx {
             hex,
@@ -237,34 +171,52 @@ pub fn spawn_petals(
             inverse_tf: grid.terrain.inverse_transform(hex),
         };
 
+        let mut petals = Vec::new();
         for &edge_idx in &[0u8, 2, 4] {
-            spawn_quad_leaf(&mut commands, &mut meshes, &leaf, &ctx, edge_idx);
+            if let Some(e) = spawn_quad_petal(&mut commands, &mut meshes, &petal, &ctx, edge_idx) {
+                petals.push(e);
+            }
         }
         for &vtx_idx in &[0u8, 1] {
-            spawn_tri_leaf(&mut commands, &mut meshes, &leaf, &ctx, vtx_idx);
+            if let Some(e) = spawn_tri_petal(&mut commands, &mut meshes, &petal, &ctx, vtx_idx) {
+                petals.push(e);
+            }
+        }
+
+        // Promote Naked → Revealed, or fill PlayerAbove petals
+        if let Ok((_, mut state)) = flower_q.get_mut(owner_entity) {
+            match &*state {
+                FlowerState::Naked => {
+                    *state = FlowerState::Revealed { petals };
+                }
+                FlowerState::PlayerAbove { petals: cur } if cur.is_empty() => {
+                    *state = FlowerState::PlayerAbove { petals };
+                }
+                _ => {}
+            }
         }
     }
 }
 
-// ── Update: pole fading ────────────────────────────────────────────
+// ── Update: stem fading ────────────────────────────────────────────
 
-/// Brightens poles near the player and dims distant ones based on horizontal distance.
-pub fn highlight_nearby_poles(
+/// Brightens stems near the player and dims distant ones based on horizontal distance.
+pub fn highlight_nearby_stems(
     player: Res<PlayerPos>,
-    pole_q: Query<(&GlobalTransform, &MeshMaterial3d<StandardMaterial>), With<HeightPole>>,
+    stem_q: Query<(&GlobalTransform, &MeshMaterial3d<StandardMaterial>), With<Stem>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     cfg: Res<TerrainConfig>,
 ) {
     let cam_xz = Vec2::new(player.pos.x, player.pos.z);
 
-    for (pole_tf, mat_handle) in &pole_q {
-        let pos = pole_tf.translation();
-        let pole_xz = Vec2::new(pos.x, pos.z);
-        let dist = cam_xz.distance(pole_xz);
-        let brightness = math::pole_fade_brightness(
+    for (stem_tf, mat_handle) in &stem_q {
+        let pos = stem_tf.translation();
+        let stem_xz = Vec2::new(pos.x, pos.z);
+        let dist = cam_xz.distance(stem_xz);
+        let brightness = math::stem_fade_brightness(
             dist,
-            cfg.flower.pole_fade_distance,
-            cfg.flower.pole_min_alpha,
+            cfg.flower.stem_fade_distance,
+            cfg.flower.stem_min_alpha,
         );
 
         if let Some(mat) = materials.get_mut(&mat_handle.0) {
@@ -312,20 +264,20 @@ pub fn draw_hex_labels(
     }
 }
 
-// ── Leaf spawn helpers ─────────────────────────────────────────────
+// ── Petal spawn helpers ────────────────────────────────────────────
 
-fn spawn_quad_leaf(
+fn spawn_quad_petal(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    leaf: &LeafCtx,
+    petal: &PetalCtx,
     ctx: &HexCtx,
     edge_index: u8,
-) -> Option<()> {
+) -> Option<Entity> {
     let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
     let neighbor = ctx.hex.neighbor(dir);
 
-    leaf.grid.terrain.height(&neighbor)?;
-    let &neighbor_entity = leaf.hex_entities.map.get(&neighbor)?;
+    petal.grid.terrain.height(&neighbor)?;
+    let &neighbor_entity = petal.hex_entities.map.get(&neighbor)?;
 
     let vertex_dirs = dir.vertex_directions();
     let v0_idx = vertex_dirs[0].index();
@@ -336,52 +288,54 @@ fn spawn_quad_leaf(
     let n0_idx = opp_vertex_dirs[1].index();
     let n1_idx = opp_vertex_dirs[0].index();
 
-    let va0 = leaf.grid.terrain.vertex(ctx.hex, v0_idx)?;
-    let va1 = leaf.grid.terrain.vertex(ctx.hex, v1_idx)?;
-    let vb0 = leaf.grid.terrain.vertex(neighbor, n0_idx)?;
-    let vb1 = leaf.grid.terrain.vertex(neighbor, n1_idx)?;
+    let va0 = petal.grid.terrain.vertex(ctx.hex, v0_idx)?;
+    let va1 = petal.grid.terrain.vertex(ctx.hex, v1_idx)?;
+    let vb0 = petal.grid.terrain.vertex(neighbor, n0_idx)?;
+    let vb1 = petal.grid.terrain.vertex(neighbor, n1_idx)?;
 
-    let leaf_name = format!(
-        "QuadLeaf({},{})e{}↔({},{})",
+    let petal_name = format!(
+        "QuadPetal({},{})e{}↔({},{})",
         ctx.hex.x, ctx.hex.y, edge_index, neighbor.x, neighbor.y
     );
 
-    let leaf_entity = commands
+    let petal_entity = commands
         .spawn((
-            QuadLeaf {
+            QuadPetal {
                 edge_index,
                 neighbor_disc: neighbor_entity,
             },
-            Name::new(leaf_name),
+            Name::new(petal_name),
             Visibility::default(),
             ctx.inverse_tf,
         ))
         .id();
 
     // Perimeter edges
-    let edge_a = spawn_edge_line(commands, meshes, leaf.neon, leaf.cfg, va0, va1);
-    let edge_b = spawn_edge_line(commands, meshes, leaf.neon, leaf.cfg, vb0, vb1);
-    commands.entity(leaf_entity).add_children(&[edge_a, edge_b]);
+    let edge_a = spawn_edge_line(commands, meshes, petal.neon, petal.cfg, va0, va1);
+    let edge_b = spawn_edge_line(commands, meshes, petal.neon, petal.cfg, vb0, vb1);
+    commands
+        .entity(petal_entity)
+        .add_children(&[edge_a, edge_b]);
 
     // Cross-gap edges + quad face
-    let cross_a = spawn_edge_line(commands, meshes, leaf.neon, leaf.cfg, va0, vb0);
-    let cross_b = spawn_edge_line(commands, meshes, leaf.neon, leaf.cfg, va1, vb1);
-    let face = spawn_quad_face(commands, meshes, leaf.neon, va0, va1, vb1, vb0);
+    let cross_a = spawn_edge_line(commands, meshes, petal.neon, petal.cfg, va0, vb0);
+    let cross_b = spawn_edge_line(commands, meshes, petal.neon, petal.cfg, va1, vb1);
+    let face = spawn_quad_face(commands, meshes, petal.neon, va0, va1, vb1, vb0);
     commands
-        .entity(leaf_entity)
+        .entity(petal_entity)
         .add_children(&[cross_a, cross_b, face]);
 
-    commands.entity(ctx.owner_entity).add_child(leaf_entity);
-    Some(())
+    commands.entity(ctx.owner_entity).add_child(petal_entity);
+    Some(petal_entity)
 }
 
-fn spawn_tri_leaf(
+fn spawn_tri_petal(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    leaf: &LeafCtx,
+    petal: &PetalCtx,
     ctx: &HexCtx,
     vertex_index: u8,
-) -> Option<()> {
+) -> Option<Entity> {
     let dir = VertexDirection::ALL_DIRECTIONS[vertex_index as usize];
     let grid_vertex = hexx::GridVertex {
         origin: ctx.hex,
@@ -391,46 +345,46 @@ fn spawn_tri_leaf(
 
     coords
         .iter()
-        .all(|c| leaf.grid.terrain.contains(c))
+        .all(|c| petal.grid.terrain.contains(c))
         .then_some(())?;
     (coords[0] == ctx.hex).then_some(())?;
 
     let v_idx = dir.index();
-    let v0 = leaf.grid.terrain.vertex(coords[0], v_idx)?;
-    let v1 = leaf
+    let v0 = petal.grid.terrain.vertex(coords[0], v_idx)?;
+    let v1 = petal
         .grid
         .terrain
         .find_equivalent_vertex(coords[1], &grid_vertex)?;
-    let v2 = leaf
+    let v2 = petal
         .grid
         .terrain
         .find_equivalent_vertex(coords[2], &grid_vertex)?;
 
-    let &neighbor1_entity = leaf.hex_entities.map.get(&coords[1])?;
-    let &neighbor2_entity = leaf.hex_entities.map.get(&coords[2])?;
+    let &neighbor1_entity = petal.hex_entities.map.get(&coords[1])?;
+    let &neighbor2_entity = petal.hex_entities.map.get(&coords[2])?;
 
-    let leaf_name = format!(
-        "TriLeaf({},{})v{}↔({},{})↔({},{})",
+    let petal_name = format!(
+        "TriPetal({},{})v{}↔({},{})↔({},{})",
         ctx.hex.x, ctx.hex.y, vertex_index, coords[1].x, coords[1].y, coords[2].x, coords[2].y
     );
 
     let face_handle = meshes.add(build_tri_mesh(v0, v1, v2));
 
-    let leaf_entity = commands
+    let petal_entity = commands
         .spawn((
-            TriLeaf {
+            TriPetal {
                 vertex_index,
                 neighbor_discs: [neighbor1_entity, neighbor2_entity],
             },
-            Name::new(leaf_name),
+            Name::new(petal_name),
             Mesh3d(face_handle),
-            MeshMaterial3d(leaf.neon.gap_face_material.clone()),
+            MeshMaterial3d(petal.neon.gap_face_material.clone()),
             ctx.inverse_tf,
         ))
         .id();
 
-    commands.entity(ctx.owner_entity).add_child(leaf_entity);
-    Some(())
+    commands.entity(ctx.owner_entity).add_child(petal_entity);
+    Some(petal_entity)
 }
 
 // ── Mesh spawn helpers ─────────────────────────────────────────────
@@ -454,7 +408,7 @@ fn spawn_edge_line(
 
     commands
         .spawn((
-            PetalEdge,
+            QuadLines,
             Mesh3d(mesh),
             MeshMaterial3d(neon.edge_material.clone()),
             Transform::from_translation(midpoint).with_rotation(rotation),

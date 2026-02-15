@@ -15,9 +15,9 @@ INTRO_SETTLE=5          # seconds after BRP is up; intro takes ~2.3s
 
 # Component type paths
 COMP_SUNDISC="hex_terrain::terrain::entities::HexSunDisc"
-COMP_POLE="hex_terrain::terrain::entities::HeightPole"
-COMP_QUADLEAF="hex_terrain::terrain::entities::QuadLeaf"
-COMP_TRILEAF="hex_terrain::terrain::entities::TriLeaf"
+COMP_STEM="hex_terrain::terrain::entities::Stem"
+COMP_QUADPETAL="hex_terrain::terrain::entities::QuadPetal"
+COMP_TRIPETAL="hex_terrain::terrain::entities::TriPetal"
 COMP_PLAYER="hex_terrain::drone::entities::Player"
 COMP_TRANSFORM="bevy_transform::components::transform::Transform"
 COMP_GTRANSFORM="bevy_transform::components::global_transform::GlobalTransform"
@@ -78,15 +78,15 @@ brp_player_xz() {
     echo "$resp" | jq -r ".result[0].components[\"$COMP_TRANSFORM\"].translation | \"\(.[0]) \(.[2])\""
 }
 
-# Query a HeightPole's world-space XZ from its GlobalTransform.
+# Query a Stem's world-space XZ from its GlobalTransform.
 # GlobalTransform is an Affine3A: 12 floats, translation at indices [9, 10, 11].
-# Finds the pole by Name (e.g. "Pole(0,0)").
-brp_pole_world_xz() {
+# Finds the stem by Name (e.g. "Stem(0,0)").
+brp_stem_world_xz() {
     local name=$1
     local resp
     resp=$(curl -sf -X POST "$BRP" \
         -H "Content-Type: application/json" \
-        -d "{\"jsonrpc\":\"2.0\",\"method\":\"world.query\",\"id\":0,\"params\":{\"data\":{\"components\":[\"$COMP_NAME\",\"$COMP_GTRANSFORM\"]},\"filter\":{\"with\":[\"$COMP_POLE\"]}}}")
+        -d "{\"jsonrpc\":\"2.0\",\"method\":\"world.query\",\"id\":0,\"params\":{\"data\":{\"components\":[\"$COMP_NAME\",\"$COMP_GTRANSFORM\"]},\"filter\":{\"with\":[\"$COMP_STEM\"]}}}")
     echo "$resp" | jq -r --arg name "$name" \
         '.result[] | select(.components["'"$COMP_NAME"'"] == $name) | .components["'"$COMP_GTRANSFORM"'"] | "\(.[9]) \(.[11])"'
 }
@@ -113,21 +113,21 @@ wait_for_brp
 
 echo "Querying during Intro..."
 sleep 1
-QL_INTRO=$(brp_count "$COMP_QUADLEAF")
+QL_INTRO=$(brp_count "$COMP_QUADPETAL")
 Y_INTRO=$(brp_player_y)
-echo "  QuadLeaf count: $QL_INTRO  (expect 0 during Intro)"
+echo "  QuadPetal count: $QL_INTRO  (expect 0 during Intro)"
 echo "  Player Y:       $Y_INTRO"
 
-# Pole brightness during Intro (poles exist from startup, fade system runs)
+# Stem brightness during Intro (stems exist from startup, fade system runs)
 read -r INTRO_PX INTRO_PZ <<< "$(brp_player_xz)"
-read -r INTRO_P00_X INTRO_P00_Z <<< "$(brp_pole_world_xz 'Pole(0,0)')"
-read -r INTRO_P22_X INTRO_P22_Z <<< "$(brp_pole_world_xz 'Pole(2,2)')"
+read -r INTRO_P00_X INTRO_P00_Z <<< "$(brp_stem_world_xz 'Stem(0,0)')"
+read -r INTRO_P22_X INTRO_P22_Z <<< "$(brp_stem_world_xz 'Stem(2,2)')"
 INTRO_DIST_00=$(LC_NUMERIC=C awk "BEGIN { dx=$INTRO_PX-($INTRO_P00_X); dz=$INTRO_PZ-($INTRO_P00_Z); printf \"%.4f\", sqrt(dx*dx+dz*dz) }")
 INTRO_DIST_22=$(LC_NUMERIC=C awk "BEGIN { dx=$INTRO_PX-($INTRO_P22_X); dz=$INTRO_PZ-($INTRO_P22_Z); printf \"%.4f\", sqrt(dx*dx+dz*dz) }")
 INTRO_BRIGHT_00=$(LC_NUMERIC=C awk "BEGIN { t=$INTRO_DIST_00/40.0; if(t>1)t=1; if(t<0)t=0; printf \"%.4f\", 1.0-t*0.95 }")
 INTRO_BRIGHT_22=$(LC_NUMERIC=C awk "BEGIN { t=$INTRO_DIST_22/40.0; if(t>1)t=1; if(t<0)t=0; printf \"%.4f\", 1.0-t*0.95 }")
-echo "  Pole(0,0): dist=$INTRO_DIST_00  brightness=$INTRO_BRIGHT_00"
-echo "  Pole(2,2): dist=$INTRO_DIST_22  brightness=$INTRO_BRIGHT_22"
+echo "  Stem(0,0): dist=$INTRO_DIST_00  brightness=$INTRO_BRIGHT_00"
+echo "  Stem(2,2): dist=$INTRO_DIST_22  brightness=$INTRO_BRIGHT_22"
 
 # ---------------------------------------------------------------------------
 # Phase 2: Wait for intro → running transition
@@ -142,29 +142,29 @@ sleep "$INTRO_SETTLE"
 
 echo "Querying during Running..."
 SD=$(brp_count  "$COMP_SUNDISC")
-HP=$(brp_count  "$COMP_POLE")
-QL=$(brp_count  "$COMP_QUADLEAF")
-TL=$(brp_count  "$COMP_TRILEAF")
+HP=$(brp_count  "$COMP_STEM")
+QL=$(brp_count  "$COMP_QUADPETAL")
+TL=$(brp_count  "$COMP_TRIPETAL")
 Y_RUNNING=$(brp_player_y)
 echo "  Player Y:       $Y_RUNNING"
 
-# Pole brightness: gather world-space positions of poles and player
+# Stem brightness: gather world-space positions of stems and player
 read -r PLAYER_X PLAYER_Z <<< "$(brp_player_xz)"
-read -r POLE_X_00 POLE_Z_00 <<< "$(brp_pole_world_xz 'Pole(0,0)')"
-read -r POLE_X_22 POLE_Z_22 <<< "$(brp_pole_world_xz 'Pole(2,2)')"
+read -r POLE_X_00 POLE_Z_00 <<< "$(brp_stem_world_xz 'Stem(0,0)')"
+read -r POLE_X_22 POLE_Z_22 <<< "$(brp_stem_world_xz 'Stem(2,2)')"
 
-# pole_fade_brightness: 1.0 - clamp(dist/40.0, 0, 1) * 0.95
+# stem_fade_brightness: 1.0 - clamp(dist/40.0, 0, 1) * 0.95
 DIST_00=$(LC_NUMERIC=C awk "BEGIN { dx=$PLAYER_X-($POLE_X_00); dz=$PLAYER_Z-($POLE_Z_00); printf \"%.4f\", sqrt(dx*dx+dz*dz) }")
 DIST_22=$(LC_NUMERIC=C awk "BEGIN { dx=$PLAYER_X-($POLE_X_22); dz=$PLAYER_Z-($POLE_Z_22); printf \"%.4f\", sqrt(dx*dx+dz*dz) }")
 BRIGHT_00=$(LC_NUMERIC=C awk "BEGIN { t=$DIST_00/40.0; if(t>1)t=1; if(t<0)t=0; printf \"%.4f\", 1.0-t*0.95 }")
 BRIGHT_22=$(LC_NUMERIC=C awk "BEGIN { t=$DIST_22/40.0; if(t>1)t=1; if(t<0)t=0; printf \"%.4f\", 1.0-t*0.95 }")
-echo "  Pole(0,0): dist=$DIST_00  brightness=$BRIGHT_00"
-echo "  Pole(2,2): dist=$DIST_22  brightness=$BRIGHT_22"
+echo "  Stem(0,0): dist=$DIST_00  brightness=$BRIGHT_00"
+echo "  Stem(2,2): dist=$DIST_22  brightness=$BRIGHT_22"
 
 if [[ "${1:-}" == "--print" ]]; then
     printf "\n%-14s %d\n%-14s %d\n%-14s %d\n%-14s %d\n" \
-        "HexSunDisc" "$SD" "HeightPole" "$HP" \
-        "QuadLeaf" "$QL" "TriLeaf" "$TL"
+        "HexSunDisc" "$SD" "Stem" "$HP" \
+        "QuadPetal" "$QL" "TriPetal" "$TL"
     printf "\n%-14s %s\n%-14s %s\n" \
         "Y (Intro)" "$Y_INTRO" "Y (Running)" "$Y_RUNNING"
     exit 0
@@ -227,10 +227,10 @@ assert_float_lt() {
 echo ""
 echo "=== State transition ==="
 
-# During Intro: spawn_petals is gated by GameState::Running → no QuadLeafs yet
+# During Intro: spawn_petals is gated by GameState::Running → no QuadPetals yet
 assert_eq    "QL(Intro)"   "$QL_INTRO"  0
 
-# During Running: spawn_petals fires → QuadLeafs present
+# During Running: spawn_petals fires → QuadPetals present
 assert_eq    "QL(Running)" "$QL"        57
 
 # Drone altitude should be stable across the transition (±1.0 tolerance)
@@ -243,21 +243,21 @@ echo "=== Entity counts (grid_radius=20, reveal_radius=2) ==="
 # Startup: one HexSunDisc per grid hex
 assert_eq    "HexSunDisc"  "$SD"  1261
 
-# Startup: one HeightPole per hex where height > pole_gap (noise-dependent)
-assert_range "HeightPole"  "$HP"  1200 1261
+# Startup: one Stem per hex where height > stem_gap (noise-dependent)
+assert_range "Stem"        "$HP"  1200 1261
 
-# Initial draw: 19 hexes * 3 QuadLeafs each (even edges 0, 2, 4)
-assert_eq    "QuadLeaf"    "$QL"  57
+# Initial draw: 19 hexes * 3 QuadPetals each (even edges 0, 2, 4)
+assert_eq    "QuadPetal"    "$QL"  57
 
-# Initial draw: 19 hexes * 2 TriLeafs each (vertices 0 and 1, with dedup)
-assert_range "TriLeaf"     "$TL"  30 38
+# Initial draw: 19 hexes * 2 TriPetals each (vertices 0 and 1, with dedup)
+assert_range "TriPetal"     "$TL"  30 38
 
-# --- Pole brightness (fade by distance from player) ---
+# --- Stem brightness (fade by distance from player) ---
 echo ""
-echo "=== Pole brightness (fade by distance) ==="
+echo "=== Stem brightness (fade by distance) ==="
 
 # During Intro (QL_INTRO==0 proves GameState::Intro):
-# fade_nearby_poles runs unconditionally → distant pole already dimmer.
+# highlight_nearby_stems runs unconditionally → distant stem already dimmer.
 assert_float_lt "Intro(2,2)<(0,0)" "$INTRO_BRIGHT_22" "$INTRO_BRIGHT_00"
 
 # During Running (QL > 0 proves GameState::Running):
