@@ -66,25 +66,14 @@ pub fn track_player_hex(
     // Demote old PlayerAbove → Revealed
     if let Some(old_entity) = prev_hex.and_then(|h| he.and_then(|he| he.map.get(&h).copied()))
         && let Ok(mut state) = flower_q.get_mut(old_entity)
-        && let FlowerState::PlayerAbove { petals } = &*state
     {
-        let petals = petals.clone();
-        *state = FlowerState::Revealed { petals };
+        state.demote();
     }
 
     // Promote new hex → PlayerAbove
     if let Some(&new_entity) = he.and_then(|he| he.map.get(&new_hex)) {
         if let Ok(mut state) = flower_q.get_mut(new_entity) {
-            match &*state {
-                FlowerState::Naked => {
-                    *state = FlowerState::PlayerAbove { petals: vec![] };
-                }
-                FlowerState::Revealed { petals } => {
-                    let petals = petals.clone();
-                    *state = FlowerState::PlayerAbove { petals };
-                }
-                FlowerState::PlayerAbove { .. } => {}
-            }
+            state.promote();
         }
 
         if let Ok(name) = names.get(new_entity) {
@@ -156,12 +145,7 @@ pub fn reveal_nearby_hexes(
         let Ok((_, state)) = flower_q.get(owner_entity) else {
             continue;
         };
-        let needs_petals = match state {
-            FlowerState::Naked => true,
-            FlowerState::PlayerAbove { petals } if petals.is_empty() => true,
-            _ => false,
-        };
-        if !needs_petals {
+        if !state.needs_petals() {
             continue;
         }
 
@@ -185,15 +169,7 @@ pub fn reveal_nearby_hexes(
 
         // Promote Naked → Revealed, or fill PlayerAbove petals
         if let Ok((_, mut state)) = flower_q.get_mut(owner_entity) {
-            match &*state {
-                FlowerState::Naked => {
-                    *state = FlowerState::Revealed { petals };
-                }
-                FlowerState::PlayerAbove { petals: cur } if cur.is_empty() => {
-                    *state = FlowerState::PlayerAbove { petals };
-                }
-                _ => {}
-            }
+            state.fill_petals(petals);
         }
     }
 }

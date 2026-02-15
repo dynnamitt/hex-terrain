@@ -70,6 +70,47 @@ pub enum FlowerState {
     PlayerAbove { petals: Vec<Entity> },
 }
 
+impl FlowerState {
+    /// True when petal geometry has not been spawned yet.
+    pub fn needs_petals(&self) -> bool {
+        match self {
+            Self::Naked => true,
+            Self::PlayerAbove { petals } => petals.is_empty(),
+            Self::Revealed { .. } => false,
+        }
+    }
+
+    /// Demote `PlayerAbove` → `Revealed`, keeping existing petals.
+    pub fn demote(&mut self) {
+        if let Self::PlayerAbove { petals } = self {
+            let petals = std::mem::take(petals);
+            *self = Self::Revealed { petals };
+        }
+    }
+
+    /// Promote any state → `PlayerAbove`, keeping existing petals.
+    pub fn promote(&mut self) {
+        match self {
+            Self::Naked => *self = Self::PlayerAbove { petals: vec![] },
+            Self::Revealed { petals } => {
+                let petals = std::mem::take(petals);
+                *self = Self::PlayerAbove { petals };
+            }
+            Self::PlayerAbove { .. } => {}
+        }
+    }
+
+    /// Fill petals on a state that `needs_petals()`.
+    /// `Naked` → `Revealed`, empty `PlayerAbove` → `PlayerAbove` with petals.
+    pub fn fill_petals(&mut self, new: Vec<Entity>) {
+        match self {
+            Self::Naked => *self = Self::Revealed { petals: new },
+            Self::PlayerAbove { petals } if petals.is_empty() => *petals = new,
+            _ => {}
+        }
+    }
+}
+
 /// Per-hex iteration data passed to petal spawn helpers.
 pub struct HexCtx {
     pub(super) hex: Hex,
