@@ -5,6 +5,7 @@
 
 mod entities;
 mod systems;
+mod terrain_hex_layout;
 
 pub use entities::{HexGrid, HexSunDisc};
 
@@ -17,33 +18,19 @@ use crate::GameState;
 pub struct TerrainConfig {
     /// Grid generation settings.
     pub grid: GridSettings,
-    /// Petal / edge spawning settings.
-    pub petals: PetalSettings,
+    /// Flower geometry: pole, petal edge, and hex-radius settings.
+    pub flower: FlowerSettings,
     /// Background clear color.
     pub clear_color: Color,
 }
 
-/// Grid layout, noise, and pole parameters.
+/// Grid layout and noise parameters.
 #[derive(Clone, Debug, Reflect)]
 pub struct GridSettings {
     /// Number of hex rings around the origin (~1200 hexes at 20).
     pub radius: u32,
     /// Distance in world-units between adjacent hex centers.
     pub point_spacing: f32,
-    /// Maximum terrain elevation produced by the noise function.
-    pub max_height: f32,
-    /// Smallest visual hex radius (noise-derived per cell).
-    pub min_hex_radius: f32,
-    /// Largest visual hex radius (noise-derived per cell).
-    pub max_hex_radius: f32,
-    /// Pole cylinder radius as a fraction of the hex's visual radius.
-    pub pole_radius_factor: f32,
-    /// Distance at which poles reach full opacity.
-    pub pole_fade_distance: f32,
-    /// Minimum alpha when the camera is right on top of a pole.
-    pub pole_min_alpha: f32,
-    /// Gap between pole top and hex face.
-    pub pole_gap: f32,
     /// Seed for the height noise generator.
     pub height_noise_seed: u32,
     /// Seed for the per-hex radius noise generator.
@@ -56,11 +43,25 @@ pub struct GridSettings {
     pub height_noise_scale: f64,
     /// Spatial scale divisor for radius noise sampling.
     pub radius_noise_scale: f64,
+    /// Maximum terrain elevation produced by the noise function.
+    pub max_height: f32,
+    /// Smallest visual hex radius (noise-derived per cell).
+    pub min_hex_radius: f32,
+    /// Largest visual hex radius (noise-derived per cell).
+    pub max_hex_radius: f32,
 }
 
-/// Edge/face spawning parameters.
+/// Flower geometry: pole dimensions, and edge/face spawning.
 #[derive(Clone, Debug, Reflect)]
-pub struct PetalSettings {
+pub struct FlowerSettings {
+    /// Pole cylinder radius as a fraction of the hex's visual radius.
+    pub pole_radius_factor: f32,
+    /// Distance at which poles reach full opacity.
+    pub pole_fade_distance: f32,
+    /// Minimum alpha when the camera is right on top of a pole.
+    pub pole_min_alpha: f32,
+    /// Gap between pole top and hex face.
+    pub pole_gap: f32,
     /// Thickness of edge line cuboids.
     pub edge_thickness: f32,
     /// How many hex rings around the drone to reveal per cell transition.
@@ -73,21 +74,21 @@ impl Default for TerrainConfig {
             grid: GridSettings {
                 radius: 20,
                 point_spacing: 4.0,
-                max_height: 10.0,
-                min_hex_radius: 0.2,
-                max_hex_radius: 2.6,
-                pole_radius_factor: 0.06,
-                pole_fade_distance: 40.0,
-                pole_min_alpha: 0.05,
-                pole_gap: 0.05,
                 height_noise_seed: 42,
                 radius_noise_seed: 137,
                 height_noise_octaves: 4,
                 radius_noise_octaves: 3,
                 height_noise_scale: 50.0,
                 radius_noise_scale: 30.0,
+                max_height: 10.0,
+                min_hex_radius: 0.2,
+                max_hex_radius: 2.6,
             },
-            petals: PetalSettings {
+            flower: FlowerSettings {
+                pole_radius_factor: 0.06,
+                pole_fade_distance: 40.0,
+                pole_min_alpha: 0.05,
+                pole_gap: 0.05,
                 edge_thickness: 0.03,
                 reveal_radius: 2,
             },
