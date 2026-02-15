@@ -20,7 +20,9 @@ Four modules, each split into three files: module root (config + plugin), `entit
 src/
   main.rs              # CLI (clap), PlayerPos resource, GameState enum
   math.rs              # Pure math helpers (noise mapping, easing, normals, pole geometry)
-  terrain.rs           # TerrainConfig (GridSettings + PetalSettings), TerrainPlugin
+  terrain.rs               # TerrainConfig (GridSettings + FlowerSettings), TerrainPlugin
+    terrain/terrain_hex_layout # TerrainHexLayout: encapsulates HexLayout + heights/radii,
+                               # on-demand vertex computation, interpolation, inverse transforms
     terrain/entities   # HexGrid, HexSunDisc, HeightPole, QuadLeaf, TriLeaf, PetalEdge,
                        # HexEntities, DrawnCells, ActiveHex, NeonMaterials, PetalRes, LeafCtx
     terrain/systems    # generate_grid, update_player_height, track_active_hex,
@@ -36,7 +38,7 @@ src/
 ### Config Resources
 Each plugin takes a config struct (e.g. `TerrainPlugin(TerrainConfig::default())`).
 
-- `TerrainConfig` — nested `GridSettings` (radius, spacing, noise, pole params) + `PetalSettings` (edge thickness, reveal radius)
+- `TerrainConfig` — nested `GridSettings` (radius, spacing, noise, hex radii) + `FlowerSettings` (pole params, edge thickness, reveal radius)
 - `DroneConfig` — move speed, mouse sensitivity, spawn_altitude (default 12.0), height lerp, bloom intensity
 - `IntroConfig` — tilt-up/down durations, highlight delay, tilt-down angle
 
@@ -48,7 +50,8 @@ Each plugin takes a config struct (e.g. `TerrainPlugin(TerrainConfig::default())
 ### Other Key Resources
 - `PlayerPos` — in main.rs: drone writes xz + altitude, terrain writes y
 - `GameState` — States enum: `Intro`, `Running`, `Debugging`
-- `HexGrid` — Component (not Resource), single entity parenting all HexSunDiscs
+- `HexGrid` — Component (not Resource), single entity parenting all HexSunDiscs; wraps `TerrainHexLayout`
+- `TerrainHexLayout` — encapsulates `HexLayout` + per-hex heights/radii; computes vertices on demand via `vertex(hex, index)`; provides `interpolate_height`, `inverse_transform`, `find_equivalent_vertex`
 - `HexEntities` — maps `Hex` → `Entity` for all HexSunDisc entities
 - `NeonMaterials` — edge (emissive cyan) + gap face (dark) materials
 - `ActiveHex` — current hex under player, with change detection
@@ -87,7 +90,7 @@ These differ from earlier Bevy tutorials/docs:
 ## Key Default Values
 
 All constants are fields on per-plugin config structs with `Default` impls.
-See `TerrainConfig` (with `GridSettings` + `PetalSettings`), `DroneConfig`, `IntroConfig`.
+See `TerrainConfig` (with `GridSettings` + `FlowerSettings`), `DroneConfig`, `IntroConfig`.
 
 ## Code Patterns
 
