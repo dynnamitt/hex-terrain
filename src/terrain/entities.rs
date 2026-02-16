@@ -111,6 +111,20 @@ impl FlowerState {
     }
 }
 
+/// Configurable set of which edges and vertices to spawn petals for.
+pub struct PetalSet {
+    /// Even edge indices to spawn quad petals (e.g. `[0, 2, 4]`).
+    pub quad_edges: &'static [u8],
+    /// Vertex indices to spawn tri petals (e.g. `[0, 1]`).
+    pub tri_vertices: &'static [u8],
+}
+
+/// All petals owned by a hex: edges 0, 2, 4 and vertices 0, 1.
+pub const FULL_PETAL_SET: PetalSet = PetalSet {
+    quad_edges: &[0, 2, 4],
+    tri_vertices: &[0, 1],
+};
+
 /// Per-hex iteration data passed to petal spawn helpers.
 pub struct HexCtx {
     pub(super) hex: Hex,

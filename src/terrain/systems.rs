@@ -8,8 +8,8 @@ use bevy_egui::egui;
 
 use super::TerrainConfig;
 use super::entities::{
-    FlowerState, HexCtx, HexEntities, HexGrid, HexSunDisc, NeonMaterials, PetalCtx, PetalRes,
-    QuadLines, QuadPetal, Stem, TriPetal,
+    FULL_PETAL_SET, FlowerState, HexCtx, HexEntities, HexGrid, HexSunDisc, NeonMaterials, PetalCtx,
+    PetalRes, PetalSet, QuadLines, QuadPetal, Stem, TriPetal,
 };
 use crate::PlayerPos;
 use crate::math;
@@ -116,43 +116,28 @@ pub fn reveal_nearby_hexes(
         cfg: &res.cfg,
     };
 
-    for hex in shapes::hexagon(center, res.cfg.flower.reveal_radius) {
-        if !grid.terrain.contains(&hex) {
-            continue;
-        }
+    // Phase 1: collect candidates (immutable borrow of flower_q)
+    let candidates: Vec<(Hex, Entity)> = shapes::hexagon(center, res.cfg.flower.reveal_radius)
+        .filter(|h| grid.terrain.contains(h))
+        .filter_map(|h| {
+            let &e = res.hex_entities.map.get(&h)?;
+            flower_q
+                .get(e)
+                .ok()
+                .filter(|(_, s)| s.needs_petals())
+                .map(|_| (h, e))
+        })
+        .collect();
 
-        let Some(&owner_entity) = res.hex_entities.map.get(&hex) else {
-            continue;
-        };
-
-        // Only spawn for Naked hexes or empty PlayerAbove
-        let Ok((_, state)) = flower_q.get(owner_entity) else {
-            continue;
-        };
-        if !state.needs_petals() {
-            continue;
-        }
-
+    // Phase 2: spawn petals + update state (mutable borrow of flower_q)
+    for (hex, owner) in candidates {
         let ctx = HexCtx {
             hex,
-            owner_entity,
+            owner_entity: owner,
             inverse_tf: grid.terrain.inverse_transform(hex),
         };
-
-        let mut petals = Vec::new();
-        for &edge_idx in &[0u8, 2, 4] {
-            if let Some(e) = spawn_quad_petal(&mut commands, &mut meshes, &petal, &ctx, edge_idx) {
-                petals.push(e);
-            }
-        }
-        for &vtx_idx in &[0u8, 1] {
-            if let Some(e) = spawn_tri_petal(&mut commands, &mut meshes, &petal, &ctx, vtx_idx) {
-                petals.push(e);
-            }
-        }
-
-        // Promote Naked → Revealed, or fill PlayerAbove petals
-        if let Ok((_, mut state)) = flower_q.get_mut(owner_entity) {
+        let petals = spawn_hex_petals(&mut commands, &mut meshes, &petal, &ctx, &FULL_PETAL_SET);
+        if let Ok((_, mut state)) = flower_q.get_mut(owner) {
             state.fill_petals(petals);
         }
     }
@@ -234,6 +219,27 @@ pub fn draw_hex_labels(
 }
 
 // ── Petal spawn helpers ────────────────────────────────────────────
+
+fn spawn_hex_petals(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    petal: &PetalCtx,
+    ctx: &HexCtx,
+    set: &PetalSet,
+) -> Vec<Entity> {
+    let mut out = Vec::new();
+    out.extend(
+        set.quad_edges
+            .iter()
+            .filter_map(|&e| spawn_quad_petal(commands, meshes, petal, ctx, e)),
+    );
+    out.extend(
+        set.tri_vertices
+            .iter()
+            .filter_map(|&v| spawn_tri_petal(commands, meshes, petal, ctx, v)),
+    );
+    out
+}
 
 fn spawn_quad_petal(
     commands: &mut Commands,
