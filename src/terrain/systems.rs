@@ -97,29 +97,13 @@ pub fn reveal_nearby_hexes(
     mut meshes: ResMut<Assets<Mesh>>,
     res: PetalRes,
     mut flower_q: Query<(&HexSunDisc, &mut FlowerState)>,
-    mut prev_center: Local<Option<Hex>>,
-    mut initial_done: Local<bool>,
 ) {
-    // Find the single PlayerAbove hex
-    let Some((center_disc, _)) = flower_q
-        .iter()
-        .find(|(_, s)| matches!(**s, FlowerState::PlayerAbove { .. }))
-    else {
-        return;
-    };
-    let center = center_disc.hex;
-
-    let trigger = if !*initial_done {
-        *initial_done = true;
-        true
-    } else {
-        *prev_center != Some(center)
-    };
-
-    if !trigger {
-        return;
-    }
-    *prev_center = Some(center);
+    // Find the PlayerAbove hex, but only when its FlowerState was just changed
+    let center = flower_q.iter_mut().find_map(|(disc, state)| {
+        (state.is_changed() && matches!(&*state, FlowerState::PlayerAbove { .. }))
+            .then_some(disc.hex)
+    });
+    let Some(center) = center else { return };
 
     let Ok(grid) = res.grid_q.single() else {
         return;
@@ -174,6 +158,20 @@ pub fn reveal_nearby_hexes(
     }
 }
 
+/// Seeds change detection for the first frame of [`GameState::Running`].
+///
+/// When transitioning from Intro → Running, the `PlayerAbove` promotion happened
+/// during Intro. `reveal_nearby_hexes` wasn't running then, so `is_changed()`
+/// wouldn't fire. This `OnEnter` system marks the current `PlayerAbove` as changed.
+pub fn trigger_initial_reveal(mut flower_q: Query<&mut FlowerState, With<HexSunDisc>>) {
+    for mut state in &mut flower_q {
+        if matches!(&*state, FlowerState::PlayerAbove { .. }) {
+            state.set_changed();
+            break;
+        }
+    }
+}
+
 // ── Update: stem fading ────────────────────────────────────────────
 
 /// Brightens stems near the player and dims distant ones based on horizontal distance.
@@ -207,12 +205,7 @@ pub fn draw_hex_labels(
     mut egui_ctx: Query<&mut bevy_egui::EguiContext>,
     camera_q: Query<(&Camera, &GlobalTransform), With<crate::drone::Player>>,
     hexes: Query<(&GlobalTransform, &Name), With<HexSunDisc>>,
-    mut ready: Local<bool>,
 ) {
-    if !*ready {
-        *ready = true;
-        return;
-    }
     let Ok((camera, cam_gt)) = camera_q.single() else {
         return;
     };

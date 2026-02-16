@@ -6,13 +6,16 @@ Bevy 0.18 hex terrain viewer with neon edge lighting. Renders a hexagonal grid w
 
 ## Build & Run
 
+Use the Makefile for all standard operations:
+
 ```bash
-cargo build
+make build                         # cargo build
+make test                          # unit tests (cargo test)
+make e2etest                       # BRP-based e2e tests (launches app)
+make clean                         # cargo clean
 cargo run                          # default: intro sequence then free-fly
 cargo run -- --debug               # verbose intro logging (DebugFlag resource)
 cargo run -- --intro-duration 5    # override tilt-up duration (seconds)
-make test                          # unit tests
-make e2etest                       # BRP-based e2e tests (launches app)
 ```
 
 ## Architecture
@@ -115,6 +118,9 @@ if let Some(name) = opt_res.as_ref().and_then(|r| r.map.get(&key)).and_then(|&e|
 
 ### `#[derive(SystemParam)]` for resource bundles
 Group related `Res<T>` params into a struct (e.g. `PetalRes`) to reduce system signature clutter.
+
+### ECS change detection over `Local` bookkeeping
+Prefer Bevy's built-in change detection (`Ref<T>::is_changed()`, `Mut<T>::is_changed()`) over `Local<bool>` / `Local<Option<T>>` for tracking state transitions between frames. When a prior system already mutates a component (e.g. `track_player_hex` promotes `FlowerState`), downstream systems can detect that via `is_changed()` — no manual diffing needed. For state-transition edge cases (system wasn't running when the change happened), use `OnEnter` + `set_changed()` to seed detection.
 
 ## Formatting
 

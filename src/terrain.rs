@@ -130,7 +130,8 @@ impl Plugin for TerrainPlugin {
                     .run_if(any_with_component::<HexGrid>)
                     .run_if(in_state(GameState::Running)),
             )
-            .add_systems(Update, systems::highlight_nearby_stems);
+            .add_systems(Update, systems::highlight_nearby_stems)
+            .add_systems(OnEnter(GameState::Running), systems::trigger_initial_reveal);
 
         app.add_systems(
             Update,
