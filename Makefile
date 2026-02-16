@@ -10,4 +10,4 @@ test:
 	cargo test
 
 e2etest:
-	bash tests/e2e_entity_count.sh
+	$(MAKE) -f tests/e2e.mk

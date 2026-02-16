@@ -8,8 +8,11 @@ Bevy 0.18 hex terrain viewer with neon edge lighting. Renders a hexagonal grid w
 
 ```bash
 cargo build
-cargo run                # default: intro sequence then free-fly
-cargo run -- --debug     # start in GameState::Debugging (inspector via Tab)
+cargo run                          # default: intro sequence then free-fly
+cargo run -- --debug               # verbose intro logging (DebugFlag resource)
+cargo run -- --intro-duration 5    # override tilt-up duration (seconds)
+make test                          # unit tests
+make e2etest                       # BRP-based e2e tests (launches app)
 ```
 
 ## Architecture
