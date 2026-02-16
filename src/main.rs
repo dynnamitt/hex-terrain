@@ -14,6 +14,19 @@ use bevy::prelude::*;
 use bevy::remote::{RemotePlugin, http::RemoteHttpPlugin};
 use bevy::window::{CursorGrabMode, CursorOptions};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use clap::Parser;
+
+/// Hex terrain viewer with neon edge lighting.
+#[derive(Parser)]
+struct Cli {
+    /// Start in debug mode (GameState::Debugging).
+    #[arg(long)]
+    debug: bool,
+
+    /// Override intro tilt-up duration (seconds).
+    #[arg(long)]
+    intro_duration: Option<f32>,
+}
 /// Application-wide game state, used for system scheduling.
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect)]
 pub enum GameState {
@@ -26,6 +39,10 @@ pub enum GameState {
     Debugging,
 }
 
+/// CLI debug flag exposed as a resource for verbose logging.
+#[derive(Resource)]
+pub struct DebugFlag(pub bool);
+
 /// Player world position. Drone/intro write xz + altitude; terrain writes y.
 #[derive(Resource, Default, Reflect)]
 pub struct PlayerPos {
@@ -36,6 +53,19 @@ pub struct PlayerPos {
 }
 
 fn main() {
+    let cli = Cli::parse();
+
+    let mut intro_cfg = intro::IntroConfig::default();
+    if let Some(d) = cli.intro_duration {
+        intro_cfg.tilt_up_duration = d;
+    }
+    if cli.debug {
+        eprintln!(
+            "IntroConfig: tilt_up_duration={}",
+            intro_cfg.tilt_up_duration
+        );
+    }
+
     let mut app = App::new();
 
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -49,12 +79,13 @@ fn main() {
     .register_type::<PlayerPos>()
     .init_state::<GameState>()
     .init_resource::<PlayerPos>()
+    .insert_resource(DebugFlag(cli.debug))
     .add_plugins(RemotePlugin::default())
     .add_plugins(RemoteHttpPlugin::default())
     .add_plugins(bevy_egui::EguiPlugin::default())
     .add_plugins(terrain::TerrainPlugin(terrain::TerrainConfig::default()))
     .add_plugins(drone::DronePlugin(drone::DroneConfig::default()))
-    .add_plugins(intro::IntroPlugin(intro::IntroConfig::default()))
+    .add_plugins(intro::IntroPlugin(intro_cfg))
     .add_systems(Update, exit_on_esc)
     .add_systems(Update, toggle_inspector)
     .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Debugging)));

@@ -2,9 +2,9 @@ use bevy::prelude::*;
 
 use super::IntroConfig;
 use super::entities::{IntroPhase, IntroTimer};
-use crate::GameState;
 use crate::drone::Player;
 use crate::math;
+use crate::{DebugFlag, GameState};
 
 pub fn run_intro(
     time: Res<Time>,
@@ -12,10 +12,20 @@ pub fn run_intro(
     mut query: Query<&mut Transform, With<Player>>,
     intro_cfg: Res<IntroConfig>,
     mut next_state: ResMut<NextState<GameState>>,
+    debug: Res<DebugFlag>,
 ) {
     let Ok(mut transform) = query.single_mut() else {
         return;
     };
+
+    if debug.0 {
+        eprintln!(
+            "run_intro: phase={:?} timer={:.3} dt={:.3}",
+            intro.phase,
+            intro.timer,
+            time.delta_secs()
+        );
+    }
 
     // Capture initial orientation on first frame
     if intro.start_pitch.is_none() {

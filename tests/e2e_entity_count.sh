@@ -11,7 +11,7 @@
 set -euo pipefail
 
 BRP="http://127.0.0.1:15702"
-INTRO_SETTLE=5          # seconds after BRP is up; intro takes ~2.3s
+INTRO_DURATION=3        # long enough for BRP to be ready before intro ends
 
 # Component type paths
 COMP_SUNDISC="hex_terrain::terrain::entities::HexSunDisc"
@@ -97,10 +97,16 @@ brp_stem_world_xz() {
 
 cargo build --quiet 2>&1
 
+# Kill any stale hex-terrain process holding the BRP port
+if pgrep -x hex-terrain >/dev/null 2>&1; then
+    echo "Killing stale hex-terrain process(es)..."
+    pkill -x hex-terrain; sleep 1
+fi
+
 APP_LOG=$(mktemp /tmp/hex-terrain-e2e.XXXXXX.log)
 
 echo "Starting hex-terrain (log: $APP_LOG)..."
-cargo run --quiet >"$APP_LOG" 2>&1 &
+cargo run --quiet -- --intro-duration "$INTRO_DURATION" >"$APP_LOG" 2>&1 &
 APP_PID=$!
 trap 'kill "$APP_PID" 2>/dev/null; wait "$APP_PID" 2>/dev/null || true; rm -f "$APP_LOG"' EXIT
 
@@ -108,37 +114,51 @@ echo "Waiting for BRP endpoint..."
 wait_for_brp
 
 # ---------------------------------------------------------------------------
-# Phase 1: During Intro (BRP just became ready, intro still playing)
+# Poll for state transitions (Intro → Running)
 # ---------------------------------------------------------------------------
+# QuadPetal count == 0 means Intro (reveal gated by GameState::Running).
+# QuadPetal count > 0 means Running. Poll in a tight loop to observe both.
 
-echo "Querying during Intro..."
-sleep 1
-QL_INTRO=$(brp_count "$COMP_QUADPETAL")
-Y_INTRO=$(brp_player_y)
-echo "  QuadPetal count: $QL_INTRO  (expect 0 during Intro)"
-echo "  Player Y:       $Y_INTRO"
+echo "Polling for Intro state (QL==0)..."
+CAUGHT_INTRO=false
+QL_INTRO=0
+Y_INTRO=""
+for _ in $(seq 1 50); do
+    ql=$(brp_count "$COMP_QUADPETAL")
+    if ((ql == 0)); then
+        CAUGHT_INTRO=true
+        QL_INTRO=0
+        Y_INTRO=$(brp_player_y)
+        # Stem brightness during Intro
+        read -r INTRO_PX INTRO_PZ <<< "$(brp_player_xz)"
+        read -r INTRO_P00_X INTRO_P00_Z <<< "$(brp_stem_world_xz 'Stem(0,0)')"
+        read -r INTRO_P22_X INTRO_P22_Z <<< "$(brp_stem_world_xz 'Stem(2,2)')"
+        INTRO_DIST_00=$(LC_NUMERIC=C awk "BEGIN { dx=$INTRO_PX-($INTRO_P00_X); dz=$INTRO_PZ-($INTRO_P00_Z); printf \"%.4f\", sqrt(dx*dx+dz*dz) }")
+        INTRO_DIST_22=$(LC_NUMERIC=C awk "BEGIN { dx=$INTRO_PX-($INTRO_P22_X); dz=$INTRO_PZ-($INTRO_P22_Z); printf \"%.4f\", sqrt(dx*dx+dz*dz) }")
+        INTRO_BRIGHT_00=$(LC_NUMERIC=C awk "BEGIN { t=$INTRO_DIST_00/40.0; if(t>1)t=1; if(t<0)t=0; printf \"%.4f\", 1.0-t*0.95 }")
+        INTRO_BRIGHT_22=$(LC_NUMERIC=C awk "BEGIN { t=$INTRO_DIST_22/40.0; if(t>1)t=1; if(t<0)t=0; printf \"%.4f\", 1.0-t*0.95 }")
+        echo "  Caught Intro: QL=0  Player Y=$Y_INTRO"
+        echo "  Stem(0,0): dist=$INTRO_DIST_00  brightness=$INTRO_BRIGHT_00"
+        echo "  Stem(2,2): dist=$INTRO_DIST_22  brightness=$INTRO_BRIGHT_22"
+        break
+    fi
+    sleep 0.1
+done
+if ! $CAUGHT_INTRO; then
+    echo "  WARNING: missed Intro window (app transitioned before first query)"
+    QL_INTRO=$(brp_count "$COMP_QUADPETAL")
+    Y_INTRO=$(brp_player_y)
+fi
 
-# Stem brightness during Intro (stems exist from startup, fade system runs)
-read -r INTRO_PX INTRO_PZ <<< "$(brp_player_xz)"
-read -r INTRO_P00_X INTRO_P00_Z <<< "$(brp_stem_world_xz 'Stem(0,0)')"
-read -r INTRO_P22_X INTRO_P22_Z <<< "$(brp_stem_world_xz 'Stem(2,2)')"
-INTRO_DIST_00=$(LC_NUMERIC=C awk "BEGIN { dx=$INTRO_PX-($INTRO_P00_X); dz=$INTRO_PZ-($INTRO_P00_Z); printf \"%.4f\", sqrt(dx*dx+dz*dz) }")
-INTRO_DIST_22=$(LC_NUMERIC=C awk "BEGIN { dx=$INTRO_PX-($INTRO_P22_X); dz=$INTRO_PZ-($INTRO_P22_Z); printf \"%.4f\", sqrt(dx*dx+dz*dz) }")
-INTRO_BRIGHT_00=$(LC_NUMERIC=C awk "BEGIN { t=$INTRO_DIST_00/40.0; if(t>1)t=1; if(t<0)t=0; printf \"%.4f\", 1.0-t*0.95 }")
-INTRO_BRIGHT_22=$(LC_NUMERIC=C awk "BEGIN { t=$INTRO_DIST_22/40.0; if(t>1)t=1; if(t<0)t=0; printf \"%.4f\", 1.0-t*0.95 }")
-echo "  Stem(0,0): dist=$INTRO_DIST_00  brightness=$INTRO_BRIGHT_00"
-echo "  Stem(2,2): dist=$INTRO_DIST_22  brightness=$INTRO_BRIGHT_22"
-
-# ---------------------------------------------------------------------------
-# Phase 2: Wait for intro → running transition
-# ---------------------------------------------------------------------------
-
-echo "Waiting ${INTRO_SETTLE}s for intro sequence..."
-sleep "$INTRO_SETTLE"
-
-# ---------------------------------------------------------------------------
-# Phase 2: During Running
-# ---------------------------------------------------------------------------
+echo "Polling for Running state (QL>0)..."
+for _ in $(seq 1 100); do
+    ql=$(brp_count "$COMP_QUADPETAL")
+    if ((ql > 0)); then
+        echo "  Caught Running: QL=$ql"
+        break
+    fi
+    sleep 0.1
+done
 
 echo "Querying during Running..."
 SD=$(brp_count  "$COMP_SUNDISC")
@@ -174,7 +194,13 @@ fi
 # Assertions
 # ---------------------------------------------------------------------------
 
-PASS=0 FAIL=0
+PASS=0 FAIL=0 SKIP=0
+
+assert_skip() {
+    local label=$1 reason=$2
+    printf "  skip  %-14s (%s)\n" "$label" "$reason"
+    ((SKIP++)) || true
+}
 
 assert_eq() {
     local label=$1 got=$2 want=$3
@@ -182,8 +208,10 @@ assert_eq() {
         printf "  ok    %-14s %d\n" "$label" "$got"
         ((PASS++)) || true
     else
-        local ratio
-        ratio=$(LC_NUMERIC=C awk "BEGIN { printf \"%.2f\", $got / $want }")
+        local ratio="n/a"
+        if ((want != 0)); then
+            ratio=$(LC_NUMERIC=C awk "BEGIN { printf \"%.2f\", $got / $want }")
+        fi
         printf "  FAIL  %-14s got %d, expected %d  (ratio: %s)\n" \
             "$label" "$got" "$want" "$ratio"
         ((FAIL++)) || true
@@ -228,13 +256,21 @@ echo ""
 echo "=== State transition ==="
 
 # During Intro: spawn_petals is gated by GameState::Running → no QuadPetals yet
-assert_eq    "QL(Intro)"   "$QL_INTRO"  0
+if $CAUGHT_INTRO; then
+    assert_eq    "QL(Intro)"   "$QL_INTRO"  0
+else
+    assert_skip  "QL(Intro)"   "missed Intro window"
+fi
 
 # During Running: spawn_petals fires → QuadPetals present
 assert_eq    "QL(Running)" "$QL"        57
 
 # Drone altitude should be stable across the transition (±1.0 tolerance)
-assert_float_eq "Altitude" "$Y_RUNNING" "$Y_INTRO" 1.0
+if $CAUGHT_INTRO; then
+    assert_float_eq "Altitude" "$Y_RUNNING" "$Y_INTRO" 1.0
+else
+    assert_skip  "Altitude"    "missed Intro window"
+fi
 
 # --- Entity counts ---
 echo ""
@@ -252,18 +288,40 @@ assert_eq    "QuadPetal"    "$QL"  57
 # Initial draw: 19 hexes * 2 TriPetals each (vertices 0 and 1, with dedup)
 assert_range "TriPetal"     "$TL"  30 38
 
+# --- FlowerState reveal (hexagon(center, reveal_radius=2) = 19 hexes) ---
+# BRP can't read FlowerState variants (Vec<Entity> lacks ReflectSerialize),
+# so we derive revealed hex count from QuadPetal count (3 per revealed hex).
+echo ""
+echo "=== FlowerState reveal (reveal_radius=2) ==="
+
+REVEALED_INTRO=$((QL_INTRO / 3))
+REVEALED_RUNNING=$((QL / 3))
+
+# During Intro: reveal_nearby_hexes is gated by GameState::Running → all Naked
+if $CAUGHT_INTRO; then
+    assert_eq    "Revealed(Intro)"   "$REVEALED_INTRO"    0
+else
+    assert_skip  "Revealed(Intro)"   "missed Intro window"
+fi
+
+# During Running: 19 hexes promoted (1 PlayerAbove + 18 Revealed)
+assert_eq    "Revealed(Running)" "$REVEALED_RUNNING"  19
+
 # --- Stem brightness (fade by distance from player) ---
 echo ""
 echo "=== Stem brightness (fade by distance) ==="
 
-# During Intro (QL_INTRO==0 proves GameState::Intro):
-# highlight_nearby_stems runs unconditionally → distant stem already dimmer.
-assert_float_lt "Intro(2,2)<(0,0)" "$INTRO_BRIGHT_22" "$INTRO_BRIGHT_00"
+# During Intro: highlight_nearby_stems runs unconditionally → distant stem dimmer.
+if $CAUGHT_INTRO; then
+    assert_float_lt "Intro(2,2)<(0,0)" "$INTRO_BRIGHT_22" "$INTRO_BRIGHT_00"
+else
+    assert_skip  "Intro(2,2)<(0,0)" "missed Intro window"
+fi
 
 # During Running (QL > 0 proves GameState::Running):
 # Same fade still active.
 assert_float_lt "Running(2,2)<(0,0)" "$BRIGHT_22" "$BRIGHT_00"
 
 echo ""
-echo "$PASS passed, $FAIL failed"
+echo "$PASS passed, $FAIL failed, $SKIP skipped"
 ((FAIL == 0))

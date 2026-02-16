@@ -56,7 +56,7 @@ Each plugin takes a config struct (e.g. `TerrainPlugin(TerrainConfig::default())
 - `TerrainHexLayout` — encapsulates `HexLayout` + per-hex heights/radii; computes vertices on demand via `vertex(hex, index)`; provides `interpolate_height`, `inverse_transform`, `find_equivalent_vertex`
 - `HexEntities` — maps `Hex` → `Entity` for all HexSunDisc entities
 - `NeonMaterials` — edge (emissive cyan) + gap face (dark) materials
-- `FlowerState` — per-hex reveal state: `Naked` → `Revealed` → `PlayerAbove`
+- `FlowerState` — per-hex reveal state: `Naked` → `Revealed` → `PlayerAbove`; helper methods `needs_petals()`, `demote()`, `promote()`, `fill_petals()`
 
 ### Entity Hierarchy
 ```

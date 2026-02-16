@@ -9,7 +9,7 @@ pub struct IntroTimer {
     pub(super) yaw: Option<f32>,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) enum IntroPhase {
     TiltUp,
     HighlightDelay,
