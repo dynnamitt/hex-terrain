@@ -14,6 +14,19 @@ use bevy::prelude::*;
 
 use crate::GameState;
 
+/// Pipeline ordering for terrain update systems.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+enum TerrainSet {
+    /// Sets `PlayerPos.pos.y` from terrain interpolation.
+    PlayerHeight,
+    /// Promotes/demotes `FlowerState` on hex transitions.
+    TrackHex,
+    /// Spawns petal geometry around the player.
+    RevealPetals,
+    /// Fades stem brightness by distance.
+    Visuals,
+}
+
 /// Nested configuration for the terrain subsystem.
 #[derive(Resource, Clone, Debug, Reflect)]
 pub struct TerrainConfig {
@@ -112,30 +125,42 @@ impl Plugin for TerrainPlugin {
             .register_type::<entities::FlowerState>()
             .insert_resource(self.0.clone())
             .insert_resource(ClearColor(self.0.clear_color))
+            .configure_sets(
+                Update,
+                (
+                    TerrainSet::PlayerHeight.before(TerrainSet::TrackHex),
+                    TerrainSet::TrackHex.before(TerrainSet::RevealPetals),
+                    TerrainSet::RevealPetals.before(TerrainSet::Visuals),
+                ),
+            )
             .add_systems(Startup, startup_systems::generate_grid)
             .add_systems(
                 Update,
-                systems::update_player_height.run_if(in_state(GameState::Running)),
+                (
+                    systems::update_player_height
+                        .in_set(TerrainSet::PlayerHeight)
+                        .run_if(in_state(GameState::Running)),
+                    systems::track_player_hex
+                        .in_set(TerrainSet::TrackHex)
+                        .run_if(resource_exists::<entities::HexEntities>)
+                        .run_if(in_state(GameState::Running).or(in_state(GameState::Intro))),
+                    systems::reveal_nearby_hexes
+                        .in_set(TerrainSet::RevealPetals)
+                        .run_if(any_with_component::<HexGrid>)
+                        .run_if(in_state(GameState::Running)),
+                    systems::highlight_nearby_stems.in_set(TerrainSet::Visuals),
+                ),
+            )
+            .add_systems(
+                OnEnter(GameState::Running),
+                (
+                    systems::sync_initial_altitude,
+                    systems::trigger_initial_reveal,
+                ),
             )
             .add_systems(
                 Update,
-                systems::track_player_hex
-                    .after(systems::update_player_height)
-                    .run_if(in_state(GameState::Running).or(in_state(GameState::Intro))),
-            )
-            .add_systems(
-                Update,
-                systems::reveal_nearby_hexes
-                    .after(systems::track_player_hex)
-                    .run_if(any_with_component::<HexGrid>)
-                    .run_if(in_state(GameState::Running)),
-            )
-            .add_systems(Update, systems::highlight_nearby_stems)
-            .add_systems(OnEnter(GameState::Running), systems::trigger_initial_reveal);
-
-        app.add_systems(
-            Update,
-            systems::draw_hex_labels.run_if(in_state(GameState::Debugging)),
-        );
+                systems::draw_hex_labels.run_if(in_state(GameState::Inspecting)),
+            );
     }
 }

@@ -125,25 +125,26 @@ pub fn recenter_cursor(
 
     let gained_focus = focus_events.read().any(|ev| ev.focused);
 
-    for mut window in &mut windows {
-        let w = window.width();
-        let h = window.height();
-        let center = Vec2::new(w / 2.0, h / 2.0);
+    let Ok(mut window) = windows.single_mut() else {
+        return;
+    };
+    let w = window.width();
+    let h = window.height();
+    let center = Vec2::new(w / 2.0, h / 2.0);
 
-        if gained_focus {
-            window.set_cursor_position(Some(center));
-            recentered.0 = true;
-            continue;
-        }
+    if gained_focus {
+        window.set_cursor_position(Some(center));
+        recentered.0 = true;
+        return;
+    }
 
-        if let Some(pos) = window.cursor_position()
-            && (pos.x < cfg.edge_margin
-                || pos.x > w - cfg.edge_margin
-                || pos.y < cfg.edge_margin
-                || pos.y > h - cfg.edge_margin)
-        {
-            window.set_cursor_position(Some(center));
-            recentered.0 = true;
-        }
+    if let Some(pos) = window.cursor_position()
+        && (pos.x < cfg.edge_margin
+            || pos.x > w - cfg.edge_margin
+            || pos.y < cfg.edge_margin
+            || pos.y > h - cfg.edge_margin)
+    {
+        window.set_cursor_position(Some(center));
+        recentered.0 = true;
     }
 }

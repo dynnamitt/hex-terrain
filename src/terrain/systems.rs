@@ -16,27 +16,25 @@ use crate::math;
 
 // ── Update: player height + active hex ─────────────────────────────
 
-/// Sets `PlayerPos.pos.y` from terrain interpolation.
+/// Syncs [`PlayerPos::altitude`] from the camera's current Y on enter Running.
 ///
-/// On the first frame, syncs [`PlayerPos::altitude`] from the camera's current
-/// Y position so the intro→running transition is seamless.
-pub fn update_player_height(
+/// Ensures the intro→running transition is seamless by deriving altitude from
+/// the camera position the intro left us at.
+pub fn sync_initial_altitude(
     grid_q: Query<&HexGrid>,
     mut player: ResMut<PlayerPos>,
     cam_q: Query<&Transform, With<crate::drone::Player>>,
-    mut synced: Local<bool>,
 ) {
     let Ok(grid) = grid_q.single() else { return };
+    let Ok(cam_tf) = cam_q.single() else { return };
+    let xz = Vec2::new(cam_tf.translation.x, cam_tf.translation.z);
+    let terrain_h = grid.terrain.interpolate_height(xz);
+    player.altitude = cam_tf.translation.y - terrain_h;
+}
 
-    if !*synced {
-        *synced = true;
-        if let Ok(cam_tf) = cam_q.single() {
-            let xz = Vec2::new(cam_tf.translation.x, cam_tf.translation.z);
-            let terrain_h = grid.terrain.interpolate_height(xz);
-            player.altitude = cam_tf.translation.y - terrain_h;
-        }
-    }
-
+/// Sets `PlayerPos.pos.y` from terrain interpolation.
+pub fn update_player_height(grid_q: Query<&HexGrid>, mut player: ResMut<PlayerPos>) {
+    let Ok(grid) = grid_q.single() else { return };
     let xz = Vec2::new(player.pos.x, player.pos.z);
     player.pos.y = grid.terrain.interpolate_height(xz) + player.altitude;
 }
@@ -46,7 +44,7 @@ pub fn update_player_height(
 /// Uses `Local<Option<Hex>>` to detect hex transitions without a global resource.
 pub fn track_player_hex(
     grid_q: Query<&HexGrid>,
-    hex_entities: Option<Res<HexEntities>>,
+    hex_entities: Res<HexEntities>,
     mut flower_q: Query<&mut FlowerState, With<HexSunDisc>>,
     names: Query<&Name>,
     player: Res<PlayerPos>,
@@ -61,17 +59,15 @@ pub fn track_player_hex(
         return;
     }
 
-    let he = hex_entities.as_ref();
-
     // Demote old PlayerAbove → Revealed
-    if let Some(old_entity) = prev_hex.and_then(|h| he.and_then(|he| he.map.get(&h).copied()))
+    if let Some(old_entity) = prev_hex.and_then(|h| hex_entities.map.get(&h).copied())
         && let Ok(mut state) = flower_q.get_mut(old_entity)
     {
         state.demote();
     }
 
     // Promote new hex → PlayerAbove
-    if let Some(&new_entity) = he.and_then(|he| he.map.get(&new_hex)) {
+    if let Some(&new_entity) = hex_entities.map.get(&new_hex) {
         if let Ok(mut state) = flower_q.get_mut(new_entity) {
             state.promote();
         }
@@ -160,13 +156,24 @@ pub fn trigger_initial_reveal(mut flower_q: Query<&mut FlowerState, With<HexSunD
 // ── Update: stem fading ────────────────────────────────────────────
 
 /// Brightens stems near the player and dims distant ones based on horizontal distance.
+///
+/// Skips the full stem loop when the player's xz position hasn't moved more than
+/// 0.1 world-units since the last update.
 pub fn highlight_nearby_stems(
     player: Res<PlayerPos>,
     stem_q: Query<(&GlobalTransform, &MeshMaterial3d<StandardMaterial>), With<Stem>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     cfg: Res<TerrainConfig>,
+    mut last_xz: Local<Option<Vec2>>,
 ) {
     let cam_xz = Vec2::new(player.pos.x, player.pos.z);
+
+    if let Some(prev) = *last_xz
+        && cam_xz.distance_squared(prev) < 0.01
+    {
+        return;
+    }
+    *last_xz = Some(cam_xz);
 
     for (stem_tf, mat_handle) in &stem_q {
         let pos = stem_tf.translation();

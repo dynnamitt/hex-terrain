@@ -63,7 +63,7 @@ impl Plugin for DronePlugin {
             .add_systems(Startup, (systems::spawn_drone, systems::hide_cursor))
             .add_systems(
                 Update,
-                systems::recenter_cursor.run_if(not(in_state(GameState::Debugging))),
+                systems::recenter_cursor.run_if(not(in_state(GameState::Inspecting))),
             )
             .add_systems(
                 Update,

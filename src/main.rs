@@ -13,13 +13,14 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy::remote::{RemotePlugin, http::RemoteHttpPlugin};
 use bevy::window::{CursorGrabMode, CursorOptions};
+use bevy_egui::egui;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use clap::Parser;
 
 /// Hex terrain viewer with neon edge lighting.
 #[derive(Parser)]
 struct Cli {
-    /// Start in debug mode (GameState::Debugging).
+    /// Start in debug mode (GameState::Inspecting).
     #[arg(long)]
     debug: bool,
 
@@ -35,8 +36,8 @@ pub enum GameState {
     Intro,
     /// Normal gameplay — drone movement + terrain reveal.
     Running,
-    /// Debug overlay active (Tab to toggle).
-    Debugging,
+    /// Inspector overlay active (Tab to toggle).
+    Inspecting,
 }
 
 /// CLI debug flag exposed as a resource for verbose logging.
@@ -88,9 +89,35 @@ fn main() {
     .add_plugins(intro::IntroPlugin(intro_cfg))
     .add_systems(Update, exit_on_esc)
     .add_systems(Update, toggle_inspector)
-    .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Debugging)));
+    .add_systems(Update, draw_fps.run_if(|f: Res<DebugFlag>| f.0))
+    .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Inspecting)));
 
     app.run();
+}
+
+fn draw_fps(
+    mut egui_ctx: Query<&mut bevy_egui::EguiContext>,
+    time: Res<Time>,
+    mut ready: Local<bool>,
+) {
+    // Skip first frame — bevy_egui hasn't called Context::run() yet.
+    if !*ready {
+        *ready = true;
+        return;
+    }
+    let Ok(mut ctx) = egui_ctx.single_mut() else {
+        return;
+    };
+    let fps = 1.0 / time.delta_secs().max(f32::EPSILON);
+    egui::Area::new(egui::Id::new("fps_overlay"))
+        .fixed_pos(egui::pos2(8.0, 8.0))
+        .show(ctx.get_mut(), |ui| {
+            ui.label(
+                egui::RichText::new(format!("{fps:.0} fps"))
+                    .color(egui::Color32::from_rgb(0, 255, 128))
+                    .font(egui::FontId::monospace(14.0)),
+            );
+        });
 }
 
 fn toggle_inspector(
@@ -101,14 +128,14 @@ fn toggle_inspector(
 ) {
     if keys.just_pressed(KeyCode::Tab) {
         let new_state = match state.get() {
-            GameState::Running => GameState::Debugging,
-            GameState::Debugging => GameState::Running,
+            GameState::Running => GameState::Inspecting,
+            GameState::Inspecting => GameState::Running,
             _ => return,
         };
-        let entering_debug = new_state == GameState::Debugging;
+        let entering_inspect = new_state == GameState::Inspecting;
         next.set(new_state);
         for (mut opts, mut window) in &mut windows {
-            if entering_debug {
+            if entering_inspect {
                 opts.visible = true;
                 opts.grab_mode = CursorGrabMode::None;
             } else {
