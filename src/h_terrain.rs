@@ -92,6 +92,7 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::TriPos1Emitter>()
             .register_type::<entities::TriPos2Emitter>()
             .register_type::<entities::Quad>()
+            .register_type::<entities::QuadEdge>()
             .register_type::<entities::Tri>()
             .insert_resource(self.0.clone())
             .insert_resource(ClearColor(self.0.clear_color))

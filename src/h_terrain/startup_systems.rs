@@ -9,8 +9,8 @@ use hexx::{EdgeDirection, Hex, VertexDirection, shapes};
 
 use super::HTerrainConfig;
 use super::entities::{
-    Corner, HCell, HGrid, Quad, QuadOwner, QuadPos2Emitter, QuadPos3Emitter, QuadTail, Tri,
-    TriOwner, TriPos1Emitter, TriPos2Emitter,
+    Corner, HCell, HGrid, Quad, QuadEdge, QuadOwner, QuadPos2Emitter, QuadPos3Emitter, QuadTail,
+    Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
 use super::h_grid_layout::HGridLayout;
 use crate::DebugFlag;
@@ -44,6 +44,13 @@ pub fn generate_h_grid(
         base_color: Color::srgb(0.12, 0.03, 0.05),
         emissive: LinearRgba::rgb(0.03, 0.06, 0.1),
         cull_mode: None,
+        ..default()
+    });
+
+    let edge_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.0, 0.5, 1.0),
+        emissive: LinearRgba::rgb(0.0, 20.0, 40.0),
+        unlit: true,
         ..default()
     });
 
@@ -117,6 +124,7 @@ pub fn generate_h_grid(
                 &mut commands,
                 &mut meshes,
                 &gap_material,
+                &edge_material,
                 &terrain,
                 &corner_entities,
                 hex,
@@ -143,10 +151,12 @@ pub fn generate_h_grid(
 
 // ── Quad gap spawning ────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_quad(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     gap_material: &Handle<StandardMaterial>,
+    edge_material: &Handle<StandardMaterial>,
     terrain: &HGridLayout,
     corner_entities: &HashMap<(Hex, u8), Entity>,
     hex: Hex,
@@ -193,6 +203,29 @@ fn spawn_quad(
         ))
         .id();
     commands.entity(owner_entity).add_child(mesh_entity);
+
+    // Spawn edge lines as children of the Quad mesh entity
+    let edge_thickness = 0.03;
+    let origin = v0;
+    let edges = [(v0, v3), (v1, v2), (v0, v1), (v3, v2)];
+    for (from, to) in edges {
+        let local_from = from - origin;
+        let local_to = to - origin;
+        let midpoint = (local_from + local_to) / 2.0;
+        let diff = local_to - local_from;
+        let length = diff.length();
+        let rotation = Quat::from_rotation_arc(Vec3::X, diff.normalize());
+        let edge_entity = commands
+            .spawn((
+                QuadEdge,
+                Mesh3d(meshes.add(Cuboid::new(length, edge_thickness, edge_thickness))),
+                MeshMaterial3d(edge_material.clone()),
+                Transform::from_translation(midpoint).with_rotation(rotation),
+            ))
+            .id();
+        commands.entity(mesh_entity).add_child(edge_entity);
+    }
+
     Some(())
 }
 

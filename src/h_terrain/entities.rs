@@ -69,3 +69,7 @@ pub struct Quad;
 /// Marker on tri gap mesh entities (child of a [`TriOwner`] corner).
 #[derive(Component, Reflect)]
 pub struct Tri;
+
+/// Marker on edge-line cuboid entities (child of a [`Quad`]).
+#[derive(Component, Reflect)]
+pub struct QuadEdge;
