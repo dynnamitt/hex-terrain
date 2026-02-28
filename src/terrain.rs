@@ -94,7 +94,7 @@ impl Default for TerrainConfig {
                 radius_noise_octaves: 3,
                 height_noise_scale: 50.0,
                 radius_noise_scale: 30.0,
-                max_height: 10.0,
+                max_height: 20.0,
                 min_hex_radius: 0.2,
                 max_hex_radius: 2.6,
             },
