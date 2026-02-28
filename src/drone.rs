@@ -4,7 +4,7 @@
 //! for terrain to consume. Spawns the Camera3d entity with bloom.
 
 mod entities;
-mod systems;
+pub(crate) mod systems;
 
 pub use entities::Player;
 

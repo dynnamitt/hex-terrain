@@ -5,7 +5,7 @@ use bevy::mesh::Indices;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
-use hexx::{EdgeDirection, Hex, VertexDirection, shapes};
+use hexx::{EdgeDirection, Hex, HexLayout, PlaneMeshBuilder, VertexDirection, shapes};
 
 use super::HTerrainConfig;
 use super::entities::{
@@ -54,6 +54,27 @@ pub fn generate_h_grid(
         ..default()
     });
 
+    // Unit hex face mesh (scaled per-hex by radius)
+    let unit_layout = HexLayout {
+        scale: Vec2::splat(1.0),
+        ..default()
+    };
+    let hex_mesh_info = PlaneMeshBuilder::new(&unit_layout).build();
+    let hex_mesh = meshes.add(
+        Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::RENDER_WORLD,
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, hex_mesh_info.vertices)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, hex_mesh_info.normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, hex_mesh_info.uvs)
+        .with_inserted_indices(Indices::U16(hex_mesh_info.indices)),
+    );
+    let hex_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.9, 0.5, 0.1),
+        ..default()
+    });
+
     let grid_entity = commands
         .spawn((
             Name::new("HGrid"),
@@ -76,6 +97,11 @@ pub fn generate_h_grid(
                 Name::new(format!("HCell({},{})", hex.x, hex.y)),
                 Transform::from_xyz(center.x, height, center.y),
                 Visibility::default(),
+            ))
+            .with_child((
+                Mesh3d(hex_mesh.clone()),
+                MeshMaterial3d(hex_material.clone()),
+                Transform::from_scale(Vec3::new(radius, 1.0, radius)),
             ))
             .id();
 

@@ -3,10 +3,19 @@
 use bevy::prelude::*;
 
 use super::entities::HGrid;
-use crate::PlayerPos;
+use crate::{PlayerMoved, PlayerPos};
 
 /// Sets `PlayerPos.pos.y` from terrain interpolation.
-pub fn update_player_height(grid_q: Query<&HGrid>, mut player: ResMut<PlayerPos>) {
+/// Skipped when [`PlayerMoved`] is `false` (no xz/altitude change this frame).
+pub fn update_player_height(
+    grid_q: Query<&HGrid>,
+    mut player: ResMut<PlayerPos>,
+    mut moved: ResMut<PlayerMoved>,
+) {
+    if !moved.0 {
+        return;
+    }
+    moved.0 = false;
     let Ok(grid) = grid_q.single() else { return };
     let xz = Vec2::new(player.pos.x, player.pos.z);
     player.pos.y = grid.terrain.interpolate_height(xz) + player.altitude;

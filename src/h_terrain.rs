@@ -5,9 +5,6 @@ mod h_grid_layout;
 mod startup_systems;
 mod systems;
 
-#[allow(unused_imports)]
-pub use entities::HGrid;
-
 use bevy::prelude::*;
 
 use crate::GameState;
@@ -103,6 +100,7 @@ impl Plugin for HTerrainPlugin {
                 Update,
                 systems::update_player_height
                     .in_set(HTerrainSet::PlayerHeight)
+                    .after(crate::drone::systems::fly)
                     .run_if(in_state(GameState::Running)),
             );
     }

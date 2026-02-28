@@ -5,6 +5,7 @@
 //! edge/face reveal as the drone moves, and bloom post-processing.
 
 mod drone;
+mod h_terrain;
 mod intro;
 pub mod math;
 mod terrain;
@@ -15,7 +16,17 @@ use bevy::remote::{RemotePlugin, http::RemoteHttpPlugin};
 use bevy::window::{CursorGrabMode, CursorOptions};
 use bevy_egui::egui;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
+
+/// Which terrain plugin to load.
+#[derive(ValueEnum, Clone, Debug, Default)]
+enum TerrainMode {
+    /// Original terrain with neon petals.
+    V1,
+    /// Height-based pivot-point grid.
+    #[default]
+    V2,
+}
 
 /// Hex terrain viewer with neon edge lighting.
 #[derive(Parser)]
@@ -27,6 +38,10 @@ struct Cli {
     /// Override intro tilt-up duration (seconds).
     #[arg(long)]
     intro_duration: Option<f32>,
+
+    /// Terrain implementation to use.
+    #[arg(long, value_enum, default_value_t)]
+    terrain: TerrainMode,
 }
 /// Application-wide game state, used for system scheduling.
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect)]
@@ -53,6 +68,11 @@ pub struct PlayerPos {
     pub altitude: f32,
 }
 
+/// Set by drone/intro when [`PlayerPos`] xz or altitude changes.
+/// Consumed (reset to `false`) by terrain height systems.
+#[derive(Resource, Default, Reflect)]
+pub struct PlayerMoved(pub bool);
+
 fn main() {
     let cli = Cli::parse();
 
@@ -78,19 +98,32 @@ fn main() {
     }))
     .register_type::<GameState>()
     .register_type::<PlayerPos>()
+    .register_type::<PlayerMoved>()
     .init_state::<GameState>()
     .init_resource::<PlayerPos>()
+    .init_resource::<PlayerMoved>()
     .insert_resource(DebugFlag(cli.debug))
     .add_plugins(RemotePlugin::default())
     .add_plugins(RemoteHttpPlugin::default())
-    .add_plugins(bevy_egui::EguiPlugin::default())
-    .add_plugins(terrain::TerrainPlugin(terrain::TerrainConfig::default()))
-    .add_plugins(drone::DronePlugin(drone::DroneConfig::default()))
-    .add_plugins(intro::IntroPlugin(intro_cfg))
-    .add_systems(Update, exit_on_esc)
-    .add_systems(Update, toggle_inspector)
-    .add_systems(Update, draw_fps.run_if(|f: Res<DebugFlag>| f.0))
-    .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Inspecting)));
+    .add_plugins(bevy_egui::EguiPlugin::default());
+
+    match cli.terrain {
+        TerrainMode::V1 => {
+            app.add_plugins(terrain::TerrainPlugin(terrain::TerrainConfig::default()));
+        }
+        TerrainMode::V2 => {
+            app.add_plugins(h_terrain::HTerrainPlugin(
+                h_terrain::HTerrainConfig::default(),
+            ));
+        }
+    }
+
+    app.add_plugins(drone::DronePlugin(drone::DroneConfig::default()))
+        .add_plugins(intro::IntroPlugin(intro_cfg))
+        .add_systems(Update, exit_on_esc)
+        .add_systems(Update, toggle_inspector)
+        .add_systems(Update, draw_fps.run_if(|f: Res<DebugFlag>| f.0))
+        .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Inspecting)));
 
     app.run();
 }

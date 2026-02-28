@@ -78,14 +78,17 @@ pub fn fly(mut input: DroneInput, mut query: Query<&mut Transform, With<Player>>
         let delta = direction * input.cfg.move_speed * input.time.delta_secs();
         input.player.pos.x += delta.x;
         input.player.pos.z += delta.z;
+        input.moved.0 = true;
     }
 
     // Q/E vertical altitude adjustment
     if input.keys.pressed(KeyCode::KeyE) {
         input.player.altitude += input.cfg.move_speed * input.time.delta_secs();
+        input.moved.0 = true;
     }
     if input.keys.pressed(KeyCode::KeyQ) {
         input.player.altitude -= input.cfg.move_speed * input.time.delta_secs();
+        input.moved.0 = true;
     }
 
     // Mouse scroll also adjusts altitude
@@ -95,6 +98,7 @@ pub fn fly(mut input: DroneInput, mut query: Query<&mut Transform, With<Player>>
             MouseScrollUnit::Pixel => ev.y / 40.0,
         };
         input.player.altitude += lines * input.cfg.scroll_sensitivity;
+        input.moved.0 = true;
     }
 
     // Apply position from PlayerPos (y is set by terrain::update_player_height)
