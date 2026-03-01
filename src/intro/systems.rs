@@ -9,15 +9,11 @@ use crate::{DebugFlag, GameState};
 pub fn run_intro(
     time: Res<Time>,
     mut intro: ResMut<IntroTimer>,
-    mut query: Query<&mut Transform, With<Player>>,
+    mut transform: Single<&mut Transform, With<Player>>,
     intro_cfg: Res<IntroConfig>,
     mut next_state: ResMut<NextState<GameState>>,
     debug: Res<DebugFlag>,
 ) {
-    let Ok(mut transform) = query.single_mut() else {
-        return;
-    };
-
     if debug.0 {
         eprintln!(
             "run_intro: phase={:?} timer={:.3} dt={:.3}",

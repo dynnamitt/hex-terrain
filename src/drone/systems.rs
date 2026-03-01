@@ -28,11 +28,7 @@ pub fn spawn_drone(mut commands: Commands, cfg: Res<DroneConfig>) {
 }
 
 /// WASD + mouse look + Q/E/scroll altitude. Writes to [`PlayerPos`].
-pub fn fly(mut input: DroneInput, mut query: Query<&mut Transform, With<Player>>) {
-    let Ok(mut transform) = query.single_mut() else {
-        return;
-    };
-
+pub fn fly(mut input: DroneInput, mut transform: Single<&mut Transform, With<Player>>) {
     // Mouse look: yaw (horizontal) + pitch (vertical)
     let mut yaw = 0.0;
     let mut pitch = 0.0;
@@ -120,7 +116,7 @@ pub fn hide_cursor(mut q: Query<(&mut CursorOptions, &mut Window)>) {
 /// Warps cursor back to center when it drifts near a window edge or when
 /// the window regains focus.
 pub fn recenter_cursor(
-    mut windows: Query<&mut Window>,
+    mut window: Single<&mut Window>,
     mut focus_events: MessageReader<WindowFocused>,
     mut recentered: ResMut<CursorRecentered>,
     cfg: Res<DroneConfig>,
@@ -128,10 +124,6 @@ pub fn recenter_cursor(
     recentered.0 = false;
 
     let gained_focus = focus_events.read().any(|ev| ev.focused);
-
-    let Ok(mut window) = windows.single_mut() else {
-        return;
-    };
     let w = window.width();
     let h = window.height();
     let center = Vec2::new(w / 2.0, h / 2.0);

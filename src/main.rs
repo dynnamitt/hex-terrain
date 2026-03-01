@@ -108,6 +108,7 @@ fn main() {
     .add_plugins(bevy_egui::EguiPlugin::default());
 
     match cli.terrain {
+        #[allow(deprecated)]
         TerrainMode::V1 => {
             app.add_plugins(terrain::TerrainPlugin(terrain::TerrainConfig::default()));
         }
@@ -129,7 +130,7 @@ fn main() {
 }
 
 fn draw_fps(
-    mut egui_ctx: Query<&mut bevy_egui::EguiContext>,
+    mut egui_ctx: Single<&mut bevy_egui::EguiContext>,
     time: Res<Time>,
     mut ready: Local<bool>,
 ) {
@@ -138,13 +139,10 @@ fn draw_fps(
         *ready = true;
         return;
     }
-    let Ok(mut ctx) = egui_ctx.single_mut() else {
-        return;
-    };
     let fps = 1.0 / time.delta_secs().max(f32::EPSILON);
     egui::Area::new(egui::Id::new("fps_overlay"))
         .fixed_pos(egui::pos2(8.0, 8.0))
-        .show(ctx.get_mut(), |ui| {
+        .show(egui_ctx.get_mut(), |ui| {
             ui.label(
                 egui::RichText::new(format!("{fps:.0} fps"))
                     .color(egui::Color32::from_rgb(0, 255, 128))

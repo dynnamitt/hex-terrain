@@ -30,6 +30,8 @@ pub struct HTerrainConfig {
 pub struct HGridSettings {
     /// Number of hex rings around the origin (~1200 hexes at 20).
     pub radius: u32,
+    /// fov, tag HCell under player + this radius
+    pub fov_reach: u32,
     /// Distance in world-units between adjacent hex centers.
     pub point_spacing: f32,
     /// Seed for the height noise generator.
@@ -57,6 +59,7 @@ impl Default for HTerrainConfig {
         Self {
             grid: HGridSettings {
                 radius: 20,
+                fov_reach: 1,
                 point_spacing: 4.0,
                 height_noise_seed: 42,
                 radius_noise_seed: 137,

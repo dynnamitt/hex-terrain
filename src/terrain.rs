@@ -112,8 +112,12 @@ impl Default for TerrainConfig {
 }
 
 /// Terrain plugin: grid generation at startup, petal spawning at runtime.
+///
+/// **Deprecated**: V1 terrain — use [`crate::h_terrain::HTerrainPlugin`] (V2) instead.
+#[deprecated(note = "V1 terrain — use h_terrain::HTerrainPlugin (V2) instead")]
 pub struct TerrainPlugin(pub TerrainConfig);
 
+#[allow(deprecated)]
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<TerrainConfig>()
