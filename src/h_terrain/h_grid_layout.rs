@@ -75,7 +75,6 @@ impl HGridLayout {
     }
 
     /// Hex coordinate from a world-space 2D position.
-    #[allow(dead_code)]
     pub fn world_pos_to_hex(&self, pos: Vec2) -> Hex {
         self.layout.world_pos_to_hex(pos)
     }

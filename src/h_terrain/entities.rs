@@ -1,5 +1,6 @@
 //! Entity types for height-based terrain.
 
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use hexx::Hex;
 
@@ -12,7 +13,13 @@ use super::h_grid_layout::HGridLayout;
 pub struct HGrid {
     /// Encapsulated hex layout with heights, radii, and vertex computation.
     pub terrain: HGridLayout,
+    /// Hex → HCell entity lookup.
+    pub hex_entities: HashMap<Hex, Entity>,
 }
+
+/// Marker on [`HCell`] entities within the player's field-of-view radius.
+#[derive(Component, Reflect)]
+pub struct InFov;
 
 /// Per-hex cell entity, positioned at the hex center.
 #[derive(Component, Reflect)]
@@ -35,12 +42,14 @@ pub struct Corner {
 pub struct QuadOwner;
 
 /// Neighbor corner contributing vertex 1 of a quad gap.
+/// Holds the [`Quad`] mesh entity this corner aids.
 #[derive(Component, Reflect)]
-pub struct QuadPos2Emitter;
+pub struct QuadPos2Emitter(pub Entity);
 
 /// Neighbor corner contributing vertex 2 of a quad gap.
+/// Holds the [`Quad`] mesh entity this corner aids.
 #[derive(Component, Reflect)]
-pub struct QuadPos3Emitter;
+pub struct QuadPos3Emitter(pub Entity);
 
 /// Corner at vertex 3 of a quad gap (corner i+1 on the owning hex).
 #[derive(Component, Reflect)]
@@ -53,12 +62,14 @@ pub struct QuadTail;
 pub struct TriOwner;
 
 /// Neighbor corner contributing vertex 1 of a tri gap.
+/// Holds the [`Tri`] mesh entity this corner aids.
 #[derive(Component, Reflect)]
-pub struct TriPos1Emitter;
+pub struct TriPos1Emitter(pub Entity);
 
 /// Neighbor corner contributing vertex 2 of a tri gap.
+/// Holds the [`Tri`] mesh entity this corner aids.
 #[derive(Component, Reflect)]
-pub struct TriPos2Emitter;
+pub struct TriPos2Emitter(pub Entity);
 
 // ── Mesh entity markers ─────────────────────────────────────────
 
@@ -70,6 +81,23 @@ pub struct Quad;
 #[derive(Component, Reflect)]
 pub struct Tri;
 
+/// Marker on hex face mesh entities (child of [`HCell`]).
+#[derive(Component, Reflect)]
+pub struct HexFace;
+
 /// Marker on edge-line cuboid entities (child of a [`Quad`]).
 #[derive(Component, Reflect)]
 pub struct QuadEdge;
+
+/// Material handles for [`InFov`] highlighting.
+#[derive(Resource)]
+pub struct FovMaterials {
+    /// Original hex face material.
+    pub hex_original: Handle<StandardMaterial>,
+    /// Highlight hex face material (emissive warm glow).
+    pub hex_highlight: Handle<StandardMaterial>,
+    /// Original gap (Quad/Tri) material.
+    pub gap_original: Handle<StandardMaterial>,
+    /// Highlight gap material (emissive cyan glow).
+    pub gap_highlight: Handle<StandardMaterial>,
+}

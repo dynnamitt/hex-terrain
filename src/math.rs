@@ -4,6 +4,7 @@
 //! on plain numeric / `Vec3` inputs, making them straightforward to unit-test.
 
 use bevy::prelude::Vec3;
+use hexx::{EdgeDirection, GridVertex, Hex, VertexDirection};
 
 /// Maps a noise value from the standard `[-1, 1]` range into `[min, max]`.
 ///
@@ -97,9 +98,55 @@ pub fn stem_geometry(
     })
 }
 
+/// Count total (quads, tris) for a grid using the same ownership rules
+/// as `generate_h_grid`: quads on even edges [0,2,4] where neighbor exists,
+/// tris on vertices [0,1] with canonical ownership and all 3 coords in grid.
+pub fn gap_filler(grid: &[Hex]) -> (usize, usize) {
+    let mut quads = 0;
+    let mut tris = 0;
+
+    for &hex in grid {
+        for edge_index in [0usize, 2, 4] {
+            let dir = EdgeDirection::ALL_DIRECTIONS[edge_index];
+            let neighbor = hex.neighbor(dir);
+            if grid.contains(&neighbor) {
+                quads += 1;
+            }
+        }
+
+        for vertex_index in [0usize, 1] {
+            let dir = VertexDirection::ALL_DIRECTIONS[vertex_index];
+            let gv = GridVertex {
+                origin: hex,
+                direction: dir,
+            };
+            let coords = gv.coordinates();
+            if coords[0] != hex {
+                continue;
+            }
+            if coords.iter().all(|c| grid.contains(c)) {
+                tris += 1;
+            }
+        }
+    }
+
+    (quads, tris)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hexx::shapes;
+
+    // ── gap_filler ────────────────────────────────────────────────────
+
+    #[test]
+    fn total_gap_counts_radius1() {
+        let grid: Vec<Hex> = shapes::hexagon(Hex::ZERO, 1).collect();
+        let (quads, tris) = gap_filler(&grid);
+        assert_eq!(quads, 12, "radius-1 grid should have 12 quads");
+        assert_eq!(tris, 6, "radius-1 grid should have 6 tris");
+    }
 
     // ── map_noise_to_range ──────────────────────────────────────────
 

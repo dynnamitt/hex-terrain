@@ -9,8 +9,8 @@ use hexx::{EdgeDirection, Hex, HexLayout, PlaneMeshBuilder, VertexDirection, sha
 
 use super::HTerrainConfig;
 use super::entities::{
-    Corner, HCell, HGrid, Quad, QuadEdge, QuadOwner, QuadPos2Emitter, QuadPos3Emitter, QuadTail,
-    Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
+    Corner, FovMaterials, HCell, HGrid, HexFace, Quad, QuadEdge, QuadOwner, QuadPos2Emitter,
+    QuadPos3Emitter, QuadTail, Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
 use super::h_grid_layout::HGridLayout;
 use crate::DebugFlag;
@@ -75,6 +75,24 @@ pub fn generate_h_grid(
         ..default()
     });
 
+    let hex_highlight = materials.add(StandardMaterial {
+        base_color: Color::srgb(1.0, 0.7, 0.2),
+        emissive: LinearRgba::rgb(4.0, 2.0, 0.4),
+        ..default()
+    });
+    let gap_highlight = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.05, 0.15, 0.2),
+        emissive: LinearRgba::rgb(0.2, 0.8, 1.6),
+        cull_mode: None,
+        ..default()
+    });
+    commands.insert_resource(FovMaterials {
+        hex_original: hex_material.clone(),
+        hex_highlight,
+        gap_original: gap_material.clone(),
+        gap_highlight,
+    });
+
     let grid_entity = commands
         .spawn((
             Name::new("HGrid"),
@@ -83,8 +101,9 @@ pub fn generate_h_grid(
         ))
         .id();
 
-    // ── Pass 1: Spawn HCells + Corners, build lookup map ─────────
+    // ── Pass 1: Spawn HCells + Corners, build lookup maps ────────
     let mut corner_entities: HashMap<(Hex, u8), Entity> = HashMap::new();
+    let mut hex_entities: HashMap<Hex, Entity> = HashMap::new();
 
     for hex in shapes::hexagon(Hex::ZERO, g.radius) {
         let center = terrain.hex_to_world_pos(hex);
@@ -99,11 +118,13 @@ pub fn generate_h_grid(
                 Visibility::default(),
             ))
             .with_child((
+                HexFace,
                 Mesh3d(hex_mesh.clone()),
                 MeshMaterial3d(hex_material.clone()),
                 Transform::from_scale(Vec3::new(radius, 1.0, radius)),
             ))
             .id();
+        hex_entities.insert(hex, cell_entity);
 
         for i in 0..6usize {
             let uc = terrain.unit_corner(i);
@@ -172,7 +193,10 @@ pub fn generate_h_grid(
         }
     }
 
-    commands.entity(grid_entity).insert(HGrid { terrain });
+    commands.entity(grid_entity).insert(HGrid {
+        terrain,
+        hex_entities,
+    });
 }
 
 // ── Quad gap spawning ────────────────────────────────────────────
@@ -212,12 +236,6 @@ fn spawn_quad(
     let v2 = terrain.vertex(neighbor, n1_idx)?;
     let v3 = terrain.vertex(hex, v1_idx)?;
 
-    // Add marker components to corner entities
-    commands.entity(owner_entity).insert(QuadOwner);
-    commands.entity(pos2_entity).insert(QuadPos2Emitter);
-    commands.entity(pos3_entity).insert(QuadPos3Emitter);
-    commands.entity(tail_entity).insert(QuadTail);
-
     // Build mesh in corner-local space
     let mesh = build_gap_mesh(&[v0, v1, v2, v3]);
     let mesh_entity = commands
@@ -229,6 +247,16 @@ fn spawn_quad(
         ))
         .id();
     commands.entity(owner_entity).add_child(mesh_entity);
+
+    // Add marker components to corner entities
+    commands.entity(owner_entity).insert(QuadOwner);
+    commands
+        .entity(pos2_entity)
+        .insert(QuadPos2Emitter(mesh_entity));
+    commands
+        .entity(pos3_entity)
+        .insert(QuadPos3Emitter(mesh_entity));
+    commands.entity(tail_entity).insert(QuadTail);
 
     // Spawn edge lines as children of the Quad mesh entity
     let edge_thickness = 0.03;
@@ -290,11 +318,6 @@ fn spawn_tri(
     let v1 = terrain.vertex(coords[1], idx1)?;
     let v2 = terrain.vertex(coords[2], idx2)?;
 
-    // Add marker components to corner entities
-    commands.entity(owner_entity).insert(TriOwner);
-    commands.entity(pos1_entity).insert(TriPos1Emitter);
-    commands.entity(pos2_entity).insert(TriPos2Emitter);
-
     // Build mesh in corner-local space
     let mesh = build_gap_mesh(&[v0, v1, v2]);
     let mesh_entity = commands
@@ -306,6 +329,15 @@ fn spawn_tri(
         ))
         .id();
     commands.entity(owner_entity).add_child(mesh_entity);
+
+    // Add marker components to corner entities
+    commands.entity(owner_entity).insert(TriOwner);
+    commands
+        .entity(pos1_entity)
+        .insert(TriPos1Emitter(mesh_entity));
+    commands
+        .entity(pos2_entity)
+        .insert(TriPos2Emitter(mesh_entity));
     Some(())
 }
 
@@ -348,4 +380,24 @@ fn build_gap_mesh(world_verts: &[Vec3]) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
     .with_inserted_indices(Indices::U16(indices))
+}
+
+/// Debug-only startup check: asserts spawned Quad/Tri counts match `gap_filler` expectations.
+pub fn verify_gap_counts(
+    _grid: Single<&HGrid>,
+    quads: Query<(), With<Quad>>,
+    tris: Query<(), With<Tri>>,
+    cfg: Res<HTerrainConfig>,
+) {
+    let hexes: Vec<Hex> = shapes::hexagon(Hex::ZERO, cfg.grid.radius).collect();
+    let (expected_quads, expected_tris) = math::gap_filler(&hexes);
+    let actual_quads = quads.iter().count();
+    let actual_tris = tris.iter().count();
+
+    assert_eq!(
+        (actual_quads, actual_tris),
+        (expected_quads, expected_tris),
+        "Gap entity mismatch: got ({actual_quads}, {actual_tris}), expected ({expected_quads}, {expected_tris})"
+    );
+    info!("Gap counts verified: {actual_quads} quads, {actual_tris} tris");
 }

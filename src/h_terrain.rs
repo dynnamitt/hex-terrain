@@ -7,13 +7,17 @@ mod systems;
 
 use bevy::prelude::*;
 
-use crate::GameState;
+use crate::{DebugFlag, GameState};
 
 /// Pipeline ordering for h_terrain update systems.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 enum HTerrainSet {
     /// Sets `PlayerPos.pos.y` from terrain interpolation.
     PlayerHeight,
+    /// Tags nearby [`entities::HCell`] entities with [`entities::InFov`].
+    TrackFov,
+    /// Swaps materials on meshes based on [`entities::InFov`] presence.
+    Highlight,
 }
 
 /// Configuration for the height-based terrain subsystem.
@@ -59,7 +63,7 @@ impl Default for HTerrainConfig {
         Self {
             grid: HGridSettings {
                 radius: 20,
-                fov_reach: 1,
+                fov_reach: 2,
                 point_spacing: 4.0,
                 height_noise_seed: 42,
                 radius_noise_seed: 137,
@@ -94,15 +98,33 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::Quad>()
             .register_type::<entities::QuadEdge>()
             .register_type::<entities::Tri>()
+            .register_type::<entities::InFov>()
+            .register_type::<entities::HexFace>()
             .insert_resource(self.0.clone())
             .insert_resource(ClearColor(self.0.clear_color))
-            .configure_sets(Update, HTerrainSet::PlayerHeight)
+            .configure_sets(
+                Update,
+                (
+                    HTerrainSet::PlayerHeight,
+                    HTerrainSet::TrackFov.after(HTerrainSet::PlayerHeight),
+                    HTerrainSet::Highlight.after(HTerrainSet::TrackFov),
+                ),
+            )
             .add_systems(Startup, startup_systems::generate_h_grid)
+            .add_systems(
+                Startup,
+                startup_systems::verify_gap_counts
+                    .after(startup_systems::generate_h_grid)
+                    .run_if(|f: Res<DebugFlag>| f.0),
+            )
             .add_systems(OnEnter(GameState::Running), systems::sync_initial_altitude)
             .add_systems(
                 Update,
-                systems::update_player_height
-                    .in_set(HTerrainSet::PlayerHeight)
+                (
+                    systems::update_player_height.in_set(HTerrainSet::PlayerHeight),
+                    systems::track_player_fov.in_set(HTerrainSet::TrackFov),
+                    systems::highlight_fov.in_set(HTerrainSet::Highlight),
+                )
                     .after(crate::drone::systems::fly)
                     .run_if(in_state(GameState::Running)),
             );

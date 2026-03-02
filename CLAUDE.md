@@ -152,6 +152,22 @@ Group related `Res<T>` params into a struct (e.g. `PetalRes`) to reduce system s
 ### ECS change detection over `Local` bookkeeping
 Prefer Bevy's built-in change detection (`Ref<T>::is_changed()`, `Mut<T>::is_changed()`) over `Local<bool>` / `Local<Option<T>>` for tracking state transitions between frames. When a prior system already mutates a component (e.g. `track_player_hex` promotes `FlowerState`), downstream systems can detect that via `is_changed()` — no manual diffing needed. For state-transition edge cases (system wasn't running when the change happened), use `OnEnter` + `set_changed()` to seed detection.
 
+### Corner marker uniqueness (V2 gap geometry)
+
+The even-edge `[0,2,4]` ownership rule and vertex canonical ownership guarantee that each Corner entity receives each marker component type **at most once**:
+
+| Marker | Corners (per hex) | Mechanism |
+|---|---|---|
+| `QuadOwner` | 0, 2, 4 | `vertex_dirs[0]` for even edges |
+| `QuadTail` | 5, 1, 3 | `vertex_dirs[1]` for even edges |
+| `QuadPos2Emitter(Entity)` | 0, 2, 4 | neighbor's `opp_vertex_dirs[1]` only fires for even spawn edges |
+| `QuadPos3Emitter(Entity)` | 1, 3, 5 | neighbor's `opp_vertex_dirs[0]` only fires for even spawn edges |
+| `TriOwner` | 0, 1 | canonical `coords[0] == hex` for vertex indices 0, 1 |
+| `TriPos1Emitter(Entity)` | at most once | same canonical ownership |
+| `TriPos2Emitter(Entity)` | at most once | same canonical ownership |
+
+A corner *can* hold multiple *different* marker types simultaneously (e.g. `QuadOwner` + `TriOwner` on corner 0). This is safe because they are distinct component types in ECS. The `PosXEmitter` markers are single-value tuples holding the `Entity` of the gap mesh they contribute to, enabling direct lookup without hierarchy traversal.
+
 ## Formatting
 
 No project-specific formatter configured. Standard `cargo fmt`.
