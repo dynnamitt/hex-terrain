@@ -60,7 +60,10 @@ impl Plugin for DronePlugin {
             .register_type::<DroneConfig>()
             .insert_resource(self.0.clone())
             .init_resource::<entities::CursorRecentered>()
-            .add_systems(Startup, (systems::spawn_drone, systems::hide_cursor))
+            .add_systems(Startup, systems::spawn_drone);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        app.add_systems(Startup, systems::hide_cursor)
             .add_systems(
                 Update,
                 systems::recenter_cursor.run_if(not(in_state(GameState::Inspecting))),
@@ -70,6 +73,13 @@ impl Plugin for DronePlugin {
                 systems::fly
                     .after(systems::recenter_cursor)
                     .run_if(in_state(GameState::Running)),
+            );
+
+        #[cfg(target_arch = "wasm32")]
+        app.add_systems(Update, systems::fly.run_if(in_state(GameState::Running)))
+            .add_systems(
+                Update,
+                systems::lock_cursor_on_click.run_if(not(in_state(GameState::Inspecting))),
             );
     }
 }

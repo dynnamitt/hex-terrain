@@ -3,6 +3,11 @@ name = "hex-terrain"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["native"]
+native = ["dep:clap", "bevy/x11", "bevy/multi_threaded", "bevy/bevy_remote"]
+web = ["bevy/webgl2"]
+
 [dependencies.bevy]
 version = "0.18"
 features = [
@@ -24,12 +29,9 @@ features = [
     "bevy_state",
     "bevy_window",
     "bevy_winit",
-    "bevy_remote",
     "hdr",
-    "multi_threaded",
     "reflect_auto_register",
     "tonemapping_luts",
-    "x11",
 ]
 default-features = false
 
@@ -39,7 +41,7 @@ default-features = false
 
 [dependencies]
 noise = "0.9"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive"], optional = true }
 bevy-inspector-egui = "0.36"
 bevy_egui = "0.39"
 hexx = { version = "0.24.0", features = ["bevy"] }
@@ -55,3 +57,9 @@ opt-level = 1
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = "thin"
+strip = "debuginfo"

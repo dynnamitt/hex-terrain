@@ -3,10 +3,14 @@ use bevy::input::mouse::MouseScrollUnit;
 use bevy::post_process::bloom::{Bloom, BloomCompositeMode};
 use bevy::prelude::*;
 use bevy::render::view::Hdr;
-use bevy::window::{CursorGrabMode, CursorOptions, WindowFocused};
+#[cfg(not(target_arch = "wasm32"))]
+use bevy::window::WindowFocused;
+use bevy::window::{CursorGrabMode, CursorOptions};
 
 use super::DroneConfig;
-use super::entities::{CursorRecentered, DroneInput, Player};
+#[cfg(not(target_arch = "wasm32"))]
+use super::entities::CursorRecentered;
+use super::entities::{DroneInput, Player};
 use crate::math;
 
 /// Spawns the Camera3d entity with Player marker, HDR, and bloom.
@@ -104,6 +108,7 @@ pub fn fly(mut input: DroneInput, mut transform: Single<&mut Transform, With<Pla
     transform.translation.y += (target_y - transform.translation.y) * input.cfg.height_lerp;
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn hide_cursor(mut q: Query<(&mut CursorOptions, &mut Window)>) {
     for (mut opts, mut window) in &mut q {
         opts.visible = false;
@@ -113,8 +118,29 @@ pub fn hide_cursor(mut q: Query<(&mut CursorOptions, &mut Window)>) {
     }
 }
 
+/// Re-locks the cursor on left click (WASM only).
+///
+/// Browsers release pointer lock when the user presses Escape or the window
+/// loses focus. This system re-engages the lock on the next left click,
+/// which counts as a user gesture the browser requires.
+#[cfg(target_arch = "wasm32")]
+pub fn lock_cursor_on_click(
+    mouse: Res<ButtonInput<MouseButton>>,
+    mut q: Query<(&mut CursorOptions, &mut Window)>,
+) {
+    if mouse.just_pressed(MouseButton::Left) {
+        for (mut opts, mut window) in &mut q {
+            opts.visible = false;
+            opts.grab_mode = CursorGrabMode::Confined;
+            let center = Vec2::new(window.width() / 2.0, window.height() / 2.0);
+            window.set_cursor_position(Some(center));
+        }
+    }
+}
+
 /// Warps cursor back to center when it drifts near a window edge or when
 /// the window regains focus.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn recenter_cursor(
     mut window: Single<&mut Window>,
     mut focus_events: MessageReader<WindowFocused>,
