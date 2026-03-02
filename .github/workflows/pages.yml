@@ -1,4 +1,4 @@
-name: Docs
+name: Pages
 
 on:
   push:
@@ -21,19 +21,19 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
-      - name: Build documentation
-        run: cargo doc --no-deps
-        env:
-          RUSTDOCFLAGS: "-D warnings"
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.108
 
-      - name: Add redirect index
-        run: echo '<meta http-equiv="refresh" content="0;url=hex_terrain/index.html">' > target/doc/index.html
+      - name: Build WASM
+        run: make wasm
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: target/doc
+          path: target/wasm
 
   deploy:
     needs: build
