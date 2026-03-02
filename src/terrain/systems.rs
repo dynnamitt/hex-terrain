@@ -46,7 +46,7 @@ pub fn track_player_hex(
     grid_q: Query<&HexGrid>,
     hex_entities: Res<HexEntities>,
     mut flower_q: Query<&mut FlowerState, With<HexSunDisc>>,
-    names: Query<&Name>,
+    #[cfg(debug_assertions)] names: Query<&Name>,
     player: Res<PlayerPos>,
     mut prev_hex: Local<Option<Hex>>,
 ) {
@@ -72,8 +72,8 @@ pub fn track_player_hex(
             state.promote();
         }
 
+        #[cfg(debug_assertions)]
         if let Ok(name) = names.get(new_entity) {
-            #[cfg(debug_assertions)]
             println!("Player over: {name}");
         }
     }

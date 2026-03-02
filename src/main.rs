@@ -10,18 +10,23 @@ mod intro;
 pub mod math;
 mod terrain;
 
+#[cfg(not(target_arch = "wasm32"))]
 use bevy::app::AppExit;
 use bevy::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
 use bevy::remote::{RemotePlugin, http::RemoteHttpPlugin};
 use bevy::window::{CursorGrabMode, CursorOptions};
 use bevy_egui::egui;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use clap::{Parser, ValueEnum};
+#[cfg(not(target_arch = "wasm32"))]
+use clap::Parser;
 
 /// Which terrain plugin to load.
-#[derive(ValueEnum, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(clap::ValueEnum))]
 enum TerrainMode {
     /// Original terrain with neon petals.
+    #[allow(dead_code)]
     V1,
     /// Height-based pivot-point grid.
     #[default]
@@ -29,6 +34,7 @@ enum TerrainMode {
 }
 
 /// Hex terrain viewer with neon edge lighting.
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Parser)]
 struct Cli {
     /// Start in debug mode (GameState::Inspecting).
@@ -74,13 +80,20 @@ pub struct PlayerPos {
 pub struct PlayerMoved(pub bool);
 
 fn main() {
-    let cli = Cli::parse();
+    #[cfg(not(target_arch = "wasm32"))]
+    let (debug, intro_duration_override, terrain_mode) = {
+        let cli = Cli::parse();
+        (cli.debug, cli.intro_duration, cli.terrain)
+    };
+    #[cfg(target_arch = "wasm32")]
+    let (debug, intro_duration_override, terrain_mode) =
+        (false, None::<f32>, TerrainMode::default());
 
     let mut intro_cfg = intro::IntroConfig::default();
-    if let Some(d) = cli.intro_duration {
+    if let Some(d) = intro_duration_override {
         intro_cfg.tilt_up_duration = d;
     }
-    if cli.debug {
+    if debug {
         eprintln!(
             "IntroConfig: tilt_up_duration={}",
             intro_cfg.tilt_up_duration
@@ -92,6 +105,9 @@ fn main() {
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
             title: "Hex Terrain".into(),
+            #[cfg(target_arch = "wasm32")]
+            canvas: Some("#game-canvas".into()),
+            fit_canvas_to_parent: true,
             ..default()
         }),
         ..default()
@@ -102,12 +118,13 @@ fn main() {
     .init_state::<GameState>()
     .init_resource::<PlayerPos>()
     .init_resource::<PlayerMoved>()
-    .insert_resource(DebugFlag(cli.debug))
-    .add_plugins(RemotePlugin::default())
-    .add_plugins(RemoteHttpPlugin::default())
+    .insert_resource(DebugFlag(debug))
     .add_plugins(bevy_egui::EguiPlugin::default());
 
-    match cli.terrain {
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_plugins((RemotePlugin::default(), RemoteHttpPlugin::default()));
+
+    match terrain_mode {
         #[allow(deprecated)]
         TerrainMode::V1 => {
             app.add_plugins(terrain::TerrainPlugin(terrain::TerrainConfig::default()));
@@ -121,10 +138,12 @@ fn main() {
 
     app.add_plugins(drone::DronePlugin(drone::DroneConfig::default()))
         .add_plugins(intro::IntroPlugin(intro_cfg))
-        .add_systems(Update, exit_on_esc)
         .add_systems(Update, toggle_inspector)
         .add_systems(Update, draw_fps.run_if(|f: Res<DebugFlag>| f.0))
         .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Inspecting)));
+
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_systems(Update, exit_on_esc);
 
     app.run();
 }
@@ -179,6 +198,7 @@ fn toggle_inspector(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn exit_on_esc(keys: Res<ButtonInput<KeyCode>>, mut exit: MessageWriter<AppExit>) {
     if keys.just_pressed(KeyCode::Escape) {
         exit.write(AppExit::Success);
