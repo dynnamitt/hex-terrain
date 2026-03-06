@@ -2,9 +2,11 @@
 
 mod entities;
 mod h_grid_layout;
+mod math;
 mod startup_systems;
 mod systems;
 
+use bevy::ecs::schedule::InternedSystemSet;
 use bevy::prelude::*;
 
 use crate::{DebugFlag, GameState};
@@ -65,7 +67,7 @@ impl Default for HTerrainConfig {
         Self {
             grid: HGridSettings {
                 radius: 20,
-                fov_reach: 2,
+                fov_reach: 3,
                 point_spacing: 4.0,
                 height_noise_seed: 43,
                 radius_noise_seed: 137,
@@ -84,7 +86,12 @@ impl Default for HTerrainConfig {
 }
 
 /// Height-based terrain plugin.
-pub struct HTerrainPlugin(pub HTerrainConfig);
+pub struct HTerrainPlugin {
+    /// Terrain configuration.
+    pub config: HTerrainConfig,
+    /// Optional system set that player-height updates must run after.
+    pub after_player_movement: Option<InternedSystemSet>,
+}
 
 impl Plugin for HTerrainPlugin {
     fn build(&self, app: &mut App) {
@@ -104,8 +111,8 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::InFov>()
             .register_type::<entities::HexFace>()
             .register_type::<entities::FovTransition>()
-            .insert_resource(self.0.clone())
-            .insert_resource(ClearColor(self.0.clear_color))
+            .insert_resource(self.config.clone())
+            .insert_resource(ClearColor(self.config.clear_color))
             .configure_sets(
                 Update,
                 (
@@ -121,17 +128,21 @@ impl Plugin for HTerrainPlugin {
                     .after(startup_systems::generate_h_grid)
                     .run_if(|f: Res<DebugFlag>| f.0),
             )
-            .add_systems(OnEnter(GameState::Running), systems::sync_initial_altitude)
-            .add_systems(
-                Update,
-                (
-                    systems::update_player_height.in_set(HTerrainSet::PlayerHeight),
-                    systems::track_player_fov.in_set(HTerrainSet::TrackFov),
-                    systems::start_fov_transitions.in_set(HTerrainSet::Highlight),
-                    systems::animate_fov_transitions.after(HTerrainSet::Highlight),
-                )
-                    .after(crate::drone::systems::fly)
-                    .run_if(in_state(GameState::Running)),
-            );
+            .add_systems(OnEnter(GameState::Running), systems::sync_initial_altitude);
+
+        if let Some(movement_set) = self.after_player_movement {
+            app.configure_sets(Update, HTerrainSet::PlayerHeight.after(movement_set));
+        }
+
+        app.add_systems(
+            Update,
+            (
+                systems::update_player_height.in_set(HTerrainSet::PlayerHeight),
+                systems::track_player_fov.in_set(HTerrainSet::TrackFov),
+                systems::start_fov_transitions.in_set(HTerrainSet::Highlight),
+                systems::animate_fov_transitions.after(HTerrainSet::Highlight),
+            )
+                .run_if(in_state(GameState::Running)),
+        );
     }
 }

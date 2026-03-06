@@ -13,8 +13,8 @@ use super::entities::{
     QuadPos3Emitter, QuadTail, Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
 use super::h_grid_layout::HGridLayout;
+use super::math;
 use crate::DebugFlag;
-use crate::math;
 
 /// Spawns the [`HGrid`] entity with [`HCell`] children, [`Corner`] grandchildren,
 /// and Quad/Tri gap geometry with distributed emitter markers.
@@ -144,9 +144,8 @@ pub fn generate_h_grid(
                 let uc_next = terrain.unit_corner((i + 1) % 6);
                 let next_offset = Vec3::new(uc_next.x * radius, 0.0, uc_next.y * radius);
                 let edge_vec = next_offset - local_offset;
-                let length = edge_vec.length();
-                let midpoint = edge_vec / 2.0;
-                let rotation = Quat::from_rotation_arc(Vec3::X, edge_vec.normalize());
+                let (midpoint, length, rotation) =
+                    math::edge_cuboid_transform(Vec3::ZERO, edge_vec);
                 let edge_mesh = meshes.add(Cuboid::new(length, edge_thickness, edge_thickness));
 
                 corner.with_child((
@@ -215,14 +214,7 @@ fn spawn_quad(
     let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
     let neighbor = hex.neighbor(dir);
 
-    let vertex_dirs = dir.vertex_directions();
-    let v0_idx = vertex_dirs[0].index();
-    let v1_idx = vertex_dirs[1].index();
-
-    let opp_dir = dir.const_neg();
-    let opp_vertex_dirs = opp_dir.vertex_directions();
-    let n0_idx = opp_vertex_dirs[1].index();
-    let n1_idx = opp_vertex_dirs[0].index();
+    let (v0_idx, v1_idx, n0_idx, n1_idx) = math::quad_corner_indices(edge_index);
 
     // All 4 corner entities must exist (grid-edge guard)
     let &owner_entity = corner_entities.get(&(hex, v0_idx))?;
@@ -237,7 +229,7 @@ fn spawn_quad(
     let v3 = terrain.vertex(hex, v1_idx)?;
 
     // Build mesh in corner-local space
-    let mesh = build_gap_mesh(&[v0, v1, v2, v3]);
+    let mesh = math::build_gap_mesh(&[v0, v1, v2, v3]);
     let mesh_entity = commands
         .spawn((
             Quad,
@@ -265,10 +257,7 @@ fn spawn_quad(
     for (from, to) in edges {
         let local_from = from - origin;
         let local_to = to - origin;
-        let midpoint = (local_from + local_to) / 2.0;
-        let diff = local_to - local_from;
-        let length = diff.length();
-        let rotation = Quat::from_rotation_arc(Vec3::X, diff.normalize());
+        let (midpoint, length, rotation) = math::edge_cuboid_transform(local_from, local_to);
         let edge_entity = commands
             .spawn((
                 QuadEdge,
@@ -319,7 +308,7 @@ fn spawn_tri(
     let v2 = terrain.vertex(coords[2], idx2)?;
 
     // Build mesh in corner-local space
-    let mesh = build_gap_mesh(&[v0, v1, v2]);
+    let mesh = math::build_gap_mesh(&[v0, v1, v2]);
     let mesh_entity = commands
         .spawn((
             Tri,
@@ -352,34 +341,6 @@ fn corner_index_for_vertex(hex: Hex, target: &hexx::GridVertex) -> Option<u8> {
         };
         candidate.equivalent(target).then_some(dir.index())
     })
-}
-
-/// Builds a gap mesh (3 or 4 world-space vertices) in the first vertex's local space.
-fn build_gap_mesh(world_verts: &[Vec3]) -> Mesh {
-    let origin = world_verts[0];
-    let local: Vec<Vec3> = world_verts.iter().map(|&v| v - origin).collect();
-
-    let normal = math::compute_normal(local[0], local[1], local[2]);
-    let positions: Vec<[f32; 3]> = local.iter().map(|v| v.to_array()).collect();
-    let normals = vec![normal.to_array(); positions.len()];
-
-    let (uvs, indices): (Vec<[f32; 2]>, Vec<u16>) = if world_verts.len() == 4 {
-        (
-            vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
-            vec![0, 1, 2, 0, 2, 3],
-        )
-    } else {
-        (vec![[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]], vec![0, 1, 2])
-    };
-
-    Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::RENDER_WORLD,
-    )
-    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
-    .with_inserted_indices(Indices::U16(indices))
 }
 
 /// Debug-only startup check: asserts spawned Quad/Tri counts match `gap_filler` expectations.

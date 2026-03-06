@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use hexx::{Hex, HexLayout, shapes};
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
-use crate::math;
+use super::math;
 
 use super::HGridSettings;
 
@@ -109,32 +109,13 @@ impl HGridLayout {
 
     /// Inverse-distance-weighted height interpolation from nearby hex vertices.
     pub fn interpolate_height(&self, pos: Vec2) -> f32 {
-        let mut weighted_sum = 0.0;
-        let mut weight_total = 0.0;
-
         let hex = self.layout.world_pos_to_hex(pos);
-
-        for h in std::iter::once(hex).chain(hex.all_neighbors()) {
-            for i in 0..6u8 {
-                if let Some(vpos) = self.vertex(h, i) {
-                    let dx = pos.x - vpos.x;
-                    let dz = pos.y - vpos.z;
-                    let dist_sq = dx * dx + dz * dz;
-                    if dist_sq < 0.001 {
-                        return vpos.y;
-                    }
-                    let weight = 1.0 / dist_sq;
-                    weighted_sum += vpos.y * weight;
-                    weight_total += weight;
-                }
-            }
-        }
-
-        if weight_total > 0.0 {
-            weighted_sum / weight_total
-        } else {
-            self.heights.get(&hex).copied().unwrap_or(0.0)
-        }
+        let vertices: Vec<Vec3> = std::iter::once(hex)
+            .chain(hex.all_neighbors())
+            .flat_map(|h| (0..6u8).filter_map(move |i| self.vertex(h, i)))
+            .collect();
+        math::idw_interpolate_height(pos, &vertices)
+            .unwrap_or_else(|| self.heights.get(&hex).copied().unwrap_or(0.0))
     }
 }
 

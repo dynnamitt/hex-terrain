@@ -106,9 +106,10 @@ fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     app.add_plugins((RemotePlugin::default(), RemoteHttpPlugin::default()));
 
-    app.add_plugins(h_terrain::HTerrainPlugin(
-        h_terrain::HTerrainConfig::default(),
-    ));
+    app.add_plugins(h_terrain::HTerrainPlugin {
+        config: h_terrain::HTerrainConfig::default(),
+        after_player_movement: Some(drone::systems::fly.into_system_set().intern()),
+    });
 
     app.add_plugins(drone::DronePlugin(drone::DroneConfig::default()))
         .add_plugins(intro::IntroPlugin(intro_cfg))
