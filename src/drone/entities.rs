@@ -3,7 +3,7 @@ use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 
 use super::DroneConfig;
-use crate::{PlayerMoved, PlayerPos};
+use crate::{GroundLevel, PlayerMoved, PlayerPos};
 
 /// Marker component for the player-controlled drone entity.
 #[derive(Component, Reflect)]
@@ -23,6 +23,7 @@ pub struct DroneInput<'w, 's> {
     pub scroll: MessageReader<'w, 's, MouseWheel>,
     pub recentered: Res<'w, CursorRecentered>,
     pub cfg: Res<'w, DroneConfig>,
+    pub ground: Res<'w, GroundLevel>,
     pub player: ResMut<'w, PlayerPos>,
     pub moved: ResMut<'w, PlayerMoved>,
 }

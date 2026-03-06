@@ -8,6 +8,7 @@ pub(crate) mod systems;
 
 pub use entities::Player;
 
+use bevy::ecs::schedule::InternedSystemSet;
 use bevy::prelude::*;
 
 use crate::GameState;
@@ -31,8 +32,8 @@ pub struct DroneConfig {
     pub bloom_intensity: f32,
     /// Height lerp factor for smooth camera Y transitions.
     pub height_lerp: f32,
-    /// Initial altitude offset above terrain when spawning.
-    pub spawn_altitude: f32,
+    /// Minimum offset above terrain (spawn height + floor for Q/scroll).
+    pub lowest_offset: f32,
 }
 
 impl Default for DroneConfig {
@@ -46,21 +47,31 @@ impl Default for DroneConfig {
             scroll_sensitivity: 3.0,
             bloom_intensity: 0.3,
             height_lerp: 0.1,
-            spawn_altitude: 12.0,
+            lowest_offset: 2.0,
         }
     }
 }
 
 /// First-person drone controller with WASD, mouse look, and altitude control.
-pub struct DronePlugin(pub DroneConfig);
+pub struct DronePlugin {
+    /// Per-plugin configuration.
+    pub config: DroneConfig,
+    /// Optional Startup set that `spawn_drone` must run after (terrain seed).
+    pub after_terrain_seed: Option<InternedSystemSet>,
+}
 
 impl Plugin for DronePlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Player>()
             .register_type::<DroneConfig>()
-            .insert_resource(self.0.clone())
-            .init_resource::<entities::CursorRecentered>()
-            .add_systems(Startup, systems::spawn_drone);
+            .insert_resource(self.config.clone())
+            .init_resource::<entities::CursorRecentered>();
+
+        if let Some(set) = self.after_terrain_seed {
+            app.add_systems(Startup, systems::spawn_drone.after(set));
+        } else {
+            app.add_systems(Startup, systems::spawn_drone);
+        }
 
         #[cfg(not(target_arch = "wasm32"))]
         app.add_systems(Startup, systems::hide_cursor)

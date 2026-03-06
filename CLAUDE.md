@@ -20,75 +20,48 @@ cargo run -- --intro-duration 5    # override tilt-up duration (seconds)
 
 ## Architecture
 
-Five modules, each split into files: module root (config + plugin), `entities.rs`, `systems.rs`.
-Both terrain modules additionally have `startup_systems.rs` and a layout helper.
-`--terrain-mode` CLI flag selects V1 (flower-based) or V2 (height-based, default).
+Four modules, each split into files: module root (config + plugin), `entities.rs`, `systems.rs`.
+The terrain module additionally has `startup_systems.rs` and a layout helper.
 
 ```
 src/
-  main.rs              # CLI (clap), PlayerPos resource, GameState enum, draw_fps, TerrainMode
+  main.rs              # CLI (clap), PlayerPos, GroundLevel, GameState, TerrainSeededPhase, draw_fps
   math.rs              # Pure math helpers (noise mapping, easing, normals, stem geometry)
-  terrain.rs               # TerrainConfig (GridSettings + FlowerSettings), TerrainPlugin (V1)
-    terrain/terrain_hex_layout # TerrainHexLayout: encapsulates HexLayout + heights/radii,
-                               # on-demand vertex computation, interpolation, inverse transforms
-    terrain/entities           # HexGrid, HexSunDisc, Stem, QuadPetal, TriPetal, QuadLines,
-                               # FlowerState, HexEntities, HexCtx, NeonMaterials, PetalRes, PetalCtx
-    terrain/startup_systems    # generate_grid (Startup schedule)
-    terrain/systems            # sync_initial_altitude, update_player_height, track_player_hex,
-                               # reveal_nearby_hexes, highlight_nearby_stems, draw_hex_labels
-  h_terrain.rs             # HTerrainConfig (HGridSettings), HTerrainPlugin (V2)
+  h_terrain.rs             # HTerrainConfig (HGridSettings), HTerrainPlugin
     h_terrain/h_grid_layout    # HGridLayout: encapsulates HexLayout + per-hex heights/radii,
                                # vertex computation, height interpolation
     h_terrain/entities         # HGrid, HCell, Corner, Quad, QuadEdge, Tri,
                                # QuadOwner, QuadPos2Emitter, QuadPos3Emitter, QuadTail,
                                # TriOwner, TriPos1Emitter, TriPos2Emitter
-    h_terrain/startup_systems  # generate_h_grid (Startup schedule)
-    h_terrain/systems          # update_player_height, sync_initial_altitude
+    h_terrain/startup_systems  # generate_h_grid, seed_ground_level (Startup schedule)
+    h_terrain/systems          # update_ground_level, track_player_fov, fov transitions
   drone.rs             # DroneConfig, DronePlugin
     drone/entities     # Player, CursorRecentered, DroneInput
     drone/systems      # spawn_drone, fly, hide_cursor, recenter_cursor, toggle_inspector
   intro.rs             # IntroConfig, IntroPlugin
-    intro/entities     # IntroSequence, IntroPhase
+    intro/entities     # IntroTimer, IntroPhase
     intro/systems      # run_intro
 ```
 
 ### Config Resources
-Each plugin takes a config struct (e.g. `TerrainPlugin(TerrainConfig::default())`).
+Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ... }`).
 
-- `TerrainConfig` — V1: nested `GridSettings` (radius, spacing, noise, hex radii) + `FlowerSettings` (stem params, edge thickness, reveal radius)
-- `HTerrainConfig` — V2: `HGridSettings` (radius, spacing, noise seeds/octaves/scales, height/radius ranges) + `clear_color`
-- `DroneConfig` — move speed, mouse sensitivity, spawn_altitude (default 12.0), height lerp, bloom intensity
+- `HTerrainConfig` — `HGridSettings` (radius, spacing, noise seeds/octaves/scales, height/radius ranges) + `clear_color`
+- `DroneConfig` — move speed, mouse sensitivity, lowest_offset (default 2.0), height lerp, bloom intensity
 - `IntroConfig` — tilt-up/down durations, highlight delay, tilt-down angle
 
 ### SystemParam Bundles
 - `DroneInput` — bundles all `fly()` inputs (time, keys, mouse, scroll, config, player)
-- `PetalRes` — bundles `reveal_nearby_hexes()` read-only params (grid query, hex entities, neon materials, config)
-- `PetalCtx` — plain struct passed to petal spawn helpers (hex entities, neon, grid, config)
+- `GapLookup` — bundles queries for discovering Quad/Tri entities reachable from an HCell
 
 ### Other Key Resources
-- `PlayerPos` — in main.rs: drone writes xz + altitude, terrain writes y
+- `PlayerPos` — in main.rs: drone writes xz + offset (above ground), terrain writes `GroundLevel`
+- `GroundLevel` — `Option<f32>`: `None` until terrain seeded, then `Some(terrain_height)` under the player
 - `GameState` — States enum: `Intro`, `Running`, `Inspecting`
-- `HexGrid` — V1 Component, single entity parenting all HexSunDiscs; wraps `TerrainHexLayout`
-- `TerrainHexLayout` — V1: encapsulates `HexLayout` + per-hex heights/radii; computes vertices on demand via `vertex(hex, index)`; provides `interpolate_height`, `inverse_transform`, `find_equivalent_vertex`
-- `HexEntities` — V1: maps `Hex` → `Entity` for all HexSunDisc entities
-- `NeonMaterials` — V1: edge (emissive cyan) + gap face (dark) materials
-- `FlowerState` — V1: per-hex reveal state: `Naked` → `Revealed` → `PlayerAbove`; helper methods `needs_petals()`, `demote()`, `promote()`, `fill_petals()`
-- `HGrid` — V2 Component, single entity parenting all HCells; wraps `HGridLayout`
-- `HGridLayout` — V2: encapsulates `HexLayout` + per-hex heights/radii; `vertex()`, `interpolate_height()`
+- `HGrid` — Component, single entity parenting all HCells; wraps `HGridLayout`
+- `HGridLayout` — encapsulates `HexLayout` + per-hex heights/radii; `vertex()`, `interpolate_height()`
 
 ### Entity Hierarchy
-
-**V1 (terrain)**
-```
-HexGrid (Component + Transform + Visibility)
-  └── HexSunDisc (per hex, scaled by radius)
-        ├── Stem (local-space child)
-        ├── QuadPetal (even edges 0,2,4 → neighbor)
-        │     └── QuadLines (cuboid mesh children)
-        └── TriPetal (vertices 0,1 → two neighbors)
-```
-
-**V2 (h_terrain)**
 ```
 HGrid (Component + Transform + Visibility)
   └── HCell (per hex, positioned at center + noise height)
@@ -100,13 +73,11 @@ HGrid (Component + Transform + Visibility)
 ```
 
 ### System Order
-**Startup**: `spawn_drone` → `generate_grid`
-**OnEnter(Running)**: `sync_initial_altitude`, `trigger_initial_reveal`
-**Update** (via `TerrainSet` pipeline): `PlayerHeight` → `TrackHex` → `RevealPetals` → `Visuals`
-- `update_player_height` (Running only)
-- `track_player_hex` (Running | Intro, requires HexEntities)
-- `reveal_nearby_hexes` (Running only, requires HexGrid)
-- `highlight_nearby_stems` (always, skips when xz movement < 0.1)
+**Startup**: `generate_h_grid` → `seed_ground_level` (in `TerrainSeededPhase`) → `spawn_drone` (after `TerrainSeededPhase`)
+**Update** (via `HTerrainPhase` pipeline): `UpdateGround` → `TrackFov` → `Highlight`
+- `update_ground_level` — sets `GroundLevel` from terrain interpolation (Running only)
+- `track_player_fov` — adds/removes `InFov` on nearby HCells (Running only)
+- `start_fov_transitions` / `animate_fov_transitions` — material color lerp (Running only)
 
 ## Dependencies
 
@@ -127,7 +98,7 @@ These differ from earlier Bevy tutorials/docs:
 ## Key Default Values
 
 All constants are fields on per-plugin config structs with `Default` impls.
-See `TerrainConfig` (with `GridSettings` + `FlowerSettings`), `DroneConfig`, `IntroConfig`.
+See `HTerrainConfig` (with `HGridSettings`), `DroneConfig`, `IntroConfig`.
 
 ## Code Patterns
 
@@ -175,11 +146,11 @@ No project-specific formatter configured. Standard `cargo fmt`.
 ## Module Dependency Graph
 
 ```
-       main (PlayerPos, GameState, TerrainMode)
+       main (PlayerPos, GroundLevel, GameState, TerrainSeededPhase)
       / |  \
-drone terrain h_terrain
-  |     |
-intro  math
+drone  h_terrain  math
+  |
+intro
 ```
 
 ## E2E Testing (BRP)

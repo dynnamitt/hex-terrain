@@ -13,9 +13,9 @@ use crate::{DebugFlag, GameState};
 
 /// Pipeline ordering for h_terrain update systems.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-enum HTerrainSet {
-    /// Sets `PlayerPos.pos.y` from terrain interpolation.
-    PlayerHeight,
+enum HTerrainPhase {
+    /// Sets [`GroundLevel`](crate::GroundLevel) from terrain interpolation.
+    UpdateGround,
     /// Tags nearby [`entities::HCell`] entities with [`entities::InFov`].
     TrackFov,
     /// Swaps materials on meshes based on [`entities::InFov`] presence.
@@ -91,6 +91,8 @@ pub struct HTerrainPlugin {
     pub config: HTerrainConfig,
     /// Optional system set that player-height updates must run after.
     pub after_player_movement: Option<InternedSystemSet>,
+    /// Optional Startup set to place `seed_ground_level` in (for ordering).
+    pub terrain_seeded_set: Option<InternedSystemSet>,
 }
 
 impl Plugin for HTerrainPlugin {
@@ -116,9 +118,9 @@ impl Plugin for HTerrainPlugin {
             .configure_sets(
                 Update,
                 (
-                    HTerrainSet::PlayerHeight,
-                    HTerrainSet::TrackFov.after(HTerrainSet::PlayerHeight),
-                    HTerrainSet::Highlight.after(HTerrainSet::TrackFov),
+                    HTerrainPhase::UpdateGround,
+                    HTerrainPhase::TrackFov.after(HTerrainPhase::UpdateGround),
+                    HTerrainPhase::Highlight.after(HTerrainPhase::TrackFov),
                 ),
             )
             .add_systems(Startup, startup_systems::generate_h_grid)
@@ -127,20 +129,28 @@ impl Plugin for HTerrainPlugin {
                 startup_systems::verify_gap_counts
                     .after(startup_systems::generate_h_grid)
                     .run_if(|f: Res<DebugFlag>| f.0),
-            )
-            .add_systems(OnEnter(GameState::Running), systems::sync_initial_altitude);
+            );
+
+        {
+            let seed = startup_systems::seed_ground_level.after(startup_systems::generate_h_grid);
+            if let Some(set) = self.terrain_seeded_set {
+                app.add_systems(Startup, seed.in_set(set));
+            } else {
+                app.add_systems(Startup, seed);
+            }
+        }
 
         if let Some(movement_set) = self.after_player_movement {
-            app.configure_sets(Update, HTerrainSet::PlayerHeight.after(movement_set));
+            app.configure_sets(Update, HTerrainPhase::UpdateGround.after(movement_set));
         }
 
         app.add_systems(
             Update,
             (
-                systems::update_player_height.in_set(HTerrainSet::PlayerHeight),
-                systems::track_player_fov.in_set(HTerrainSet::TrackFov),
-                systems::start_fov_transitions.in_set(HTerrainSet::Highlight),
-                systems::animate_fov_transitions.after(HTerrainSet::Highlight),
+                systems::update_ground_level.in_set(HTerrainPhase::UpdateGround),
+                systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
+                systems::start_fov_transitions.in_set(HTerrainPhase::Highlight),
+                systems::animate_fov_transitions.after(HTerrainPhase::Highlight),
             )
                 .run_if(in_state(GameState::Running)),
         );

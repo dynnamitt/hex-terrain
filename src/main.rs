@@ -48,16 +48,26 @@ pub enum GameState {
 #[derive(Resource)]
 pub struct DebugFlag(pub bool);
 
-/// Player world position. Drone/intro write xz + altitude; terrain writes y.
+/// Shared Startup set: terrain seed systems run in this set,
+/// so that [`drone::systems::spawn_drone`] can be ordered after them.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TerrainSeededPhase;
+
+/// Player world position. Drone writes xz + offset.
 #[derive(Resource, Default, Reflect)]
 pub struct PlayerPos {
-    /// Final world position (terrain sets `.y`).
-    pub pos: Vec3,
-    /// User-controlled vertical offset (Q/E/scroll).
-    pub altitude: f32,
+    /// Horizontal position on the terrain plane.
+    pub xz: Vec2,
+    /// User-controlled vertical offset above ground (Q/E/scroll).
+    pub offset: f32,
 }
 
-/// Set by drone/intro when [`PlayerPos`] xz or altitude changes.
+/// Terrain height beneath the player, written by h_terrain.
+/// `None` until terrain has been seeded at startup.
+#[derive(Resource, Default, Reflect)]
+pub struct GroundLevel(pub Option<f32>);
+
+/// Set by drone/intro when [`PlayerPos`] xz or offset changes.
 /// Consumed (reset to `false`) by terrain height systems.
 #[derive(Resource, Default, Reflect)]
 pub struct PlayerMoved(pub bool);
@@ -97,9 +107,11 @@ fn main() {
     .register_type::<GameState>()
     .register_type::<PlayerPos>()
     .register_type::<PlayerMoved>()
+    .register_type::<GroundLevel>()
     .init_state::<GameState>()
     .init_resource::<PlayerPos>()
     .init_resource::<PlayerMoved>()
+    .init_resource::<GroundLevel>()
     .insert_resource(DebugFlag(debug))
     .add_plugins(bevy_egui::EguiPlugin::default());
 
@@ -109,13 +121,17 @@ fn main() {
     app.add_plugins(h_terrain::HTerrainPlugin {
         config: h_terrain::HTerrainConfig::default(),
         after_player_movement: Some(drone::systems::fly.into_system_set().intern()),
+        terrain_seeded_set: Some(TerrainSeededPhase.intern()),
     });
 
-    app.add_plugins(drone::DronePlugin(drone::DroneConfig::default()))
-        .add_plugins(intro::IntroPlugin(intro_cfg))
-        .add_systems(Update, toggle_inspector)
-        .add_systems(Update, draw_fps.run_if(|f: Res<DebugFlag>| f.0))
-        .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Inspecting)));
+    app.add_plugins(drone::DronePlugin {
+        config: drone::DroneConfig::default(),
+        after_terrain_seed: Some(TerrainSeededPhase.intern()),
+    })
+    .add_plugins(intro::IntroPlugin(intro_cfg))
+    .add_systems(Update, toggle_inspector)
+    .add_systems(Update, draw_fps.run_if(|f: Res<DebugFlag>| f.0))
+    .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Inspecting)));
 
     #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, exit_on_esc);

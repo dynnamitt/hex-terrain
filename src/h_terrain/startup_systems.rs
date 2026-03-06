@@ -343,6 +343,14 @@ fn corner_index_for_vertex(hex: Hex, target: &hexx::GridVertex) -> Option<u8> {
     })
 }
 
+/// Seeds [`GroundLevel`](crate::GroundLevel) from terrain height at the origin.
+///
+/// Runs at startup (after grid generation) so that the ground level is
+/// correct before the drone spawns.
+pub fn seed_ground_level(grid: Single<&HGrid>, mut ground: ResMut<crate::GroundLevel>) {
+    ground.0 = Some(grid.terrain.interpolate_height(Vec2::ZERO));
+}
+
 /// Debug-only startup check: asserts spawned Quad/Tri counts match `gap_filler` expectations.
 pub fn verify_gap_counts(
     _grid: Single<&HGrid>,

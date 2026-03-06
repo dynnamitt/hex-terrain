@@ -11,7 +11,7 @@ use super::entities::{
     Corner, FovMaterials, FovTransition, HCell, HGrid, HexFace, InFov, Quad, QuadPos2Emitter,
     QuadPos3Emitter, Tri, TriPos1Emitter, TriPos2Emitter,
 };
-use crate::{PlayerMoved, PlayerPos};
+use crate::{GroundLevel, PlayerMoved, PlayerPos};
 
 /// Bundles queries for discovering gap entities (Quad/Tri) reachable from an HCell.
 #[derive(SystemParam)]
@@ -70,38 +70,19 @@ fn gap_entities_for_cell(cell: Entity, lookup: &GapLookup) -> Vec<Entity> {
     out
 }
 
-/// Sets `PlayerPos.pos.y` from terrain interpolation.
-/// Skipped when [`PlayerMoved`] is `false` (no xz/altitude change this frame).
-pub fn update_player_height(
+/// Sets [`GroundLevel`] from terrain interpolation under the player.
+/// Skipped when [`PlayerMoved`] is `false` (no xz/offset change this frame).
+pub fn update_ground_level(
     grid: Single<&HGrid>,
-    mut player: ResMut<PlayerPos>,
+    player: Res<PlayerPos>,
     mut moved: ResMut<PlayerMoved>,
+    mut ground: ResMut<GroundLevel>,
 ) {
     if !moved.0 {
         return;
     }
     moved.0 = false;
-    let xz = Vec2::new(player.pos.x, player.pos.z);
-    player.pos.y = grid.terrain.interpolate_height(xz) + player.altitude;
-}
-
-/// Seeds [`PlayerPos`] from the camera transform left by the intro sequence.
-///
-/// Sets xz position, derives altitude from terrain height, and computes the
-/// initial `pos.y` so the first `fly()` frame doesn't snap to the origin.
-pub fn sync_initial_altitude(
-    grid: Single<&HGrid>,
-    mut player: ResMut<PlayerPos>,
-    mut moved: ResMut<PlayerMoved>,
-    cam_tf: Single<&Transform, With<crate::drone::Player>>,
-) {
-    let xz = Vec2::new(cam_tf.translation.x, cam_tf.translation.z);
-    let terrain_h = grid.terrain.interpolate_height(xz);
-    player.pos.x = cam_tf.translation.x;
-    player.pos.z = cam_tf.translation.z;
-    player.altitude = cam_tf.translation.y - terrain_h;
-    player.pos.y = cam_tf.translation.y;
-    moved.0 = true;
+    ground.0 = Some(grid.terrain.interpolate_height(player.xz));
 }
 
 /// Adds/removes [`InFov`] on [`HCell`] entities when the player crosses a hex boundary.
@@ -113,8 +94,7 @@ pub fn track_player_fov(
     mut prev_hex: Local<Option<Hex>>,
     gap: GapLookup,
 ) {
-    let xz = Vec2::new(player.pos.x, player.pos.z);
-    let current_hex = grid.terrain.world_pos_to_hex(xz);
+    let current_hex = grid.terrain.world_pos_to_hex(player.xz);
 
     if *prev_hex == Some(current_hex) {
         return;

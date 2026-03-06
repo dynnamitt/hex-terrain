@@ -14,7 +14,19 @@ use super::entities::{DroneInput, Player};
 use crate::math;
 
 /// Spawns the Camera3d entity with Player marker, HDR, and bloom.
-pub fn spawn_drone(mut commands: Commands, cfg: Res<DroneConfig>) {
+///
+/// Must run after terrain seed so that [`GroundLevel`] is `Some`.
+pub fn spawn_drone(
+    mut commands: Commands,
+    cfg: Res<DroneConfig>,
+    mut player: ResMut<crate::PlayerPos>,
+    ground: Res<crate::GroundLevel>,
+    mut moved: ResMut<crate::PlayerMoved>,
+) {
+    let ground_y = ground.0.unwrap_or(0.0);
+    player.offset = cfg.lowest_offset;
+    moved.0 = true;
+    let spawn_y = ground_y + cfg.lowest_offset;
     commands.spawn((
         Name::new("Player"),
         Camera3d::default(),
@@ -25,13 +37,12 @@ pub fn spawn_drone(mut commands: Commands, cfg: Res<DroneConfig>) {
             composite_mode: BloomCompositeMode::Additive,
             ..Bloom::NATURAL
         },
-        Transform::from_xyz(0.0, cfg.spawn_altitude, 0.0)
-            .looking_at(Vec3::new(5.0, 0.0, 5.0), Vec3::Y),
+        Transform::from_xyz(0.0, spawn_y, 0.0).looking_at(Vec3::new(5.0, ground_y, 5.0), Vec3::Y),
         Player,
     ));
 }
 
-/// WASD + mouse look + Q/E/scroll altitude. Writes to [`PlayerPos`].
+/// WASD + mouse look + Q/E/scroll offset. Writes to [`PlayerPos`].
 pub fn fly(mut input: DroneInput, mut transform: Single<&mut Transform, With<Player>>) {
     // Mouse look: yaw (horizontal) + pitch (vertical)
     let mut yaw = 0.0;
@@ -76,35 +87,39 @@ pub fn fly(mut input: DroneInput, mut transform: Single<&mut Transform, With<Pla
     if direction != Vec3::ZERO {
         direction = direction.normalize();
         let delta = direction * input.cfg.move_speed * input.time.delta_secs();
-        input.player.pos.x += delta.x;
-        input.player.pos.z += delta.z;
+        input.player.xz.x += delta.x;
+        input.player.xz.y += delta.z;
         input.moved.0 = true;
     }
 
-    // Q/E vertical altitude adjustment
+    // Q/E vertical offset adjustment
     if input.keys.pressed(KeyCode::KeyE) {
-        input.player.altitude += input.cfg.move_speed * input.time.delta_secs();
+        input.player.offset += input.cfg.move_speed * input.time.delta_secs();
         input.moved.0 = true;
     }
     if input.keys.pressed(KeyCode::KeyQ) {
-        input.player.altitude -= input.cfg.move_speed * input.time.delta_secs();
+        input.player.offset -= input.cfg.move_speed * input.time.delta_secs();
         input.moved.0 = true;
     }
 
-    // Mouse scroll also adjusts altitude
+    // Mouse scroll also adjusts offset
     for ev in input.scroll.read() {
         let lines = match ev.unit {
             MouseScrollUnit::Line => ev.y,
             MouseScrollUnit::Pixel => ev.y / 40.0,
         };
-        input.player.altitude += lines * input.cfg.scroll_sensitivity;
+        input.player.offset += lines * input.cfg.scroll_sensitivity;
         input.moved.0 = true;
     }
 
-    // Apply position from PlayerPos (y is set by h_terrain::update_player_height)
-    let target_y = input.player.pos.y;
-    transform.translation.x = input.player.pos.x;
-    transform.translation.z = input.player.pos.z;
+    // Clamp offset to lowest_offset floor
+    input.player.offset = input.player.offset.max(input.cfg.lowest_offset);
+
+    // Apply position from PlayerPos + GroundLevel
+    let ground_y = input.ground.0.unwrap_or(0.0);
+    let target_y = ground_y + input.player.offset;
+    transform.translation.x = input.player.xz.x;
+    transform.translation.z = input.player.xz.y;
     transform.translation.y += (target_y - transform.translation.y) * input.cfg.height_lerp;
 }
 
