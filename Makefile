@@ -1,4 +1,4 @@
-.PHONY: clean build test e2etest wasm serve
+.PHONY: clean build test wasm serve
 
 WASM_OUT = target/wasm
 
@@ -10,9 +10,6 @@ build:
 
 test:
 	cargo test
-
-e2etest:
-	$(MAKE) -f tests/e2e.mk
 
 wasm:
 	cargo build --release --target wasm32-unknown-unknown \

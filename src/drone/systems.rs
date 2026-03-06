@@ -101,7 +101,7 @@ pub fn fly(mut input: DroneInput, mut transform: Single<&mut Transform, With<Pla
         input.moved.0 = true;
     }
 
-    // Apply position from PlayerPos (y is set by terrain::update_player_height)
+    // Apply position from PlayerPos (y is set by h_terrain::update_player_height)
     let target_y = input.player.pos.y;
     transform.translation.x = input.player.pos.x;
     transform.translation.z = input.player.pos.z;

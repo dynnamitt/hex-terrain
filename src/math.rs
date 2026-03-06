@@ -41,18 +41,6 @@ pub fn compute_normal(v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
     edge1.cross(edge2).normalize_or_zero()
 }
 
-/// Brightness multiplier for height-indicator stems based on camera distance.
-///
-/// Returns a value in `[min_alpha, 1.0]`:
-/// - At `distance = 0` the stem is fully bright (`1.0`).
-/// - At `distance >= fade_distance` the stem is dimmest (`min_alpha`).
-///
-/// Stems near the camera glow brightly; distant stems fade to reduce clutter.
-pub fn stem_fade_brightness(distance: f32, fade_distance: f32, min_alpha: f32) -> f32 {
-    let t = (distance / fade_distance).clamp(0.0, 1.0);
-    1.0 - t * (1.0 - min_alpha)
-}
-
 /// Clamps a pitch angle so the camera cannot flip past vertical.
 ///
 /// `current` is the existing pitch in radians (from `Quat::to_euler`).
@@ -63,39 +51,6 @@ pub fn clamp_pitch(current: f32, delta: f32, margin: f32) -> f32 {
     let limit = std::f32::consts::FRAC_PI_2 - margin;
     let clamped = (current + delta).clamp(-limit, limit);
     clamped - current
-}
-
-/// Geometry parameters for a height-indicator stem.
-#[derive(Debug, PartialEq)]
-pub struct StemGeometry {
-    /// World-space radius of the cylinder.
-    pub radius: f32,
-    /// Total height of the cylinder.
-    pub height: f32,
-    /// Y coordinate of the cylinder centre (half the height).
-    pub y_center: f32,
-}
-
-/// Computes stem cylinder dimensions from a hex's visual radius and face height.
-///
-/// Returns `None` when the face is at or below ground level (no stem needed).
-/// `radius_factor` controls how thick the stem is relative to the hex,
-/// and `gap` leaves a small space between stem top and hex face.
-pub fn stem_geometry(
-    hex_radius: f32,
-    face_height: f32,
-    radius_factor: f32,
-    gap: f32,
-) -> Option<StemGeometry> {
-    let stem_height = face_height - gap;
-    if stem_height <= 0.0 {
-        return None;
-    }
-    Some(StemGeometry {
-        radius: hex_radius * radius_factor,
-        height: stem_height,
-        y_center: stem_height / 2.0,
-    })
 }
 
 /// Count total (quads, tris) for a grid using the same ownership rules
@@ -223,32 +178,6 @@ mod tests {
         assert_eq!(n, Vec3::ZERO);
     }
 
-    // ── stem_fade_brightness ────────────────────────────────────────
-
-    #[test]
-    fn at_zero_distance_returns_full_brightness() {
-        let b = stem_fade_brightness(0.0, 40.0, 0.05);
-        assert!((b - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn at_fade_distance_returns_min_alpha() {
-        let b = stem_fade_brightness(40.0, 40.0, 0.05);
-        assert!((b - 0.05).abs() < 1e-6);
-    }
-
-    #[test]
-    fn beyond_fade_distance_clamps_to_min_alpha() {
-        let b = stem_fade_brightness(100.0, 40.0, 0.05);
-        assert!((b - 0.05).abs() < 1e-6);
-    }
-
-    #[test]
-    fn mid_distance_is_between_min_and_one() {
-        let b = stem_fade_brightness(20.0, 40.0, 0.05);
-        assert!(b > 0.05 && b < 1.0);
-    }
-
     // ── clamp_pitch ─────────────────────────────────────────────────
 
     #[test]
@@ -273,25 +202,5 @@ mod tests {
         let limit = -(std::f32::consts::FRAC_PI_2 - 0.05);
         let delta = clamp_pitch(limit + 0.01, -0.1, 0.05);
         assert!((delta - (-0.01)).abs() < 1e-4);
-    }
-
-    // ── stem_geometry ───────────────────────────────────────────────
-
-    #[test]
-    fn stem_for_elevated_hex() {
-        let pg = stem_geometry(1.0, 5.0, 0.06, 0.05).unwrap();
-        assert!((pg.radius - 0.06).abs() < 1e-6);
-        assert!((pg.height - 4.95).abs() < 1e-6);
-        assert!((pg.y_center - 4.95 / 2.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn stem_at_ground_level_returns_none() {
-        assert!(stem_geometry(1.0, 0.05, 0.06, 0.05).is_none());
-    }
-
-    #[test]
-    fn stem_below_ground_returns_none() {
-        assert!(stem_geometry(1.0, -1.0, 0.06, 0.05).is_none());
     }
 }

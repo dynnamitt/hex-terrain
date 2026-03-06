@@ -8,7 +8,6 @@ mod drone;
 mod h_terrain;
 mod intro;
 pub mod math;
-mod terrain;
 
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::app::AppExit;
@@ -21,18 +20,6 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 #[cfg(not(target_arch = "wasm32"))]
 use clap::Parser;
 
-/// Which terrain plugin to load.
-#[derive(Clone, Debug, Default)]
-#[cfg_attr(not(target_arch = "wasm32"), derive(clap::ValueEnum))]
-enum TerrainMode {
-    /// Original terrain with neon petals.
-    #[allow(dead_code)]
-    V1,
-    /// Height-based pivot-point grid.
-    #[default]
-    V2,
-}
-
 /// Hex terrain viewer with neon edge lighting.
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Parser)]
@@ -44,10 +31,6 @@ struct Cli {
     /// Override intro tilt-up duration (seconds).
     #[arg(long)]
     intro_duration: Option<f32>,
-
-    /// Terrain implementation to use.
-    #[arg(long, value_enum, default_value_t)]
-    terrain: TerrainMode,
 }
 /// Application-wide game state, used for system scheduling.
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect)]
@@ -81,13 +64,12 @@ pub struct PlayerMoved(pub bool);
 
 fn main() {
     #[cfg(not(target_arch = "wasm32"))]
-    let (debug, intro_duration_override, terrain_mode) = {
+    let (debug, intro_duration_override) = {
         let cli = Cli::parse();
-        (cli.debug, cli.intro_duration, cli.terrain)
+        (cli.debug, cli.intro_duration)
     };
     #[cfg(target_arch = "wasm32")]
-    let (debug, intro_duration_override, terrain_mode) =
-        (false, None::<f32>, TerrainMode::default());
+    let (debug, intro_duration_override) = (false, None::<f32>);
 
     let mut intro_cfg = intro::IntroConfig::default();
     if let Some(d) = intro_duration_override {
@@ -124,17 +106,9 @@ fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     app.add_plugins((RemotePlugin::default(), RemoteHttpPlugin::default()));
 
-    match terrain_mode {
-        #[allow(deprecated)]
-        TerrainMode::V1 => {
-            app.add_plugins(terrain::TerrainPlugin(terrain::TerrainConfig::default()));
-        }
-        TerrainMode::V2 => {
-            app.add_plugins(h_terrain::HTerrainPlugin(
-                h_terrain::HTerrainConfig::default(),
-            ));
-        }
-    }
+    app.add_plugins(h_terrain::HTerrainPlugin(
+        h_terrain::HTerrainConfig::default(),
+    ));
 
     app.add_plugins(drone::DronePlugin(drone::DroneConfig::default()))
         .add_plugins(intro::IntroPlugin(intro_cfg))
