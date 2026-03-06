@@ -5,14 +5,17 @@ use bevy::prelude::*;
 use hexx::{Hex, shapes};
 
 use super::HTerrainConfig;
+use bevy::color::Mix;
+
 use super::entities::{
-    Corner, FovMaterials, HCell, HGrid, HexFace, InFov, Quad, QuadPos2Emitter, QuadPos3Emitter,
-    Tri, TriPos1Emitter, TriPos2Emitter,
+    Corner, FovMaterials, FovTransition, HCell, HGrid, HexFace, InFov, Quad, QuadPos2Emitter,
+    QuadPos3Emitter, Tri, TriPos1Emitter, TriPos2Emitter,
 };
 use crate::{PlayerMoved, PlayerPos};
 
 /// Bundles queries for discovering gap entities (Quad/Tri) reachable from an HCell.
 #[derive(SystemParam)]
+#[allow(clippy::type_complexity)]
 pub(super) struct GapLookup<'w, 's> {
     children: Query<'w, 's, &'static Children>,
     corners: Query<
@@ -144,46 +147,136 @@ pub fn track_player_fov(
     *prev_hex = Some(current_hex);
 }
 
-/// Swaps materials on hex/quad/tri meshes when [`InFov`] is added or removed.
-pub fn highlight_fov(
-    added_cells: Query<&Children, (With<HCell>, Added<InFov>)>,
-    added_gaps: Query<Entity, (Or<(With<Quad>, With<Tri>)>, Added<InFov>)>,
-    mut removed: RemovedComponents<InFov>,
-    cells: Query<&Children, With<HCell>>,
-    hex_faces: Query<(), With<HexFace>>,
+/// Bundles InFov change-detection queries and cell→HexFace navigation.
+#[derive(SystemParam)]
+#[allow(clippy::type_complexity)]
+pub(super) struct FovChanges<'w, 's> {
+    added_cells: Query<'w, 's, &'static Children, (With<HCell>, Added<InFov>)>,
+    added_gaps: Query<'w, 's, Entity, (Or<(With<Quad>, With<Tri>)>, Added<InFov>)>,
+    removed: RemovedComponents<'w, 's, InFov>,
+    cells: Query<'w, 's, &'static Children, With<HCell>>,
+    hex_faces: Query<'w, 's, (), With<HexFace>>,
+}
+
+/// Starts or reverses [`FovTransition`] on material entities when [`InFov`] changes.
+pub fn start_fov_transitions(
+    mut fov: FovChanges,
     mut materials: Query<&mut MeshMaterial3d<StandardMaterial>>,
-    fov_mats: Res<FovMaterials>,
+    mut transitions: Query<&mut FovTransition>,
+    mut mat_assets: ResMut<Assets<StandardMaterial>>,
+    mut commands: Commands,
 ) {
-    // Removals: swap back to original material
-    for entity in removed.read() {
-        // Quad/Tri have MeshMaterial3d directly
-        if let Ok(mut mat) = materials.get_mut(entity) {
-            mat.0 = fov_mats.gap_original.clone();
-        } else if let Ok(children) = cells.get(entity) {
-            // HCell → find HexFace child
+    // Collect (material_entity, fade_in) pairs, then process.
+    let mut targets: Vec<(Entity, bool)> = Vec::new();
+
+    for entity in fov.removed.read() {
+        if materials.contains(entity) {
+            targets.push((entity, false));
+        } else if let Ok(children) = fov.cells.get(entity) {
             for child in children.iter() {
-                if hex_faces.contains(child) {
-                    if let Ok(mut mat) = materials.get_mut(child) {
-                        mat.0 = fov_mats.hex_original.clone();
-                    }
+                if fov.hex_faces.contains(child) {
+                    targets.push((child, false));
                 }
             }
         }
+    }
+    for children in &fov.added_cells {
+        for child in children.iter() {
+            if fov.hex_faces.contains(child) {
+                targets.push((child, true));
+            }
+        }
+    }
+    for entity in &fov.added_gaps {
+        targets.push((entity, true));
     }
 
-    // Additions: swap to highlight material
-    for children in &added_cells {
-        for child in children.iter() {
-            if hex_faces.contains(child) {
-                if let Ok(mut mat) = materials.get_mut(child) {
-                    mat.0 = fov_mats.hex_highlight.clone();
-                }
+    for (entity, fade_in) in targets {
+        let direction = if fade_in { 1.0 } else { -1.0 };
+        if let Ok(mut existing) = transitions.get_mut(entity) {
+            existing.direction = direction;
+        } else {
+            let Ok(mut mat) = materials.get_mut(entity) else {
+                continue;
+            };
+            if let Some(current) = mat_assets.get(&mat.0).cloned() {
+                mat.0 = mat_assets.add(current);
             }
+            let progress = if fade_in { 0.0 } else { 1.0 };
+            commands.entity(entity).insert(FovTransition {
+                progress,
+                direction,
+            });
         }
     }
-    for entity in &added_gaps {
-        if let Ok(mut mat) = materials.get_mut(entity) {
-            mat.0 = fov_mats.gap_highlight.clone();
+}
+
+/// Ticks [`FovTransition`] progress and lerps material colors each frame.
+pub fn animate_fov_transitions(
+    mut query: Query<(
+        Entity,
+        &mut FovTransition,
+        &mut MeshMaterial3d<StandardMaterial>,
+        Has<HexFace>,
+    )>,
+    fov_mats: Res<FovMaterials>,
+    mut mat_assets: ResMut<Assets<StandardMaterial>>,
+    cfg: Res<HTerrainConfig>,
+    time: Res<Time>,
+    mut commands: Commands,
+) {
+    let dt = time.delta_secs();
+    let duration = cfg.fov_transition_secs;
+
+    // Copy target colors upfront to avoid borrow conflicts with get_mut below.
+    let hex_orig = mat_assets
+        .get(&fov_mats.hex_original)
+        .map(|m| (m.base_color, m.emissive));
+    let hex_hi = mat_assets
+        .get(&fov_mats.hex_highlight)
+        .map(|m| (m.base_color, m.emissive));
+    let gap_orig = mat_assets
+        .get(&fov_mats.gap_original)
+        .map(|m| (m.base_color, m.emissive));
+    let gap_hi = mat_assets
+        .get(&fov_mats.gap_highlight)
+        .map(|m| (m.base_color, m.emissive));
+
+    let (Some(hex_orig), Some(hex_hi), Some(gap_orig), Some(gap_hi)) =
+        (hex_orig, hex_hi, gap_orig, gap_hi)
+    else {
+        return;
+    };
+
+    for (entity, mut tr, mut mat_handle, is_hex) in &mut query {
+        tr.progress = (tr.progress + tr.direction * dt / duration).clamp(0.0, 1.0);
+        let t = tr.progress;
+
+        let ((orig_base, orig_emissive), (hi_base, hi_emissive)) = if is_hex {
+            (hex_orig, hex_hi)
+        } else {
+            (gap_orig, gap_hi)
+        };
+
+        if t <= 0.0 || t >= 1.0 {
+            let target = if t >= 1.0 {
+                if is_hex {
+                    &fov_mats.hex_highlight
+                } else {
+                    &fov_mats.gap_highlight
+                }
+            } else if is_hex {
+                &fov_mats.hex_original
+            } else {
+                &fov_mats.gap_original
+            };
+            mat_handle.0 = target.clone();
+            commands.entity(entity).remove::<FovTransition>();
+        } else if let Some(mat) = mat_assets.get_mut(&mat_handle.0) {
+            let orig_lin = LinearRgba::from(orig_base);
+            let hi_lin = LinearRgba::from(hi_base);
+            mat.base_color = Color::from(orig_lin.mix(&hi_lin, t));
+            mat.emissive = orig_emissive.mix(&hi_emissive, t);
         }
     }
 }

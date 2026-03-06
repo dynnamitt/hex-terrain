@@ -41,8 +41,8 @@ pub fn generate_h_grid(
     });
 
     let gap_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.12, 0.03, 0.05),
-        emissive: LinearRgba::rgb(0.03, 0.06, 0.1),
+        base_color: Color::srgb(0.102, 0.0255, 0.0425),
+        emissive: LinearRgba::rgb(0.0255, 0.051, 0.085),
         cull_mode: None,
         ..default()
     });
@@ -76,13 +76,13 @@ pub fn generate_h_grid(
     });
 
     let hex_highlight = materials.add(StandardMaterial {
-        base_color: Color::srgb(1.0, 0.7, 0.2),
-        emissive: LinearRgba::rgb(4.0, 2.0, 0.4),
+        base_color: Color::srgb(0.8, 0.56, 0.16),
+        emissive: LinearRgba::rgb(3.2, 1.6, 0.32),
         ..default()
     });
     let gap_highlight = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.05, 0.15, 0.2),
-        emissive: LinearRgba::rgb(0.2, 0.8, 1.6),
+        base_color: Color::srgb(0.04, 0.12, 0.16),
+        emissive: LinearRgba::rgb(0.16, 0.64, 1.28),
         cull_mode: None,
         ..default()
     });

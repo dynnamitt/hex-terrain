@@ -89,6 +89,15 @@ pub struct HexFace;
 #[derive(Component, Reflect)]
 pub struct QuadEdge;
 
+/// Tracks an in-progress color transition between original and highlight materials.
+#[derive(Component, Reflect)]
+pub struct FovTransition {
+    /// 0.0 = original colors, 1.0 = highlight colors.
+    pub progress: f32,
+    /// +1.0 when fading toward highlight, -1.0 when fading toward original.
+    pub direction: f32,
+}
+
 /// Material handles for [`InFov`] highlighting.
 #[derive(Resource)]
 pub struct FovMaterials {

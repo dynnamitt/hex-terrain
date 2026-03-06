@@ -7,6 +7,10 @@
           {
             "type": "command",
             "command": "cargo fmt -- --check 2>&1 || cargo fmt"
+          },
+          {
+            "type": "command",
+            "command": "cargo clippy -- -D warnings 2>&1"
           }
         ]
       }

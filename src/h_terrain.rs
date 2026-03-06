@@ -27,6 +27,8 @@ pub struct HTerrainConfig {
     pub grid: HGridSettings,
     /// Background clear color.
     pub clear_color: Color,
+    /// Duration of the fov highlight fade in seconds.
+    pub fov_transition_secs: f32,
 }
 
 /// Grid layout and noise parameters.
@@ -65,7 +67,7 @@ impl Default for HTerrainConfig {
                 radius: 20,
                 fov_reach: 2,
                 point_spacing: 4.0,
-                height_noise_seed: 42,
+                height_noise_seed: 43,
                 radius_noise_seed: 137,
                 height_noise_octaves: 4,
                 radius_noise_octaves: 3,
@@ -76,6 +78,7 @@ impl Default for HTerrainConfig {
                 max_hex_radius: 2.6,
             },
             clear_color: Color::srgb(0.01, 0.01, 0.02),
+            fov_transition_secs: 0.3,
         }
     }
 }
@@ -100,6 +103,7 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::Tri>()
             .register_type::<entities::InFov>()
             .register_type::<entities::HexFace>()
+            .register_type::<entities::FovTransition>()
             .insert_resource(self.0.clone())
             .insert_resource(ClearColor(self.0.clear_color))
             .configure_sets(
@@ -123,7 +127,8 @@ impl Plugin for HTerrainPlugin {
                 (
                     systems::update_player_height.in_set(HTerrainSet::PlayerHeight),
                     systems::track_player_fov.in_set(HTerrainSet::TrackFov),
-                    systems::highlight_fov.in_set(HTerrainSet::Highlight),
+                    systems::start_fov_transitions.in_set(HTerrainSet::Highlight),
+                    systems::animate_fov_transitions.after(HTerrainSet::Highlight),
                 )
                     .after(crate::drone::systems::fly)
                     .run_if(in_state(GameState::Running)),
