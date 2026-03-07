@@ -1,4 +1,4 @@
-.PHONY: clean build test wasm serve
+.PHONY: clean build test coverage wasm serve
 
 WASM_OUT = target/wasm
 
@@ -10,6 +10,10 @@ build:
 
 test:
 	cargo test
+
+coverage:
+	cargo tarpaulin --out html --skip-clean
+	@echo "Coverage report: tarpaulin-report.html"
 
 wasm:
 	cargo build --release --target wasm32-unknown-unknown \

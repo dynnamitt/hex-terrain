@@ -20,3 +20,17 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+
+    - name: Install tarpaulin
+      run: |
+        curl -sL https://github.com/xd009642/tarpaulin/releases/latest/download/cargo-tarpaulin-x86_64-unknown-linux-gnu.tar.gz | tar xz
+        sudo mv cargo-tarpaulin /usr/local/bin/
+
+    - name: Generate coverage
+      run: cargo tarpaulin --out xml --skip-clean
+
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        files: cobertura.xml
+        fail_ci_if_error: false

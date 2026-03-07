@@ -5,6 +5,8 @@ mod h_grid_layout;
 mod math;
 mod startup_systems;
 mod systems;
+#[cfg(test)]
+mod tests;
 
 use bevy::ecs::schedule::InternedSystemSet;
 use bevy::prelude::*;
