@@ -7,6 +7,8 @@ use bevy::render::view::Hdr;
 use bevy::window::WindowFocused;
 use bevy::window::{CursorGrabMode, CursorOptions};
 
+use bevy_egui::egui;
+
 use super::DroneConfig;
 #[cfg(not(target_arch = "wasm32"))]
 use super::entities::CursorRecentered;
@@ -151,6 +153,29 @@ pub fn lock_cursor_on_click(
             window.set_cursor_position(Some(center));
         }
     }
+}
+
+/// Draws a small white crosshair at screen center so the player can see the aim point.
+pub fn draw_crosshair(mut egui_ctx: Single<&mut bevy_egui::EguiContext>, window: Single<&Window>) {
+    let cx = window.width() / 2.0;
+    let cy = window.height() / 2.0;
+    let half = 8.0;
+    let stroke = egui::Stroke::new(1.5, egui::Color32::WHITE);
+
+    egui::Area::new(egui::Id::new("crosshair"))
+        .fixed_pos(egui::pos2(0.0, 0.0))
+        .interactable(false)
+        .show(egui_ctx.get_mut(), |ui| {
+            let painter = ui.painter();
+            painter.line_segment(
+                [egui::pos2(cx - half, cy), egui::pos2(cx + half, cy)],
+                stroke,
+            );
+            painter.line_segment(
+                [egui::pos2(cx, cy - half), egui::pos2(cx, cy + half)],
+                stroke,
+            );
+        });
 }
 
 /// Warps cursor back to center when it drifts near a window edge or when

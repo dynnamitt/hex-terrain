@@ -86,6 +86,11 @@ impl Plugin for DronePlugin {
                     .run_if(in_state(GameState::Running)),
             );
 
+        app.add_systems(
+            Update,
+            systems::draw_crosshair.run_if(in_state(GameState::Running)),
+        );
+
         #[cfg(target_arch = "wasm32")]
         app.add_systems(Update, systems::fly.run_if(in_state(GameState::Running)))
             .add_systems(
