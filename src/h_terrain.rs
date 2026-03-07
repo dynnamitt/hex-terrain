@@ -69,7 +69,7 @@ impl Default for HTerrainConfig {
         Self {
             grid: HGridSettings {
                 radius: 20,
-                fov_reach: 3,
+                fov_reach: 1,
                 point_spacing: 4.0,
                 height_noise_seed: 43,
                 radius_noise_seed: 137,
@@ -82,7 +82,7 @@ impl Default for HTerrainConfig {
                 max_hex_radius: 2.6,
             },
             clear_color: Color::srgb(0.01, 0.01, 0.02),
-            fov_transition_secs: 0.3,
+            fov_transition_secs: 1.3,
         }
     }
 }

@@ -86,7 +86,7 @@ pub fn generate_h_grid(
         cull_mode: None,
         ..default()
     });
-    let hex_in_sight = materials.add(StandardMaterial {
+    let hex_in_aim = materials.add(StandardMaterial {
         base_color: Color::srgb(0.6, 0.1, 0.8),
         emissive: LinearRgba::rgb(2.4, 0.4, 3.2),
         ..default()
@@ -96,7 +96,7 @@ pub fn generate_h_grid(
         hex_highlight,
         gap_original: gap_material.clone(),
         gap_highlight,
-        hex_in_sight,
+        hex_in_aim,
     });
 
     let grid_entity = commands

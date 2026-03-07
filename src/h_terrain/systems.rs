@@ -1,6 +1,8 @@
 //! Runtime systems for height-based terrain.
 
+use bevy::ecs::relationship::Relationship;
 use bevy::ecs::system::SystemParam;
+use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 use hexx::{Hex, shapes};
 
@@ -102,27 +104,43 @@ pub fn track_player_fov(
     }
 
     let reach = cfg.grid.fov_reach;
+    let new_ring: HashSet<Hex> = shapes::hexagon(current_hex, reach).collect();
+    let old_ring: HashSet<Hex> = prev_hex
+        .map(|old| shapes::hexagon(old, reach).collect())
+        .unwrap_or_default();
 
-    // Remove InFov from old ring
-    if let Some(old) = *prev_hex {
-        for hex in shapes::hexagon(old, reach) {
-            if let Some(&entity) = grid.hex_entities.get(&hex) {
-                commands.entity(entity).remove::<InFov>();
-                for gap_entity in gap_entities_for_cell(entity, &gap) {
-                    commands.entity(gap_entity).remove::<InFov>();
-                }
-            }
+    // Remove InFov only from cells that left the FoV
+    for hex in old_ring.difference(&new_ring) {
+        if let Some(&entity) = grid.hex_entities.get(hex) {
+            commands.entity(entity).remove::<InFov>();
         }
     }
 
-    // Add InFov to new ring
-    for hex in shapes::hexagon(current_hex, reach) {
-        if let Some(&entity) = grid.hex_entities.get(&hex) {
+    // Add InFov only to cells that newly entered the FoV
+    for hex in new_ring.difference(&old_ring) {
+        if let Some(&entity) = grid.hex_entities.get(hex) {
             commands.entity(entity).insert(InFov);
-            for gap_entity in gap_entities_for_cell(entity, &gap) {
-                commands.entity(gap_entity).insert(InFov);
-            }
         }
+    }
+
+    // Diff gap entities separately — gaps are shared between cells, so we must
+    // compare the full gap sets rather than piggyback on cell diffs.
+    let old_gaps: HashSet<Entity> = old_ring
+        .iter()
+        .filter_map(|h| grid.hex_entities.get(h).copied())
+        .flat_map(|e| gap_entities_for_cell(e, &gap))
+        .collect();
+    let new_gaps: HashSet<Entity> = new_ring
+        .iter()
+        .filter_map(|h| grid.hex_entities.get(h).copied())
+        .flat_map(|e| gap_entities_for_cell(e, &gap))
+        .collect();
+
+    for &entity in old_gaps.difference(&new_gaps) {
+        commands.entity(entity).remove::<InFov>();
+    }
+    for &entity in new_gaps.difference(&old_gaps) {
+        commands.entity(entity).insert(InFov);
     }
 
     *prev_hex = Some(current_hex);
@@ -293,6 +311,8 @@ pub(super) struct SightParams<'w, 's> {
     current_sight: Query<'w, 's, (Entity, &'static PreSightMaterial), With<InSight>>,
     fov_mats: Res<'w, FovMaterials>,
     materials: Query<'w, 's, &'static mut MeshMaterial3d<StandardMaterial>>,
+    parents: Query<'w, 's, &'static ChildOf>,
+    in_fov: Query<'w, 's, (), With<InFov>>,
 }
 
 /// Tags the single hex face at screen center with [`InSight`] and applies a purple material.
@@ -318,9 +338,18 @@ pub fn track_in_sight(mut sight: SightParams, mut commands: Commands) {
     let hits = sight.raycast.cast_ray(ray, &default());
     for &(entity, _) in hits {
         if sight.hex_faces.contains(entity) {
+            // Only highlight if parent HCell is within FoV
+            let in_fov = sight
+                .parents
+                .get(entity)
+                .ok()
+                .is_some_and(|parent| sight.in_fov.contains(parent.get()));
+            if !in_fov {
+                return;
+            }
             if let Ok(mut mat) = sight.materials.get_mut(entity) {
                 let stash = PreSightMaterial(mat.0.clone());
-                mat.0 = sight.fov_mats.hex_in_sight.clone();
+                mat.0 = sight.fov_mats.hex_in_aim.clone();
                 commands.entity(entity).insert((InSight, stash));
             }
             return;

@@ -243,7 +243,23 @@ fn initial_fov_marks_center_ring() {
 
 #[test]
 fn fov_follows_player_across_hex_boundary() {
-    let mut app = test_app();
+    let mut cfg = test_config();
+    cfg.fov_transition_secs = 10.0; // slow so transitions stay visible
+    let mut app = test_app_with_config(cfg);
+
+    // Collect cells that have InFov before the move.
+    let before_fov: Vec<Entity> = {
+        let w = app.world_mut();
+        w.query_filtered::<Entity, (With<HCell>, With<InFov>)>()
+            .iter(w)
+            .collect()
+    };
+    assert_eq!(before_fov.len(), 7);
+
+    // Complete any initial transitions so we start clean.
+    for _ in 0..5 {
+        app.update();
+    }
 
     let target_pos = {
         let w = app.world_mut();
@@ -260,9 +276,97 @@ fn fov_follows_player_across_hex_boundary() {
 
     let w = app.world_mut();
     let in_fov_count = w.query_filtered::<&HCell, With<InFov>>().iter(w).count();
-
-    // hex(1,0) has 6 neighbors, all within radius-2 grid → 7
     assert_eq!(in_fov_count, 7, "InFov count should be 7 at hex(1,0)");
+
+    // Cells that were InFov before AND after the move must NOT have a
+    // FovTransition — their InFov was never removed, so no animation should fire.
+    let after_fov: Vec<Entity> = w
+        .query_filtered::<Entity, (With<HCell>, With<InFov>)>()
+        .iter(w)
+        .collect();
+    let overlap: Vec<Entity> = before_fov
+        .iter()
+        .filter(|e| after_fov.contains(e))
+        .copied()
+        .collect();
+    assert!(
+        !overlap.is_empty(),
+        "There should be overlap cells between old and new FoV"
+    );
+
+    // Check that overlap HexFace children have no FovTransition.
+    for &cell in &overlap {
+        let children = w.entity(cell).get::<Children>().unwrap();
+        for child in children.iter() {
+            if w.entity(child).contains::<HexFace>() {
+                assert!(
+                    !w.entity(child).contains::<FovTransition>(),
+                    "Overlap cell's HexFace should NOT have FovTransition (glitch)"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn fov_gap_counts_stable_across_hex_move() {
+    // Use radius=4, fov_reach=2 so both origin and hex(1,0) are fully interior
+    // (2-hex buffer between FoV edge and grid edge) — gap counts are symmetric.
+    let mut cfg = test_config();
+    cfg.grid.radius = 4;
+    cfg.grid.fov_reach = 2;
+    let mut app = test_app_with_config(cfg);
+
+    // Phase A: baseline at origin (fov_reach=2 → 19 cells)
+    let w = app.world_mut();
+    let cell_count_a = w
+        .query_filtered::<(), (With<HCell>, With<InFov>)>()
+        .iter(w)
+        .count();
+    let quad_count_a = w
+        .query_filtered::<(), (With<Quad>, With<InFov>)>()
+        .iter(w)
+        .count();
+    let tri_count_a = w
+        .query_filtered::<(), (With<Tri>, With<InFov>)>()
+        .iter(w)
+        .count();
+    assert_eq!(cell_count_a, 19);
+    let total_a = cell_count_a + quad_count_a + tri_count_a;
+
+    // Phase B: move to hex(1,0) — fully interior with radius=4
+    let target_pos = w
+        .query::<&HGrid>()
+        .iter(w)
+        .next()
+        .unwrap()
+        .terrain
+        .hex_to_world_pos(Hex::new(1, 0));
+
+    move_player(&mut app, target_pos);
+    app.update();
+
+    let w = app.world_mut();
+    let cell_count_b = w
+        .query_filtered::<(), (With<HCell>, With<InFov>)>()
+        .iter(w)
+        .count();
+    let quad_count_b = w
+        .query_filtered::<(), (With<Quad>, With<InFov>)>()
+        .iter(w)
+        .count();
+    let tri_count_b = w
+        .query_filtered::<(), (With<Tri>, With<InFov>)>()
+        .iter(w)
+        .count();
+    assert_eq!(cell_count_b, 19, "hex(1,0) should have 19 InFov cells");
+    let total_b = cell_count_b + quad_count_b + tri_count_b;
+
+    assert_eq!(
+        total_b, total_a,
+        "InFov geo total should be stable: phase A had {total_a} (c={cell_count_a} q={quad_count_a} t={tri_count_a}), \
+         phase B has {total_b} (c={cell_count_b} q={quad_count_b} t={tri_count_b})"
+    );
 }
 
 #[test]

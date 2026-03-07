@@ -117,6 +117,6 @@ pub struct FovMaterials {
     pub gap_original: Handle<StandardMaterial>,
     /// Highlight gap material (emissive cyan glow).
     pub gap_highlight: Handle<StandardMaterial>,
-    /// Purple emissive material for the hex face at screen center.
-    pub hex_in_sight: Handle<StandardMaterial>,
+    /// Purple emissive material for the aimed-at hex face (screen center + within FoV).
+    pub hex_in_aim: Handle<StandardMaterial>,
 }
