@@ -7,9 +7,8 @@ use bevy::state::app::StatesPlugin;
 use bevy::time::TimeUpdateStrategy;
 use hexx::{Hex, shapes};
 
-use super::entities::{
-    Corner, FovMaterials, FovTransition, HCell, HGrid, HexFace, InFov, Quad, QuadEdge, Tri,
-};
+use super::entities::{Corner, FovTransition, HCell, HGrid, HexFace, InFov, Quad, QuadEdge, Tri};
+use super::materials::FovMaterials;
 use super::{HTerrainConfig, HTerrainPhase, math, startup_systems, systems};
 use crate::{DebugFlag, GameState, GroundLevel, PlayerMoved, PlayerPos};
 

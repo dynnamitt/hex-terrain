@@ -100,7 +100,7 @@ pub(crate) fn idw_interpolate_height(pos: Vec2, vertices: &[Vec3]) -> Option<f32
 }
 
 /// Placement for a cuboid along an edge: (midpoint, length, rotation).
-pub(crate) fn edge_cuboid_transform(from: Vec3, to: Vec3) -> (Vec3, f32, Quat) {
+pub fn edge_cuboid_transform(from: Vec3, to: Vec3) -> (Vec3, f32, Quat) {
     let diff = to - from;
     let length = diff.length();
     let midpoint = (from + to) / 2.0;

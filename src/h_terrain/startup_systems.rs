@@ -9,10 +9,11 @@ use hexx::{EdgeDirection, Hex, HexLayout, PlaneMeshBuilder, VertexDirection, sha
 
 use super::HTerrainConfig;
 use super::entities::{
-    Corner, FovMaterials, HCell, HGrid, HexFace, Quad, QuadEdge, QuadOwner, QuadPos2Emitter,
-    QuadPos3Emitter, QuadTail, Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
+    Corner, HCell, HGrid, HexFace, Quad, QuadEdge, QuadOwner, QuadPos2Emitter, QuadPos3Emitter,
+    QuadTail, Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
 use super::h_grid_layout::HGridLayout;
+use super::materials::FovMaterials;
 use super::math;
 use crate::DebugFlag;
 
@@ -29,29 +30,11 @@ pub fn generate_h_grid(
     let terrain = HGridLayout::from_settings(g);
 
     let edge_thickness = 0.02;
+    let fov = FovMaterials::new(&mut materials);
     let debug_assets = debug.0.then(|| {
         let sphere_mesh = meshes.add(Sphere::new(0.08));
-        let material = materials.add(StandardMaterial {
-            base_color: Color::srgb(1.0, 0.2, 0.8),
-            emissive: LinearRgba::rgb(4.0, 0.8, 3.2),
-            unlit: true,
-            ..default()
-        });
+        let material = FovMaterials::debug_material(&mut materials);
         (sphere_mesh, material)
-    });
-
-    let gap_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.102, 0.0255, 0.0425),
-        emissive: LinearRgba::rgb(0.0255, 0.051, 0.085),
-        cull_mode: None,
-        ..default()
-    });
-
-    let edge_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.0, 0.5, 1.0),
-        emissive: LinearRgba::rgb(0.0, 20.0, 40.0),
-        unlit: true,
-        ..default()
     });
 
     // Unit hex face mesh (scaled per-hex by radius)
@@ -70,34 +53,6 @@ pub fn generate_h_grid(
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, hex_mesh_info.uvs)
         .with_inserted_indices(Indices::U16(hex_mesh_info.indices)),
     );
-    let hex_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.9, 0.5, 0.1),
-        ..default()
-    });
-
-    let hex_highlight = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.042, 0.126, 0.168),
-        emissive: LinearRgba::rgb(0.168, 0.672, 1.344),
-        ..default()
-    });
-    let gap_highlight = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.04, 0.12, 0.16),
-        emissive: LinearRgba::rgb(0.16, 0.64, 1.28),
-        cull_mode: None,
-        ..default()
-    });
-    let hex_in_aim = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.6, 0.1, 0.8),
-        emissive: LinearRgba::rgb(2.4, 0.4, 3.2),
-        ..default()
-    });
-    commands.insert_resource(FovMaterials {
-        hex_original: hex_material.clone(),
-        hex_highlight,
-        gap_original: gap_material.clone(),
-        gap_highlight,
-        hex_in_aim,
-    });
 
     let grid_entity = commands
         .spawn((
@@ -126,7 +81,7 @@ pub fn generate_h_grid(
             .with_child((
                 HexFace,
                 Mesh3d(hex_mesh.clone()),
-                MeshMaterial3d(hex_material.clone()),
+                MeshMaterial3d(fov.hex_original.clone()),
                 Transform::from_scale(Vec3::new(radius, 1.0, radius)),
             ))
             .id();
@@ -175,8 +130,8 @@ pub fn generate_h_grid(
             spawn_quad(
                 &mut commands,
                 &mut meshes,
-                &gap_material,
-                &edge_material,
+                &fov.gap_original,
+                &fov.edge,
                 &terrain,
                 &corner_entities,
                 hex,
@@ -189,7 +144,7 @@ pub fn generate_h_grid(
             spawn_tri(
                 &mut commands,
                 &mut meshes,
-                &gap_material,
+                &fov.gap_original,
                 &terrain,
                 &corner_entities,
                 hex,
@@ -202,6 +157,7 @@ pub fn generate_h_grid(
         terrain,
         hex_entities,
     });
+    commands.insert_resource(fov);
 }
 
 // ── Quad gap spawning ────────────────────────────────────────────

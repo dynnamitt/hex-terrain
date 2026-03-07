@@ -10,9 +10,10 @@ use super::HTerrainConfig;
 use bevy::color::Mix;
 
 use super::entities::{
-    Corner, FovMaterials, FovTransition, HCell, HGrid, HexFace, InFov, InSight, PreSightMaterial,
-    Quad, QuadPos2Emitter, QuadPos3Emitter, Tri, TriPos1Emitter, TriPos2Emitter,
+    Corner, FovTransition, HCell, HGrid, HexFace, InFov, InSight, PreSightMaterial, Quad,
+    QuadPos2Emitter, QuadPos3Emitter, Tri, TriPos1Emitter, TriPos2Emitter,
 };
+use super::materials::FovMaterials;
 use crate::drone::Player;
 use crate::{GroundLevel, PlayerMoved, PlayerPos};
 

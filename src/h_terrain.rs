@@ -2,6 +2,7 @@
 
 mod entities;
 mod h_grid_layout;
+pub(crate) mod materials;
 mod math;
 mod startup_systems;
 mod systems;
@@ -13,15 +14,20 @@ use bevy::prelude::*;
 
 use crate::{DebugFlag, GameState};
 
+pub use entities::InSight;
+pub use math::edge_cuboid_transform;
+
 /// Pipeline ordering for h_terrain update systems.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-enum HTerrainPhase {
+pub enum HTerrainPhase {
     /// Sets [`GroundLevel`](crate::GroundLevel) from terrain interpolation.
     UpdateGround,
     /// Tags nearby [`entities::HCell`] entities with [`entities::InFov`].
     TrackFov,
     /// Swaps materials on meshes based on [`entities::InFov`] presence.
     Highlight,
+    /// Raycasts screen center to tag the aimed hex face with [`InSight`].
+    Sight,
 }
 
 /// Configuration for the height-based terrain subsystem.
@@ -69,7 +75,7 @@ impl Default for HTerrainConfig {
         Self {
             grid: HGridSettings {
                 radius: 20,
-                fov_reach: 1,
+                fov_reach: 2,
                 point_spacing: 4.0,
                 height_noise_seed: 43,
                 radius_noise_seed: 137,
@@ -125,6 +131,7 @@ impl Plugin for HTerrainPlugin {
                     HTerrainPhase::UpdateGround,
                     HTerrainPhase::TrackFov.after(HTerrainPhase::UpdateGround),
                     HTerrainPhase::Highlight.after(HTerrainPhase::TrackFov),
+                    HTerrainPhase::Sight.after(HTerrainPhase::Highlight),
                 ),
             )
             .add_systems(Startup, startup_systems::generate_h_grid)
@@ -155,7 +162,7 @@ impl Plugin for HTerrainPlugin {
                 systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
                 systems::start_fov_transitions.in_set(HTerrainPhase::Highlight),
                 systems::animate_fov_transitions.after(HTerrainPhase::Highlight),
-                systems::track_in_sight.after(systems::animate_fov_transitions),
+                systems::track_in_sight.in_set(HTerrainPhase::Sight),
             )
                 .run_if(in_state(GameState::Running)),
         );

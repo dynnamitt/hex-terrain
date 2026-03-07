@@ -105,18 +105,3 @@ pub struct InSight;
 /// Stashed material handle from before [`InSight`] was applied.
 #[derive(Component, Reflect)]
 pub struct PreSightMaterial(pub Handle<StandardMaterial>);
-
-/// Material handles for [`InFov`] highlighting.
-#[derive(Resource)]
-pub struct FovMaterials {
-    /// Original hex face material.
-    pub hex_original: Handle<StandardMaterial>,
-    /// Highlight hex face material (emissive warm glow).
-    pub hex_highlight: Handle<StandardMaterial>,
-    /// Original gap (Quad/Tri) material.
-    pub gap_original: Handle<StandardMaterial>,
-    /// Highlight gap material (emissive cyan glow).
-    pub gap_highlight: Handle<StandardMaterial>,
-    /// Purple emissive material for the aimed-at hex face (screen center + within FoV).
-    pub hex_in_aim: Handle<StandardMaterial>,
-}

@@ -4,7 +4,10 @@
 //! for terrain to consume. Spawns the Camera3d entity with bloom.
 
 mod entities;
+pub(crate) mod materials;
 pub(crate) mod systems;
+#[cfg(test)]
+mod tests;
 
 pub use entities::Player;
 
@@ -12,6 +15,7 @@ use bevy::ecs::schedule::InternedSystemSet;
 use bevy::prelude::*;
 
 use crate::GameState;
+use crate::h_terrain::HTerrainPhase;
 
 /// Per-plugin configuration for the drone controller.
 #[derive(Resource, Clone, Debug, Reflect)]
@@ -34,6 +38,14 @@ pub struct DroneConfig {
     pub height_lerp: f32,
     /// Minimum offset above terrain (spawn height + floor for Q/scroll).
     pub lowest_offset: f32,
+    /// Local-space offset of the laser pipe from the camera.
+    pub pipe_offset: Vec3,
+    /// Length of the laser pipe cylinder.
+    pub pipe_length: f32,
+    /// Radius of the laser pipe cylinder.
+    pub pipe_radius: f32,
+    /// Thickness of the laser ray cuboid.
+    pub laser_thickness: f32,
 }
 
 impl Default for DroneConfig {
@@ -48,6 +60,10 @@ impl Default for DroneConfig {
             bloom_intensity: 0.3,
             height_lerp: 0.1,
             lowest_offset: 2.0,
+            pipe_offset: Vec3::new(-0.5, -0.5, -1.0),
+            pipe_length: 1.7,
+            pipe_radius: 0.02,
+            laser_thickness: 0.015,
         }
     }
 }
@@ -64,13 +80,25 @@ impl Plugin for DronePlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Player>()
             .register_type::<DroneConfig>()
+            .register_type::<entities::LaserPipe>()
+            .register_type::<entities::LaserRay>()
             .insert_resource(self.config.clone())
             .init_resource::<entities::CursorRecentered>();
 
+        app.add_systems(Startup, systems::create_drone_materials);
+
         if let Some(set) = self.after_terrain_seed {
-            app.add_systems(Startup, systems::spawn_drone.after(set));
+            app.add_systems(
+                Startup,
+                systems::spawn_drone
+                    .after(systems::create_drone_materials)
+                    .after(set),
+            );
         } else {
-            app.add_systems(Startup, systems::spawn_drone);
+            app.add_systems(
+                Startup,
+                systems::spawn_drone.after(systems::create_drone_materials),
+            );
         }
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -89,6 +117,12 @@ impl Plugin for DronePlugin {
         app.add_systems(
             Update,
             systems::draw_crosshair.run_if(in_state(GameState::Running)),
+        )
+        .add_systems(
+            Update,
+            systems::fire_laser
+                .after(HTerrainPhase::Sight)
+                .run_if(in_state(GameState::Running)),
         );
 
         #[cfg(target_arch = "wasm32")]
