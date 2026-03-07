@@ -98,6 +98,14 @@ pub struct FovTransition {
     pub direction: f32,
 }
 
+/// Marker on the single hex face the camera is looking directly at.
+#[derive(Component, Reflect)]
+pub struct InSight;
+
+/// Stashed material handle from before [`InSight`] was applied.
+#[derive(Component, Reflect)]
+pub struct PreSightMaterial(pub Handle<StandardMaterial>);
+
 /// Material handles for [`InFov`] highlighting.
 #[derive(Resource)]
 pub struct FovMaterials {
@@ -109,4 +117,6 @@ pub struct FovMaterials {
     pub gap_original: Handle<StandardMaterial>,
     /// Highlight gap material (emissive cyan glow).
     pub gap_highlight: Handle<StandardMaterial>,
+    /// Purple emissive material for the hex face at screen center.
+    pub hex_in_sight: Handle<StandardMaterial>,
 }

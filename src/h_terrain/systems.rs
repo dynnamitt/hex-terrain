@@ -8,9 +8,10 @@ use super::HTerrainConfig;
 use bevy::color::Mix;
 
 use super::entities::{
-    Corner, FovMaterials, FovTransition, HCell, HGrid, HexFace, InFov, Quad, QuadPos2Emitter,
-    QuadPos3Emitter, Tri, TriPos1Emitter, TriPos2Emitter,
+    Corner, FovMaterials, FovTransition, HCell, HGrid, HexFace, InFov, InSight, PreSightMaterial,
+    Quad, QuadPos2Emitter, QuadPos3Emitter, Tri, TriPos1Emitter, TriPos2Emitter,
 };
+use crate::drone::Player;
 use crate::{GroundLevel, PlayerMoved, PlayerPos};
 
 /// Bundles queries for discovering gap entities (Quad/Tri) reachable from an HCell.
@@ -136,11 +137,13 @@ pub(super) struct FovChanges<'w, 's> {
     removed: RemovedComponents<'w, 's, InFov>,
     cells: Query<'w, 's, &'static Children, With<HCell>>,
     hex_faces: Query<'w, 's, (), With<HexFace>>,
+    in_sight: Query<'w, 's, (), With<InSight>>,
 }
 
 /// Starts or reverses [`FovTransition`] on material entities when [`InFov`] changes.
 pub fn start_fov_transitions(
     mut fov: FovChanges,
+    fov_mats: Res<FovMaterials>,
     mut materials: Query<&mut MeshMaterial3d<StandardMaterial>>,
     mut transitions: Query<&mut FovTransition>,
     mut mat_assets: ResMut<Assets<StandardMaterial>>,
@@ -172,6 +175,20 @@ pub fn start_fov_transitions(
     }
 
     for (entity, fade_in) in targets {
+        // InSight entities can't transition — update the stashed target instead.
+        if fov.in_sight.contains(entity) {
+            let target = if fade_in {
+                &fov_mats.hex_highlight
+            } else {
+                &fov_mats.hex_original
+            };
+            commands
+                .entity(entity)
+                .insert(PreSightMaterial(target.clone()))
+                .remove::<FovTransition>();
+            continue;
+        }
+
         let direction = if fade_in { 1.0 } else { -1.0 };
         if let Ok(mut existing) = transitions.get_mut(entity) {
             existing.direction = direction;
@@ -192,13 +209,17 @@ pub fn start_fov_transitions(
 }
 
 /// Ticks [`FovTransition`] progress and lerps material colors each frame.
+#[allow(clippy::type_complexity)]
 pub fn animate_fov_transitions(
-    mut query: Query<(
-        Entity,
-        &mut FovTransition,
-        &mut MeshMaterial3d<StandardMaterial>,
-        Has<HexFace>,
-    )>,
+    mut query: Query<
+        (
+            Entity,
+            &mut FovTransition,
+            &mut MeshMaterial3d<StandardMaterial>,
+            Has<HexFace>,
+        ),
+        Without<InSight>,
+    >,
     fov_mats: Res<FovMaterials>,
     mut mat_assets: ResMut<Assets<StandardMaterial>>,
     cfg: Res<HTerrainConfig>,
@@ -257,6 +278,52 @@ pub fn animate_fov_transitions(
             let hi_lin = LinearRgba::from(hi_base);
             mat.base_color = Color::from(orig_lin.mix(&hi_lin, t));
             mat.emissive = orig_emissive.mix(&hi_emissive, t);
+        }
+    }
+}
+
+/// Bundles queries for the [`track_in_sight`] system.
+#[derive(SystemParam)]
+#[allow(clippy::type_complexity)]
+pub(super) struct SightParams<'w, 's> {
+    camera: Single<'w, 's, (&'static Camera, &'static GlobalTransform), With<Player>>,
+    windows: Single<'w, 's, &'static Window>,
+    raycast: MeshRayCast<'w, 's>,
+    hex_faces: Query<'w, 's, (), With<HexFace>>,
+    current_sight: Query<'w, 's, (Entity, &'static PreSightMaterial), With<InSight>>,
+    fov_mats: Res<'w, FovMaterials>,
+    materials: Query<'w, 's, &'static mut MeshMaterial3d<StandardMaterial>>,
+}
+
+/// Tags the single hex face at screen center with [`InSight`] and applies a purple material.
+pub fn track_in_sight(mut sight: SightParams, mut commands: Commands) {
+    // Remove previous InSight — restore pre-sight material
+    for (entity, stashed) in &sight.current_sight {
+        commands
+            .entity(entity)
+            .remove::<(InSight, PreSightMaterial)>();
+        if let Ok(mut mat) = sight.materials.get_mut(entity) {
+            mat.0 = stashed.0.clone();
+        }
+    }
+
+    // Ray from screen center
+    let center = Vec2::new(sight.windows.width() / 2.0, sight.windows.height() / 2.0);
+    let (camera, cam_gt) = *sight.camera;
+    let Ok(ray) = camera.viewport_to_world(cam_gt, center) else {
+        return;
+    };
+
+    // Cast and find first HexFace hit
+    let hits = sight.raycast.cast_ray(ray, &default());
+    for &(entity, _) in hits {
+        if sight.hex_faces.contains(entity) {
+            if let Ok(mut mat) = sight.materials.get_mut(entity) {
+                let stash = PreSightMaterial(mat.0.clone());
+                mat.0 = sight.fov_mats.hex_in_sight.clone();
+                commands.entity(entity).insert((InSight, stash));
+            }
+            return;
         }
     }
 }

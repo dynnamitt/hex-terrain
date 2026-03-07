@@ -63,7 +63,7 @@ pub fn generate_h_grid(
     let hex_mesh = meshes.add(
         Mesh::new(
             PrimitiveTopology::TriangleList,
-            RenderAssetUsages::RENDER_WORLD,
+            RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
         )
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, hex_mesh_info.vertices)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, hex_mesh_info.normals)
@@ -76,8 +76,8 @@ pub fn generate_h_grid(
     });
 
     let hex_highlight = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.8, 0.56, 0.16),
-        emissive: LinearRgba::rgb(3.2, 1.6, 0.32),
+        base_color: Color::srgb(0.042, 0.126, 0.168),
+        emissive: LinearRgba::rgb(0.168, 0.672, 1.344),
         ..default()
     });
     let gap_highlight = materials.add(StandardMaterial {
@@ -86,11 +86,17 @@ pub fn generate_h_grid(
         cull_mode: None,
         ..default()
     });
+    let hex_in_sight = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.6, 0.1, 0.8),
+        emissive: LinearRgba::rgb(2.4, 0.4, 3.2),
+        ..default()
+    });
     commands.insert_resource(FovMaterials {
         hex_original: hex_material.clone(),
         hex_highlight,
         gap_original: gap_material.clone(),
         gap_highlight,
+        hex_in_sight,
     });
 
     let grid_entity = commands

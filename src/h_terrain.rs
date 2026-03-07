@@ -113,6 +113,8 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::InFov>()
             .register_type::<entities::HexFace>()
             .register_type::<entities::FovTransition>()
+            .register_type::<entities::InSight>()
+            .register_type::<entities::PreSightMaterial>()
             .insert_resource(self.config.clone())
             .insert_resource(ClearColor(self.config.clear_color))
             .configure_sets(
@@ -151,6 +153,7 @@ impl Plugin for HTerrainPlugin {
                 systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
                 systems::start_fov_transitions.in_set(HTerrainPhase::Highlight),
                 systems::animate_fov_transitions.after(HTerrainPhase::Highlight),
+                systems::track_in_sight.after(systems::animate_fov_transitions),
             )
                 .run_if(in_state(GameState::Running)),
         );
