@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Hex Terrain</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: #010102;
+      }
+      body {
+        padding: 2%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      #game-wrapper {
+        flex: 1;
+        min-height: 0;
+        position: relative;
+      }
+      #game-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      #loading-overlay {
+        position: absolute;
+        inset: 0;
+        background: #060d0d;
+        border: 1px solid #0a3a3a;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        animation: pulse 2s ease-in-out infinite;
+      }
+      #loading-overlay h1 {
+        font-family: monospace;
+        font-size: 18px;
+        color: #00ffcc;
+        font-weight: normal;
+        opacity: 0.6;
+      }
+      #loading-overlay h3 {
+        font-family: monospace;
+        font-size: 13px;
+        color: #6a7a8a;
+        font-weight: normal;
+      }
+      #loading-overlay ul {
+        font-family: monospace;
+        font-size: 12px;
+        color: #6a7a8a;
+        list-style: none;
+        text-align: left;
+      }
+      #loading-overlay ul li::before {
+        content: "› ";
+        color: #0a3a3a;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          background: #060d0d;
+        }
+        50% {
+          background: #0a1616;
+        }
+      }
+      #loading-overlay.hidden {
+        display: none;
+      }
+      #hint {
+        font-family: monospace;
+        font-size: 13px;
+        color: #00ffcc;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      #hint-text {
+        opacity: 0;
+        transition: opacity 0.4s;
+      }
+      #hint-text.visible {
+        opacity: 0.6;
+      }
+      #history a {
+        color: #6a7a8a;
+        text-decoration: none;
+        font-size: 11px;
+      }
+      #history a:hover {
+        color: #00ffcc;
+      }
+      .keys {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-family: monospace;
+        font-size: 13px;
+        color: #6a7a8a;
+      }
+      .keys span {
+        white-space: nowrap;
+      }
+      kbd {
+        background: #1a2a2a;
+        color: #00ffcc;
+        border: 1px solid #0a3a3a;
+        border-radius: 3px;
+        padding: 1px 5px;
+        font-family: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hint"><span id="hint-text">click canvas to play</span><span id="history"><a href="../history.html">📜</a></span></div>
+    <div id="game-wrapper">
+      <canvas id="game-canvas"></canvas>
+      <div id="loading-overlay">
+        <h1>loading…</h1>
+        <h3>v0.0.2</h3>
+        <ul>
+          <li>Laser-drill aiming with animated pipe pivot and ray visuals</li>
+          <li>FoV color transitions for hex faces, gaps, and edges</li>
+          <li>Crosshair overlay and InSight targeting</li>
+          <li>Smooth ground-following drone altitude</li>
+          <li>Animated intro with tilt-up camera reveal and bloom</li>
+        </ul>
+      </div>
+    </div>
+    <div class="keys">
+      <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span>
+      <span><kbd>Q</kbd><kbd>E</kbd> altitude</span>
+      <span><kbd>Scroll</kbd> altitude</span>
+      <span><kbd>Mouse</kbd> look</span>
+      <span><kbd>Space</kbd> laser-drill</span>
+      <span><kbd>Tab</kbd> inspector</span>
+    </div>
+    <script type="module">
+      import init from "./hex-terrain.js";
+      const overlay = document.getElementById("loading-overlay");
+      const hintText = document.getElementById("hint-text");
+
+      function readyToPlay() {
+        overlay.classList.add("hidden");
+        hintText.classList.add("visible");
+        setTimeout(() => hintText.classList.remove("visible"), 5000);
+      }
+
+      init()
+        .then(readyToPlay)
+        .catch((error) => {
+          if (!error.message.startsWith("Using exceptions for control flow,")) {
+            overlay.querySelector("h1").textContent = "failed to load";
+            throw error;
+          }
+          readyToPlay();
+        });
+    </script>
+  </body>
+</html>
