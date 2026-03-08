@@ -2,7 +2,7 @@
 
 # 3d geometric play with rust,bevy & mrOpus
 
- [Try latest wasm build!](https://dynnamitt.github.io/hex-terrain/)
+[![Play in browser](https://img.shields.io/badge/Play_in_browser-654FF0?style=for-the-badge&logo=webassembly&logoColor=white)](https://dynnamitt.github.io/hex-terrain/)
 
  
           v2----v1
