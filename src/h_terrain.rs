@@ -89,7 +89,7 @@ impl Default for HTerrainConfig {
                 max_hex_radius: 2.6,
             },
             clear_color: OrigPalette::ClearColor.into(),
-            fov_transition_secs: 1.3,
+            fov_transition_secs: 0.5,
         }
     }
 }

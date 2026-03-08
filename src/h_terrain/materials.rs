@@ -6,7 +6,9 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::HTerrainConfig;
-use super::entities::{FovTransition, HCell, HexFace, InFov, InSight, PreSightMaterial, Quad, Tri};
+use super::entities::{
+    FovTransition, HCell, HexFace, InFov, InSight, PreSightMaterial, Quad, QuadEdge, Tri,
+};
 use crate::drone::Player;
 
 /// Base/default terrain color palette.
@@ -47,15 +49,16 @@ impl From<OrigPalette> for LinearRgba {
 pub enum FovPalette {
     Hex,
     Gap,
+    Edge,
     Aim,
 }
 
 impl From<FovPalette> for Color {
     fn from(p: FovPalette) -> Self {
         match p {
-            FovPalette::Hex => Color::srgb(1.0, 0.75, 0.15), // golden amber
-            FovPalette::Gap => Color::srgb(0.1, 0.1, 0.04),  // near-black brown
-            FovPalette::Aim => Color::srgb(0.6, 0.1, 0.8),   // purple
+            FovPalette::Hex | FovPalette::Edge => Color::srgb(0.2, 0.9, 0.3), // bright green
+            FovPalette::Gap => Color::srgb(0.165, 0.745, 0.25),               // muted lime green
+            FovPalette::Aim => Color::srgb(0.6, 0.1, 0.8),                    // purple
         }
     }
 }
@@ -63,9 +66,9 @@ impl From<FovPalette> for Color {
 impl From<FovPalette> for LinearRgba {
     fn from(p: FovPalette) -> Self {
         match p {
-            FovPalette::Hex => LinearRgba::rgb(0.36, 0.2, 0.04), // warm amber glow
-            FovPalette::Gap => LinearRgba::rgb(0.03, 0.005, 0.01), // faint red-brown glow
-            FovPalette::Aim => LinearRgba::rgb(0.92, 0.32, 2.56), // vivid violet bloom
+            FovPalette::Hex | FovPalette::Edge => LinearRgba::rgb(0.04, 0.18, 0.06), // green-tinted glow
+            FovPalette::Gap => LinearRgba::rgb(0.022, 0.10, 0.034), // soft green glow
+            FovPalette::Aim => LinearRgba::rgb(0.92, 0.32, 2.56),   // vivid violet bloom
         }
     }
 }
@@ -85,6 +88,8 @@ pub struct TerrainMaterials {
     pub hex_in_aim: Handle<StandardMaterial>,
     /// Bright emissive edge-line material for quad edges.
     pub edge: Handle<StandardMaterial>,
+    /// Highlight edge-line material for quad edges within FoV.
+    pub edge_highlight: Handle<StandardMaterial>,
 }
 
 impl TerrainMaterials {
@@ -122,6 +127,12 @@ impl TerrainMaterials {
                 unlit: true,
                 ..default()
             }),
+            edge_highlight: materials.add(StandardMaterial {
+                base_color: FovPalette::Edge.into(),
+                emissive: FovPalette::Edge.into(),
+                unlit: true,
+                ..default()
+            }),
         }
     }
 
@@ -145,10 +156,12 @@ pub(super) struct FovChanges<'w, 's> {
     cells: Query<'w, 's, &'static Children, With<HCell>>,
     hex_faces: Query<'w, 's, (), With<HexFace>>,
     in_sight: Query<'w, 's, (), With<InSight>>,
+    gap_children: Query<'w, 's, &'static Children, Or<(With<Quad>, With<Tri>)>>,
+    quad_edges: Query<'w, 's, (), With<QuadEdge>>,
 }
 
 /// Starts or reverses [`FovTransition`] on material entities when [`InFov`] changes.
-pub fn start_fov_transitions(
+pub(super) fn start_fov_transitions(
     mut fov: FovChanges,
     mats: Res<TerrainMaterials>,
     mut materials: Query<&mut MeshMaterial3d<StandardMaterial>>,
@@ -162,6 +175,14 @@ pub fn start_fov_transitions(
     for entity in fov.removed.read() {
         if materials.contains(entity) {
             targets.push((entity, false));
+            // Propagate to QuadEdge children of removed gap entities.
+            if let Ok(children) = fov.gap_children.get(entity) {
+                for child in children.iter() {
+                    if fov.quad_edges.contains(child) {
+                        targets.push((child, false));
+                    }
+                }
+            }
         } else if let Ok(children) = fov.cells.get(entity) {
             for child in children.iter() {
                 if fov.hex_faces.contains(child) {
@@ -179,6 +200,14 @@ pub fn start_fov_transitions(
     }
     for entity in &fov.added_gaps {
         targets.push((entity, true));
+        // Propagate to QuadEdge children of added gap entities.
+        if let Ok(children) = fov.gap_children.get(entity) {
+            for child in children.iter() {
+                if fov.quad_edges.contains(child) {
+                    targets.push((child, true));
+                }
+            }
+        }
     }
 
     for (entity, fade_in) in targets {
@@ -217,13 +246,14 @@ pub fn start_fov_transitions(
 
 /// Ticks [`FovTransition`] progress and lerps material colors each frame.
 #[allow(clippy::type_complexity)]
-pub fn animate_fov_transitions(
+pub(super) fn animate_fov_transitions(
     mut query: Query<
         (
             Entity,
             &mut FovTransition,
             &mut MeshMaterial3d<StandardMaterial>,
             Has<HexFace>,
+            Has<QuadEdge>,
         ),
         Without<InSight>,
     >,
@@ -249,19 +279,33 @@ pub fn animate_fov_transitions(
     let gap_hi = mat_assets
         .get(&mats.gap_highlight)
         .map(|m| (m.base_color, m.emissive));
+    let edge_orig = mat_assets
+        .get(&mats.edge)
+        .map(|m| (m.base_color, m.emissive));
+    let edge_hi = mat_assets
+        .get(&mats.edge_highlight)
+        .map(|m| (m.base_color, m.emissive));
 
-    let (Some(hex_orig), Some(hex_hi), Some(gap_orig), Some(gap_hi)) =
-        (hex_orig, hex_hi, gap_orig, gap_hi)
+    let (
+        Some(hex_orig),
+        Some(hex_hi),
+        Some(gap_orig),
+        Some(gap_hi),
+        Some(edge_orig),
+        Some(edge_hi),
+    ) = (hex_orig, hex_hi, gap_orig, gap_hi, edge_orig, edge_hi)
     else {
         return;
     };
 
-    for (entity, mut tr, mat_handle, is_hex) in &mut query {
+    for (entity, mut tr, mat_handle, is_hex, is_edge) in &mut query {
         tr.progress = (tr.progress + tr.direction * dt / duration).clamp(0.0, 1.0);
         let t = tr.progress;
 
         let ((orig_base, orig_emissive), (hi_base, hi_emissive)) = if is_hex {
             (hex_orig, hex_hi)
+        } else if is_edge {
+            (edge_orig, edge_hi)
         } else {
             (gap_orig, gap_hi)
         };
@@ -302,7 +346,7 @@ pub(super) struct SightParams<'w, 's> {
 }
 
 /// Tags the single hex face at screen center with [`InSight`] and applies a purple material.
-pub fn track_in_sight(mut sight: SightParams, mut commands: Commands) {
+pub(super) fn track_in_sight(mut sight: SightParams, mut commands: Commands) {
     // Remove previous InSight — restore pre-sight material
     for (entity, stashed) in &sight.current_sight {
         commands
