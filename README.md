@@ -19,19 +19,20 @@
 
 ```mermaid
 graph LR
-    gen[generate_h_grid] --> seed[seed_ground_level]
-    gen --> verify[verify_gap_counts<br/><i>debug only</i>]
-    seed -- TerrainSeededPhase --> spawn[spawn_drone]
-    spawn -.-> hide[hide_cursor<br/><i>native only</i>]
+    generate_h_grid --> seed_ground_level
+    generate_h_grid --> verify_gap_counts
+    seed_ground_level -- TerrainSeededPhase --> spawn_drone
+    create_drone_materials --> spawn_drone
 
     subgraph h_terrain
-        gen
-        seed
-        verify
+        generate_h_grid
+        seed_ground_level
+        verify_gap_counts[verify_gap_counts<br/><i>debug only</i>]
     end
 
     subgraph drone
-        spawn
-        hide
+        create_drone_materials
+        spawn_drone
+        hide_cursor[hide_cursor<br/><i>native only</i>]
     end
 ```
