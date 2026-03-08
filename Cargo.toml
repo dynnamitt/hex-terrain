@@ -32,6 +32,8 @@ features = [
     "hdr",
     "reflect_auto_register",
     "tonemapping_luts",
+    "bevy_picking",
+    "mesh_picking",
 ]
 default-features = false
 

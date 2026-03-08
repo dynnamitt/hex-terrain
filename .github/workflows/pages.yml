@@ -5,43 +5,58 @@ on:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
 
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Install wasm-bindgen-cli
         run: cargo install wasm-bindgen-cli --version 0.2.108
 
       - name: Build WASM
-        run: make wasm
+        run: make wasm VERSION=${{ steps.version.outputs.tag }}
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
         with:
-          path: target/wasm
+          ref: gh-pages
+          path: gh-pages
+          fetch-depth: 1
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy version
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          mkdir -p gh-pages/${VERSION}
+          cp -r target/wasm/* gh-pages/${VERSION}/
+          sed "s|__VERSION__|${VERSION}|g" web/root-index.html > gh-pages/index.html
+          # Build version list (newest first)
+          cd gh-pages
+          ITEMS=""
+          for d in $(ls -d v* 2>/dev/null | sort -V -r); do
+            ITEMS="${ITEMS}      <li><a href=\"${d}/\">${d}</a></li>\n"
+          done
+          sed "s|__VERSION_LIST__|${ITEMS}|g" ../web/history.html > history.html
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "deploy ${VERSION}"
+          git push

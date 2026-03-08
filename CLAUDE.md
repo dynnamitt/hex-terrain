@@ -12,6 +12,7 @@ Use the Makefile for all standard operations:
 make build                         # cargo build
 make test                          # unit tests (cargo test)
 make e2etest                       # BRP-based e2e tests (launches app)
+make coverage                      # tarpaulin HTML coverage report
 make clean                         # cargo clean
 cargo run                          # default: intro sequence then free-fly
 cargo run -- --debug               # verbose intro logging (DebugFlag resource)
@@ -35,6 +36,7 @@ src/
                                # TriOwner, TriPos1Emitter, TriPos2Emitter
     h_terrain/startup_systems  # generate_h_grid, seed_ground_level (Startup schedule)
     h_terrain/systems          # update_ground_level, track_player_fov, fov transitions
+    h_terrain/tests            # ECS integration tests (cfg(test))
   drone.rs             # DroneConfig, DronePlugin
     drone/entities     # Player, CursorRecentered, DroneInput
     drone/systems      # spawn_drone, fly, hide_cursor, recenter_cursor, toggle_inspector
@@ -139,6 +141,10 @@ The even-edge `[0,2,4]` ownership rule and vertex canonical ownership guarantee 
 
 A corner *can* hold multiple *different* marker types simultaneously (e.g. `QuadOwner` + `TriOwner` on corner 0). This is safe because they are distinct component types in ECS. The `PosXEmitter` markers are single-value tuples holding the `Entity` of the gap mesh they contribute to, enabling direct lookup without hierarchy traversal.
 
+## Release Notes
+
+`UPDATES.md` is the source of truth for release notes. The loading overlay in `web/index.html` displays the same bullets — keep both in sync when adding entries.
+
 ## Formatting
 
 No project-specific formatter configured. Standard `cargo fmt`.
@@ -153,7 +159,23 @@ drone  h_terrain  math
 intro
 ```
 
-## E2E Testing (BRP)
+## Testing
+
+### Unit / Integration Tests
+
+`h_terrain/tests.rs` contains ECS integration tests that run h_terrain systems in a headless Bevy `App` (no window/renderer). The `test_app()` helper wires up `MinimalPlugins` + `AssetPlugin`, registers all h_terrain startup and update systems, and forces `GameState::Running`. Tests cover:
+- Startup entity counts (HGrid, HCell, Corner, Quad, Tri, QuadEdge)
+- Gap entity counts matching `math::gap_filler` predictions
+- `seed_ground_level` correctness
+- `update_ground_level` on player movement
+- `track_player_fov` at origin, after hex boundary crossing, and at grid edge
+- `start_fov_transitions` / `animate_fov_transitions` direction and completion
+
+### Coverage
+
+CI generates coverage via **cargo-tarpaulin** and uploads to **Codecov**. Run locally with `make coverage` (produces `tarpaulin-report.html`).
+
+### E2E Testing (BRP)
 
 Tests in `tests/e2e_entity_count.sh` query the running app via Bevy Remote Protocol (`http://127.0.0.1:15702`).
 

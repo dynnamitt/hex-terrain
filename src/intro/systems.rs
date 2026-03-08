@@ -64,7 +64,7 @@ pub fn run_intro(
             transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
 
             if t >= 1.0 {
-                next_state.set(GameState::Running);
+                next_state.set(GameState::Arming);
             }
         }
     }

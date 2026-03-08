@@ -2,24 +2,33 @@
 
 mod entities;
 mod h_grid_layout;
+pub(crate) mod materials;
 mod math;
 mod startup_systems;
 mod systems;
+#[cfg(test)]
+mod tests;
 
 use bevy::ecs::schedule::InternedSystemSet;
 use bevy::prelude::*;
 
 use crate::{DebugFlag, GameState};
 
+pub use entities::InSight;
+pub use materials::OrigPalette;
+pub use math::edge_cuboid_transform;
+
 /// Pipeline ordering for h_terrain update systems.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-enum HTerrainPhase {
+pub enum HTerrainPhase {
     /// Sets [`GroundLevel`](crate::GroundLevel) from terrain interpolation.
     UpdateGround,
     /// Tags nearby [`entities::HCell`] entities with [`entities::InFov`].
     TrackFov,
     /// Swaps materials on meshes based on [`entities::InFov`] presence.
     Highlight,
+    /// Raycasts screen center to tag the aimed hex face with [`InSight`].
+    Sight,
 }
 
 /// Configuration for the height-based terrain subsystem.
@@ -67,7 +76,7 @@ impl Default for HTerrainConfig {
         Self {
             grid: HGridSettings {
                 radius: 20,
-                fov_reach: 3,
+                fov_reach: 2,
                 point_spacing: 4.0,
                 height_noise_seed: 43,
                 radius_noise_seed: 137,
@@ -79,8 +88,8 @@ impl Default for HTerrainConfig {
                 min_hex_radius: 0.2,
                 max_hex_radius: 2.6,
             },
-            clear_color: Color::srgb(0.01, 0.01, 0.02),
-            fov_transition_secs: 0.3,
+            clear_color: OrigPalette::ClearColor.into(),
+            fov_transition_secs: 0.5,
         }
     }
 }
@@ -113,6 +122,8 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::InFov>()
             .register_type::<entities::HexFace>()
             .register_type::<entities::FovTransition>()
+            .register_type::<entities::InSight>()
+            .register_type::<entities::PreSightMaterial>()
             .insert_resource(self.config.clone())
             .insert_resource(ClearColor(self.config.clear_color))
             .configure_sets(
@@ -121,6 +132,7 @@ impl Plugin for HTerrainPlugin {
                     HTerrainPhase::UpdateGround,
                     HTerrainPhase::TrackFov.after(HTerrainPhase::UpdateGround),
                     HTerrainPhase::Highlight.after(HTerrainPhase::TrackFov),
+                    HTerrainPhase::Sight.after(HTerrainPhase::Highlight),
                 ),
             )
             .add_systems(Startup, startup_systems::generate_h_grid)
@@ -149,8 +161,9 @@ impl Plugin for HTerrainPlugin {
             (
                 systems::update_ground_level.in_set(HTerrainPhase::UpdateGround),
                 systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
-                systems::start_fov_transitions.in_set(HTerrainPhase::Highlight),
-                systems::animate_fov_transitions.after(HTerrainPhase::Highlight),
+                materials::start_fov_transitions.in_set(HTerrainPhase::Highlight),
+                materials::animate_fov_transitions.after(HTerrainPhase::Highlight),
+                materials::track_in_sight.in_set(HTerrainPhase::Sight),
             )
                 .run_if(in_state(GameState::Running)),
         );

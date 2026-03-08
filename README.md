@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/dynnamitt/hex-terrain/graph/badge.svg)](https://codecov.io/gh/dynnamitt/hex-terrain)
+
 # 3d geometric play with rust,bevy & mrOpus
 
  [Try latest wasm build!](https://dynnamitt.github.io/hex-terrain/)
