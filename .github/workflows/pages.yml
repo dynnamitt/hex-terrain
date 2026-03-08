@@ -68,9 +68,10 @@ jobs:
           VERSION="${{ steps.version.outputs.tag }}"
           mkdir -p gh-pages/${VERSION}
           cp -r src/target/wasm/* gh-pages/${VERSION}/
-          sed "s|__VERSION__|${VERSION}|g" templates/web/root-index.html > gh-pages/index.html
-          # Build version list (newest first)
+          # Determine latest version from deployed directories
           cd gh-pages
+          LATEST=$(ls -d v* 2>/dev/null | sort -V | tail -1)
+          sed "s|__VERSION__|${LATEST}|g" ../templates/web/root-index.html > index.html
           ITEMS=""
           for d in $(ls -d v* 2>/dev/null | sort -V -r); do
             ITEMS="${ITEMS}      <li><a href=\"${d}/\">${d}</a></li>\n"
