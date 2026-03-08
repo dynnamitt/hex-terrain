@@ -84,12 +84,24 @@
         font-family: monospace;
         font-size: 13px;
         color: #00ffcc;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      #hint-text {
         opacity: 0;
-        text-align: center;
         transition: opacity 0.4s;
       }
-      #hint.visible {
+      #hint-text.visible {
         opacity: 0.6;
+      }
+      #history a {
+        color: #6a7a8a;
+        text-decoration: none;
+        font-size: 11px;
+      }
+      #history a:hover {
+        color: #00ffcc;
       }
       .keys {
         display: flex;
@@ -113,12 +125,12 @@
     </style>
   </head>
   <body>
-    <div id="hint">click canvas to play</div>
+    <div id="hint"><span id="hint-text">click canvas to play</span><span id="history"><a href="../history.html">📜</a></span></div>
     <div id="game-wrapper">
       <canvas id="game-canvas"></canvas>
       <div id="loading-overlay">
         <h1>loading…</h1>
-        <h3>v0.0.2</h3>
+        <h3>__VERSION__</h3>
         <ul>
           <li>Laser-drill aiming with animated pipe pivot and ray visuals</li>
           <li>FoV color transitions for hex faces, gaps, and edges</li>
@@ -139,12 +151,12 @@
     <script type="module">
       import init from "./hex-terrain.js";
       const overlay = document.getElementById("loading-overlay");
-      const hint = document.getElementById("hint");
+      const hintText = document.getElementById("hint-text");
 
       function readyToPlay() {
         overlay.classList.add("hidden");
-        hint.classList.add("visible");
-        setTimeout(() => hint.classList.remove("visible"), 5000);
+        hintText.classList.add("visible");
+        setTimeout(() => hintText.classList.remove("visible"), 5000);
       }
 
       init()
