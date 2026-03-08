@@ -15,6 +15,7 @@ use bevy::prelude::*;
 use crate::{DebugFlag, GameState};
 
 pub use entities::InSight;
+pub use materials::OrigPalette;
 pub use math::edge_cuboid_transform;
 
 /// Pipeline ordering for h_terrain update systems.
@@ -87,7 +88,7 @@ impl Default for HTerrainConfig {
                 min_hex_radius: 0.2,
                 max_hex_radius: 2.6,
             },
-            clear_color: Color::srgb(0.01, 0.01, 0.02),
+            clear_color: OrigPalette::ClearColor.into(),
             fov_transition_secs: 1.3,
         }
     }
@@ -160,9 +161,9 @@ impl Plugin for HTerrainPlugin {
             (
                 systems::update_ground_level.in_set(HTerrainPhase::UpdateGround),
                 systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
-                systems::start_fov_transitions.in_set(HTerrainPhase::Highlight),
-                systems::animate_fov_transitions.after(HTerrainPhase::Highlight),
-                systems::track_in_sight.in_set(HTerrainPhase::Sight),
+                materials::start_fov_transitions.in_set(HTerrainPhase::Highlight),
+                materials::animate_fov_transitions.after(HTerrainPhase::Highlight),
+                materials::track_in_sight.in_set(HTerrainPhase::Sight),
             )
                 .run_if(in_state(GameState::Running)),
         );
