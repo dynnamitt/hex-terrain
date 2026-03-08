@@ -141,6 +141,10 @@ The even-edge `[0,2,4]` ownership rule and vertex canonical ownership guarantee 
 
 A corner *can* hold multiple *different* marker types simultaneously (e.g. `QuadOwner` + `TriOwner` on corner 0). This is safe because they are distinct component types in ECS. The `PosXEmitter` markers are single-value tuples holding the `Entity` of the gap mesh they contribute to, enabling direct lookup without hierarchy traversal.
 
+## Release Notes
+
+`UPDATES.md` is the source of truth for release notes. The loading overlay in `web/index.html` displays the same bullets — keep both in sync when adding entries.
+
 ## Formatting
 
 No project-specific formatter configured. Standard `cargo fmt`.
