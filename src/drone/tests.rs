@@ -8,7 +8,7 @@ use bevy::state::app::StatesPlugin;
 use bevy::time::TimeUpdateStrategy;
 
 use super::DroneConfig;
-use super::entities::{CursorRecentered, LaserPipe, LaserRay, Player};
+use super::entities::{ArmingTimer, CursorRecentered, Elbow, LaserPipe, LaserRay, Player};
 use super::systems;
 use crate::h_terrain::InSight;
 use crate::{GameState, GroundLevel, PlayerMoved, PlayerPos};
@@ -46,11 +46,23 @@ fn test_app() -> App {
     );
     app.add_systems(
         Update,
+        systems::arm_pipe.run_if(in_state(GameState::Arming)),
+    );
+    app.add_systems(
+        Update,
         (systems::fly, systems::fire_laser).run_if(in_state(GameState::Running)),
     );
 
     app.update();
-    app.update();
+
+    // Fix elbow rotation from hidden (spawn) to armed position
+    {
+        let w = app.world_mut();
+        let elbow = w.query_filtered::<Entity, With<Elbow>>().single(w).unwrap();
+        w.entity_mut(elbow).get_mut::<Transform>().unwrap().rotation =
+            Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+    }
+    app.update(); // propagate GlobalTransform
 
     app
 }
@@ -84,18 +96,28 @@ fn pipe_is_child_of_player() {
         .query_filtered::<Entity, With<Player>>()
         .single(w)
         .unwrap();
+    let elbow = w.query_filtered::<Entity, With<Elbow>>().single(w).unwrap();
     let pipe = w
         .query_filtered::<Entity, With<LaserPipe>>()
         .single(w)
         .unwrap();
 
-    let children = w
+    let player_children = w
         .entity(player)
         .get::<Children>()
         .expect("Player should have Children");
     assert!(
-        children.iter().any(|c| c == pipe),
-        "LaserPipe should be a child of Player"
+        player_children.iter().any(|c| c == elbow),
+        "Elbow should be a child of Player"
+    );
+
+    let elbow_children = w
+        .entity(elbow)
+        .get::<Children>()
+        .expect("Elbow should have Children");
+    assert!(
+        elbow_children.iter().any(|c| c == pipe),
+        "LaserPipe should be a child of Elbow"
     );
 }
 
@@ -247,5 +269,111 @@ fn fly_offset_clamps_to_lowest() {
     assert!(
         (offset - lowest).abs() < 1e-4,
         "Offset {offset} should be clamped to lowest_offset {lowest}"
+    );
+}
+
+// ── Arming animation ────────────────────────────────────────────
+
+#[test]
+fn arm_pipe_slerps_to_armed_rotation() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_plugins(AssetPlugin::default())
+        .add_plugins(StatesPlugin)
+        .add_plugins(bevy::transform::TransformPlugin)
+        .init_asset::<Mesh>()
+        .init_asset::<StandardMaterial>()
+        .insert_resource(DroneConfig::default())
+        .init_resource::<PlayerPos>()
+        .init_resource::<PlayerMoved>()
+        .insert_resource(GroundLevel(Some(0.0)))
+        .init_resource::<CursorRecentered>()
+        .init_resource::<ButtonInput<KeyCode>>()
+        .init_resource::<ButtonInput<MouseButton>>()
+        .add_message::<MouseMotion>()
+        .add_message::<MouseWheel>()
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+            100,
+        )))
+        .init_state::<GameState>();
+
+    app.add_systems(Startup, systems::create_drone_materials);
+    app.add_systems(
+        Startup,
+        systems::spawn_drone.after(systems::create_drone_materials),
+    );
+    app.add_systems(
+        Update,
+        systems::arm_pipe.run_if(in_state(GameState::Arming)),
+    );
+
+    // Startup
+    app.update();
+
+    let armed = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+
+    // Verify elbow starts in hidden rotation (not yet armed)
+    {
+        let w = app.world_mut();
+        let rot = w
+            .query_filtered::<&Transform, With<Elbow>>()
+            .single(w)
+            .unwrap()
+            .rotation;
+        let angle = rot.angle_between(armed);
+        assert!(
+            angle > 0.1,
+            "Elbow should start in hidden rotation, not armed (angle={angle})"
+        );
+    }
+
+    // Enter Arming state and tick past arm_duration (0.6s default).
+    // Use 200ms steps (below Bevy's 250ms max_delta clamp): 3 × 200ms = 600ms.
+    app.world_mut()
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Arming);
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+        200,
+    )));
+    app.update();
+    app.update();
+    app.update();
+
+    // Verify elbow reached armed rotation
+    {
+        let w = app.world_mut();
+        let rot = w
+            .query_filtered::<&Transform, With<Elbow>>()
+            .single(w)
+            .unwrap()
+            .rotation;
+        let angle = rot.angle_between(armed);
+        assert!(
+            angle < 0.01,
+            "Elbow should be at armed rotation after arming completes (angle={angle})"
+        );
+    }
+
+    // Verify ArmingTimer was advanced
+    {
+        let arm_duration = app.world().resource::<DroneConfig>().arm_duration;
+        let w = app.world_mut();
+        let timer = w
+            .query_filtered::<&ArmingTimer, With<Elbow>>()
+            .single(w)
+            .unwrap();
+        assert!(
+            timer.0 >= arm_duration,
+            "ArmingTimer {} should be >= arm_duration {}",
+            timer.0,
+            arm_duration
+        );
+    }
+
+    // Verify state transitioned to Running
+    app.update();
+    assert_eq!(
+        *app.world().resource::<State<GameState>>().get(),
+        GameState::Running
     );
 }

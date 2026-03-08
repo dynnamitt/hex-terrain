@@ -46,6 +46,8 @@ pub struct DroneConfig {
     pub pipe_radius: f32,
     /// Thickness of the laser ray cuboid.
     pub laser_thickness: f32,
+    /// Duration of the pipe swing-in animation (seconds).
+    pub arm_duration: f32,
 }
 
 impl Default for DroneConfig {
@@ -61,9 +63,10 @@ impl Default for DroneConfig {
             height_lerp: 0.1,
             lowest_offset: 2.0,
             pipe_offset: Vec3::new(-0.5, -0.5, -1.0),
-            pipe_length: 1.7,
-            pipe_radius: 0.02,
+            pipe_length: 3.0,
+            pipe_radius: 0.07,
             laser_thickness: 0.015,
+            arm_duration: 0.6,
         }
     }
 }
@@ -80,8 +83,10 @@ impl Plugin for DronePlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Player>()
             .register_type::<DroneConfig>()
+            .register_type::<entities::Elbow>()
             .register_type::<entities::LaserPipe>()
             .register_type::<entities::LaserRay>()
+            .register_type::<entities::ArmingTimer>()
             .insert_resource(self.config.clone())
             .init_resource::<entities::CursorRecentered>();
 
@@ -115,6 +120,10 @@ impl Plugin for DronePlugin {
             );
 
         app.add_systems(
+            Update,
+            systems::arm_pipe.run_if(in_state(GameState::Arming)),
+        )
+        .add_systems(
             Update,
             systems::draw_crosshair.run_if(in_state(GameState::Running)),
         )

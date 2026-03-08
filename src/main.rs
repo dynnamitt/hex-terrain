@@ -38,6 +38,8 @@ pub enum GameState {
     /// Intro camera animation playing.
     #[default]
     Intro,
+    /// Pipe swing-in animation after intro.
+    Arming,
     /// Normal gameplay — drone movement + terrain reveal.
     Running,
     /// Inspector overlay active (Tab to toggle).

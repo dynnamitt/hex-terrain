@@ -12,7 +12,7 @@ use bevy_egui::egui;
 use super::DroneConfig;
 #[cfg(not(target_arch = "wasm32"))]
 use super::entities::CursorRecentered;
-use super::entities::{DroneInput, LaserPipe, LaserRay, Player};
+use super::entities::{ArmingTimer, DroneInput, Elbow, LaserPipe, LaserRay, Player};
 use super::materials::DroneMaterials;
 use crate::h_terrain::{InSight, edge_cuboid_transform};
 use crate::math;
@@ -57,14 +57,26 @@ pub fn spawn_drone(
             Player,
         ))
         .with_children(|parent| {
-            parent.spawn((
-                Name::new("LaserPipe"),
-                LaserPipe,
-                Mesh3d(meshes.add(Cylinder::new(cfg.pipe_radius, cfg.pipe_length / 2.0))),
-                MeshMaterial3d(drone_mats.pipe.clone()),
-                Transform::from_translation(cfg.pipe_offset)
-                    .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
-            ));
+            parent
+                .spawn((
+                    Name::new("Elbow"),
+                    Elbow,
+                    ArmingTimer(0.0),
+                    Visibility::default(),
+                    Transform::from_translation(cfg.pipe_offset).with_rotation(
+                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
+                            * Quat::from_rotation_x(std::f32::consts::FRAC_PI_2),
+                    ),
+                ))
+                .with_children(|elbow| {
+                    elbow.spawn((
+                        Name::new("LaserPipe"),
+                        LaserPipe,
+                        Mesh3d(meshes.add(Cylinder::new(cfg.pipe_radius, cfg.pipe_length / 2.0))),
+                        MeshMaterial3d(drone_mats.pipe.clone()),
+                        Transform::from_translation(Vec3::NEG_Y * (cfg.pipe_length / 4.0)),
+                    ));
+                });
         });
 
     // Laser ray as root entity (world-space positioning)
@@ -76,6 +88,28 @@ pub fn spawn_drone(
         Transform::default(),
         Visibility::Hidden,
     ));
+}
+
+/// Animates the laser pipe from its hidden rotation into the armed (forward-facing) position.
+pub fn arm_pipe(
+    time: Res<Time>,
+    cfg: Res<DroneConfig>,
+    mut elbow_q: Single<(&mut Transform, &mut ArmingTimer), With<Elbow>>,
+    mut next_state: ResMut<NextState<crate::GameState>>,
+) {
+    let (tf, timer) = &mut *elbow_q;
+    timer.0 += time.delta_secs();
+    let t = (timer.0 / cfg.arm_duration).min(1.0);
+    let eased = crate::math::ease_out_cubic(t);
+
+    let hidden = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
+        * Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+    let armed = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+    tf.rotation = hidden.slerp(armed, eased);
+
+    if t >= 1.0 {
+        next_state.set(crate::GameState::Running);
+    }
 }
 
 /// WASD + mouse look + Q/E/scroll offset. Writes to [`PlayerPos`].

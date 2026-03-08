@@ -9,6 +9,10 @@ use crate::{GroundLevel, PlayerMoved, PlayerPos};
 #[derive(Component, Reflect)]
 pub struct Player;
 
+/// Pivot entity between Player and LaserPipe; the pipe swings from this point.
+#[derive(Component, Reflect)]
+pub struct Elbow;
+
 /// Marker on the cylindrical pipe mesh attached below-left of the camera.
 #[derive(Component, Reflect)]
 pub struct LaserPipe;
@@ -16,6 +20,10 @@ pub struct LaserPipe;
 /// Marker on the laser ray cuboid (root entity, world-space positioned).
 #[derive(Component, Reflect)]
 pub struct LaserRay;
+
+/// Tracks elapsed time during the [`GameState::Arming`] pipe swing-in animation.
+#[derive(Component, Reflect)]
+pub struct ArmingTimer(pub f32);
 
 /// Set to `true` on frames where the cursor was warped back to center,
 /// so [`super::systems::fly`] can discard any synthetic mouse-motion delta.

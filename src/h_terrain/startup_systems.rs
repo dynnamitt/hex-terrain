@@ -13,7 +13,7 @@ use super::entities::{
     QuadTail, Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
 use super::h_grid_layout::HGridLayout;
-use super::materials::FovMaterials;
+use super::materials::TerrainMaterials;
 use super::math;
 use crate::DebugFlag;
 
@@ -30,10 +30,10 @@ pub fn generate_h_grid(
     let terrain = HGridLayout::from_settings(g);
 
     let edge_thickness = 0.02;
-    let fov = FovMaterials::new(&mut materials);
+    let fov = TerrainMaterials::new(&mut materials);
     let debug_assets = debug.0.then(|| {
         let sphere_mesh = meshes.add(Sphere::new(0.08));
-        let material = FovMaterials::debug_material(&mut materials);
+        let material = TerrainMaterials::debug_material(&mut materials);
         (sphere_mesh, material)
     });
 

@@ -8,8 +8,8 @@ use bevy::time::TimeUpdateStrategy;
 use hexx::{Hex, shapes};
 
 use super::entities::{Corner, FovTransition, HCell, HGrid, HexFace, InFov, Quad, QuadEdge, Tri};
-use super::materials::FovMaterials;
-use super::{HTerrainConfig, HTerrainPhase, math, startup_systems, systems};
+use super::materials::TerrainMaterials;
+use super::{HTerrainConfig, HTerrainPhase, materials, math, startup_systems, systems};
 use crate::{DebugFlag, GameState, GroundLevel, PlayerMoved, PlayerPos};
 
 fn test_config() -> HTerrainConfig {
@@ -80,8 +80,8 @@ fn test_app_with_config(cfg: HTerrainConfig) -> App {
         (
             systems::update_ground_level.in_set(HTerrainPhase::UpdateGround),
             systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
-            systems::start_fov_transitions.in_set(HTerrainPhase::Highlight),
-            systems::animate_fov_transitions.after(HTerrainPhase::Highlight),
+            materials::start_fov_transitions.in_set(HTerrainPhase::Highlight),
+            materials::animate_fov_transitions.after(HTerrainPhase::Highlight),
         )
             .run_if(in_state(GameState::Running)),
     );
@@ -128,8 +128,8 @@ fn startup_spawns_grid_entities() {
     assert_eq!(hex_entity_count, 19);
 
     assert!(
-        w.get_resource::<FovMaterials>().is_some(),
-        "FovMaterials resource should exist"
+        w.get_resource::<TerrainMaterials>().is_some(),
+        "TerrainMaterials resource should exist"
     );
 }
 
