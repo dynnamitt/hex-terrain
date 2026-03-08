@@ -3,6 +3,11 @@ name: Pages
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to build (e.g. v0.0.1)"
+        required: true
 
 permissions:
   contents: write
@@ -15,11 +20,24 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          path: src
+
+      - name: Checkout main templates
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: templates
+          sparse-checkout: |
+            web/root-index.html
+            web/history.html
 
       - name: Extract version from tag
         id: version
-        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+        run: echo "tag=${{ inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -28,11 +46,14 @@ jobs:
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src
 
       - name: Install wasm-bindgen-cli
         run: cargo install wasm-bindgen-cli --version 0.2.108
 
       - name: Build WASM
+        working-directory: src
         run: make wasm VERSION=${{ steps.version.outputs.tag }}
 
       - name: Checkout gh-pages
@@ -46,15 +67,15 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.tag }}"
           mkdir -p gh-pages/${VERSION}
-          cp -r target/wasm/* gh-pages/${VERSION}/
-          sed "s|__VERSION__|${VERSION}|g" web/root-index.html > gh-pages/index.html
+          cp -r src/target/wasm/* gh-pages/${VERSION}/
+          sed "s|__VERSION__|${VERSION}|g" templates/web/root-index.html > gh-pages/index.html
           # Build version list (newest first)
           cd gh-pages
           ITEMS=""
           for d in $(ls -d v* 2>/dev/null | sort -V -r); do
             ITEMS="${ITEMS}      <li><a href=\"${d}/\">${d}</a></li>\n"
           done
-          sed "s|__VERSION_LIST__|${ITEMS}|g" ../web/history.html > history.html
+          sed "s|__VERSION_LIST__|${ITEMS}|g" ../templates/web/history.html > history.html
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
