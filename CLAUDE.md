@@ -137,6 +137,8 @@ These differ from earlier Bevy tutorials/docs:
 - Imports: `bevy::platform::collections::{HashMap, HashSet}`
 - Relationships: `ChildOf` component for parent lookups (via `bevy::ecs::relationship::Relationship`)
 - Single queries: `Single<&T, With<Marker>>` system param (not `query.single()`)
+- MeshRayCast backface culling: culls backfaces by default (Möller–Trumbore). Add `RayCastBackfaces` marker component per-entity to disable. Import: `bevy::picking::mesh_picking::ray_cast::RayCastBackfaces`. Independent of material `cull_mode`.
+- MeshRayCast MAIN_WORLD: meshes need `RenderAssetUsages::MAIN_WORLD` to retain CPU vertex data for raycasting; without it `MeshRayCast` silently returns no hits
 
 ## Key Default Values
 

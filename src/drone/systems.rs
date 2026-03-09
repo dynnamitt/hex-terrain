@@ -190,7 +190,11 @@ pub fn fly(mut input: DroneInput, mut transform: Single<&mut Transform, With<Pla
     let target_y = ground_y + input.player.offset;
     transform.translation.x = input.player.xz.x;
     transform.translation.z = input.player.xz.y;
-    transform.translation.y += (target_y - transform.translation.y) * input.cfg.height_lerp;
+    if target_y > transform.translation.y {
+        transform.translation.y = target_y;
+    } else {
+        transform.translation.y += (target_y - transform.translation.y) * input.cfg.height_lerp;
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -2,6 +2,7 @@
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
+use bevy::picking::mesh_picking::ray_cast::RayCastBackfaces;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
@@ -195,6 +196,7 @@ fn spawn_quad(
     let mesh_entity = commands
         .spawn((
             Quad,
+            RayCastBackfaces,
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(gap_material.clone()),
             Transform::default(),
@@ -274,6 +276,7 @@ fn spawn_tri(
     let mesh_entity = commands
         .spawn((
             Tri,
+            RayCastBackfaces,
             Mesh3d(meshes.add(mesh)),
             MeshMaterial3d(gap_material.clone()),
             Transform::default(),
