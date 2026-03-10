@@ -129,8 +129,12 @@ impl Plugin for DronePlugin {
         )
         .add_systems(
             Update,
-            systems::fire_laser
-                .after(HTerrainPhase::Sight)
+            (
+                systems::aim_pipe.after(HTerrainPhase::Sight),
+                systems::fire_laser
+                    .after(HTerrainPhase::Sight)
+                    .after(systems::aim_pipe),
+            )
                 .run_if(in_state(GameState::Running)),
         );
 

@@ -50,7 +50,12 @@ fn test_app() -> App {
     );
     app.add_systems(
         Update,
-        (systems::fly, systems::fire_laser).run_if(in_state(GameState::Running)),
+        (
+            systems::fly,
+            systems::aim_pipe,
+            systems::fire_laser.after(systems::aim_pipe),
+        )
+            .run_if(in_state(GameState::Running)),
     );
 
     app.update();
@@ -180,7 +185,13 @@ fn laser_tip_at_pipe_front() {
     let cfg = app.world().resource::<DroneConfig>().clone();
     let half_h = cfg.pipe_length / 4.0;
 
-    // Read pipe GlobalTransform (propagated during PostUpdate of test_app updates).
+    // Spawn InSight target; aim_pipe will rotate elbow toward it.
+    let target_pos = Vec3::new(5.0, 0.0, 5.0);
+    app.world_mut()
+        .spawn((InSight, Transform::from_translation(target_pos)));
+    app.update();
+
+    // Read pipe GlobalTransform AFTER aim_pipe has rotated elbow.
     let pipe_gt = {
         let w = app.world_mut();
         *w.query_filtered::<&GlobalTransform, With<LaserPipe>>()
@@ -190,12 +201,6 @@ fn laser_tip_at_pipe_front() {
 
     let front = pipe_gt.transform_point(Vec3::NEG_Y * half_h);
     let back = pipe_gt.transform_point(Vec3::Y * half_h);
-
-    // Spawn InSight target and let GlobalTransform propagate.
-    let target_pos = Vec3::new(5.0, 0.0, 5.0);
-    app.world_mut()
-        .spawn((InSight, Transform::from_translation(target_pos)));
-    app.update();
 
     // Fire laser.
     app.world_mut()
@@ -376,4 +381,84 @@ fn arm_pipe_slerps_to_armed_rotation() {
         *app.world().resource::<State<GameState>>().get(),
         GameState::Running
     );
+}
+
+// ── Aim pipe tracking ──────────────────────────────────────────
+
+#[test]
+fn aim_pipe_tracks_target() {
+    let mut app = test_app();
+
+    let target_pos = Vec3::new(5.0, 0.0, 5.0);
+    app.world_mut()
+        .spawn((InSight, Transform::from_translation(target_pos)));
+    app.update(); // propagate InSight's GlobalTransform
+    app.update(); // aim_pipe reads correct target position
+
+    let w = app.world_mut();
+    let elbow_gt = w
+        .query_filtered::<&GlobalTransform, With<Elbow>>()
+        .single(w)
+        .unwrap();
+
+    let elbow_world = elbow_gt.translation();
+    let expected_dir = (target_pos - elbow_world).normalize();
+
+    // Elbow's local -Y in world space should point toward the target
+    let local_neg_y_world = (elbow_gt.transform_point(Vec3::NEG_Y) - elbow_world).normalize();
+    let dot = local_neg_y_world.dot(expected_dir);
+    assert!(
+        dot > 0.99,
+        "Elbow -Y should point toward target (dot={dot})"
+    );
+}
+
+#[test]
+fn aim_pipe_snaps_back() {
+    let mut app = test_app();
+    let armed = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+
+    // Spawn target and let aim_pipe rotate elbow
+    let target = app
+        .world_mut()
+        .spawn((
+            InSight,
+            Transform::from_translation(Vec3::new(5.0, 0.0, 5.0)),
+        ))
+        .id();
+    app.update();
+
+    // Verify rotation changed from armed
+    {
+        let w = app.world_mut();
+        let rot = w
+            .query_filtered::<&Transform, With<Elbow>>()
+            .single(w)
+            .unwrap()
+            .rotation;
+        let angle = rot.angle_between(armed);
+        assert!(
+            angle > 0.01,
+            "Elbow should have rotated away from armed (angle={angle})"
+        );
+    }
+
+    // Remove target and update
+    app.world_mut().despawn(target);
+    app.update();
+
+    // Verify snap back to armed
+    {
+        let w = app.world_mut();
+        let rot = w
+            .query_filtered::<&Transform, With<Elbow>>()
+            .single(w)
+            .unwrap()
+            .rotation;
+        let angle = rot.angle_between(armed);
+        assert!(
+            angle < 0.01,
+            "Elbow should snap back to armed rotation (angle={angle})"
+        );
+    }
 }

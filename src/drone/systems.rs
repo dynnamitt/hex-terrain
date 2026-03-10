@@ -283,6 +283,36 @@ pub fn draw_crosshair(mut egui_ctx: Single<&mut bevy_egui::EguiContext>, window:
         });
 }
 
+/// Points the laser pipe at the aimed hex face, or snaps back to resting angle.
+pub fn aim_pipe(
+    player_q: Single<&GlobalTransform, With<Player>>,
+    mut elbow_q: Single<(&mut Transform, &GlobalTransform), With<Elbow>>,
+    sight_target: Query<&GlobalTransform, With<InSight>>,
+) {
+    let armed = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+
+    let Ok(target_gt) = sight_target.single() else {
+        elbow_q.0.rotation = armed;
+        return;
+    };
+
+    let elbow_world = elbow_q.1.translation();
+    let target_world = target_gt.translation();
+    let desired_world_dir = (target_world - elbow_world).normalize_or_zero();
+
+    if desired_world_dir == Vec3::ZERO {
+        elbow_q.0.rotation = armed;
+        return;
+    }
+
+    // Convert world direction to Player-local space
+    let (_, player_rot, _) = player_q.to_scale_rotation_translation();
+    let desired_local_dir = player_rot.inverse() * desired_world_dir;
+
+    // Pipe extends along Elbow's local -Y; rotate -Y to aim at target
+    elbow_q.0.rotation = Quat::from_rotation_arc(Vec3::NEG_Y, desired_local_dir);
+}
+
 /// Shows a red laser ray from the pipe tip to the aimed hex face on Space or Left Click.
 pub fn fire_laser(
     pipe_q: Single<&GlobalTransform, With<LaserPipe>>,
