@@ -1,6 +1,7 @@
 //! Runtime systems for height-based terrain.
 
 use bevy::ecs::system::SystemParam;
+use bevy::picking::mesh_picking::ray_cast::{MeshRayCast, MeshRayCastSettings, RayCastVisibility};
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 use hexx::{Hex, shapes};
@@ -8,10 +9,10 @@ use hexx::{Hex, shapes};
 use super::HTerrainConfig;
 
 use super::entities::{
-    Corner, HGrid, InFov, Quad, QuadPos2Emitter, QuadPos3Emitter, Tri, TriPos1Emitter,
+    Corner, HGrid, HexFace, InFov, Quad, QuadPos2Emitter, QuadPos3Emitter, Tri, TriPos1Emitter,
     TriPos2Emitter,
 };
-use crate::{GroundLevel, PlayerMoved, PlayerPos};
+use crate::{GroundLevel, PlayerPos};
 
 /// Bundles queries for discovering gap entities (Quad/Tri) reachable from an HCell.
 #[derive(SystemParam)]
@@ -70,19 +71,26 @@ fn gap_entities_for_cell(cell: Entity, lookup: &GapLookup) -> Vec<Entity> {
     out
 }
 
-/// Sets [`GroundLevel`] from terrain interpolation under the player.
-/// Skipped when [`PlayerMoved`] is `false` (no xz/offset change this frame).
+/// Sets [`GroundLevel`] by raycasting straight down onto terrain meshes.
+/// On miss (e.g. grid edge), keeps the previous height unchanged.
+#[allow(clippy::type_complexity)]
 pub fn update_ground_level(
-    grid: Single<&HGrid>,
     player: Res<PlayerPos>,
-    mut moved: ResMut<PlayerMoved>,
     mut ground: ResMut<GroundLevel>,
+    mut raycast: MeshRayCast,
+    surfaces: Query<(), Or<(With<HexFace>, With<Quad>, With<Tri>)>>,
 ) {
-    if !moved.0 {
-        return;
+    let origin_y = ground.0.unwrap_or(0.0) + 100.0;
+    let origin = Vec3::new(player.xz.x, origin_y, player.xz.y);
+    let ray = Ray3d::new(origin, Dir3::NEG_Y);
+    let filter = |e| surfaces.contains(e);
+    let settings = MeshRayCastSettings::default()
+        .with_filter(&filter)
+        .with_visibility(RayCastVisibility::Any);
+
+    if let Some((_, hit)) = raycast.cast_ray(ray, &settings).first() {
+        ground.0 = Some(hit.point.y);
     }
-    moved.0 = false;
-    ground.0 = Some(grid.terrain.interpolate_height(player.xz));
 }
 
 /// Adds/removes [`InFov`] on [`HCell`] entities when the player crosses a hex boundary.

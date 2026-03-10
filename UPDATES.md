@@ -1,5 +1,11 @@
 # Updates
 
+## v0.0.3
+
+- Laser pipe snaps to aimed hex face — points at InSight target in real-time
+- Raycast-based ground level replaces interpolation — camera rides actual mesh surfaces
+- Asymmetric height lerp — instant snap up on rising terrain, smooth ease down on descent
+
 ## v0.0.2
 
 - Laser-drill aiming system with animated pipe pivot and ray visuals
