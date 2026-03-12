@@ -41,20 +41,7 @@ jobs:
 
       - name: Inject release notes into index.html
         working-directory: src
-        run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          # Extract bullet lines between "## <tag>" and the next "##" (or EOF)
-          sed -n "/^## ${TAG}$/,/^## /{/^## /d;p}" UPDATES.md \
-            | sed -n 's/^- \(.*\)/          <li>\1<\/li>/p' > /tmp/updates.html
-          if [ ! -s /tmp/updates.html ]; then
-            echo "::error::UPDATES.md is missing release notes for '${TAG}'. Add a '## ${TAG}' section before publishing."
-            exit 1
-          fi
-          # Replace __UPDATES__ placeholder line with extracted items
-          sed -i '/__UPDATES__/{
-            r /tmp/updates.html
-            d
-          }' web/index.html
+        run: make inject-updates TAG=${{ steps.version.outputs.tag }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
