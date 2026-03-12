@@ -49,17 +49,15 @@ src/
     h_terrain/systems          # update_ground_level, track_player_fov
     h_terrain/tests            # ECS integration tests (cfg(test))
   drone.rs             # DroneConfig, DronePlugin
-    drone/entities     # Player, Elbow, LaserPipe, LaserRay, ArmingTimer,
-                       # CursorRecentered, DroneInput
+    drone/entities     # Player, Elbow, LaserPipe, LaserRay, ArmingComplete,
+                       # IntroComplete, CursorRecentered, DroneInput
     drone/materials    # DroneMaterials resource (pipe, laser_ray)
-    drone/systems      # create_drone_materials, spawn_drone, fly, arm_pipe,
-                       # draw_crosshair, fire_laser,
+    drone/systems      # create_drone_materials, spawn_drone, link_elbow_animation,
+                       # start_arming, fly, aim_pipe, draw_crosshair, fire_laser,
                        # hide_cursor, recenter_cursor (native),
                        # lock_cursor_on_click (wasm)
     drone/tests        # drone unit tests (cfg(test))
-  intro.rs             # IntroConfig, IntroPlugin
-    intro/entities     # IntroTimer, IntroPhase
-    intro/systems      # run_intro
+  intro.rs             # IntroConfig, IntroPlugin (animation built in spawn_drone)
 ```
 
 ### Config Resources
@@ -100,23 +98,25 @@ HGrid (Component + Transform + Visibility)
         │     │     └── QuadEdge ×4 (emissive cyan cuboid edge lines)
         │     └── Tri (gap mesh child of TriOwner corners, vertices 0,1)
 
-Player (Camera3d + Hdr + Bloom)
-  └── Elbow (pivot for pipe swing-in animation)
+Player (Camera3d + Hdr + Bloom + AnimationPlayer + AnimationGraphHandle)
+  └── Elbow (pivot, AnimatedBy Player — arming animation target)
         └── LaserPipe (cylinder mesh)
 
 LaserRay (root entity, world-space positioned cuboid, Visibility::Hidden until firing)
 ```
 
 ### System Order
-**Startup**: `create_drone_materials` → `generate_h_grid` → `seed_ground_level` (in `TerrainSeededPhase`) → `spawn_drone` (after both)
+**Startup**: `create_drone_materials` → `generate_h_grid` → `seed_ground_level` (in `TerrainSeededPhase`) → `spawn_drone` (after both) → `link_elbow_animation` (after `spawn_drone`)
 **Startup** (debug only): `verify_gap_counts` (after `generate_h_grid`)
+**State transitions** (via AnimationGraph — procedural curves on Player's AnimationPlayer):
+- `Intro → Arming`: intro clip (tilt-up CubicOut → hold → tilt-down CubicIn) fires `IntroComplete` event → observer sets `GameState::Arming`
+- `Arming → Running`: `start_arming` (OnEnter Arming) plays arming clip (BackOut easing) → `ArmingComplete` event → observer sets `GameState::Running` and stops animation to prevent PostUpdate overwrite
 **Update** (via `HTerrainPhase` pipeline, Running only): `UpdateGround` → `TrackFov` → `Highlight` → `Sight`
 - `update_ground_level` — sets `GroundLevel` from terrain interpolation (guarded by `PlayerMoved`)
 - `track_player_fov` — adds/removes `InFov` on nearby HCells
 - `start_fov_transitions` / `animate_fov_transitions` — material color lerp for FoV reveal
 - `track_in_sight` — raycasts screen center, tags aimed HexFace with `InSight` + purple material
-**Update** (Arming only): `arm_pipe` — animates Elbow rotation, transitions to Running
-**Update** (Running only): `draw_crosshair`, `fire_laser` (after Sight phase), `fly` (after `recenter_cursor`)
+**Update** (Running only): `aim_pipe` (slerp with ease-out toward InSight target, eases back to armed when no target), `draw_crosshair`, `fire_laser` (after Sight phase), `fly` (after `recenter_cursor`)
 
 ## Dependencies
 

@@ -1,3 +1,4 @@
+use bevy::animation::AnimationEvent;
 use bevy::ecs::system::SystemParam;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
@@ -21,9 +22,13 @@ pub struct LaserPipe;
 #[derive(Component, Reflect)]
 pub struct LaserRay;
 
-/// Tracks elapsed time during the [`GameState::Arming`] pipe swing-in animation.
-#[derive(Component, Reflect)]
-pub struct ArmingTimer(pub f32);
+/// Animation event fired when the arming pipe swing-in animation completes.
+#[derive(Clone, AnimationEvent, Reflect)]
+pub struct ArmingComplete;
+
+/// Animation event fired when the intro camera sequence completes.
+#[derive(Clone, AnimationEvent, Reflect)]
+pub struct IntroComplete;
 
 /// Set to `true` on frames where the cursor was warped back to center,
 /// so [`super::systems::fly`] can discard any synthetic mouse-motion delta.

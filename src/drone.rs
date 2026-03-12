@@ -46,6 +46,8 @@ pub struct DroneConfig {
     pub pipe_radius: f32,
     /// Thickness of the laser ray cuboid.
     pub laser_thickness: f32,
+    /// Aim pipe interpolation speed (higher = faster tracking).
+    pub aim_speed: f32,
     /// Duration of the pipe swing-in animation (seconds).
     pub arm_duration: f32,
 }
@@ -66,6 +68,7 @@ impl Default for DroneConfig {
             pipe_length: 3.0,
             pipe_radius: 0.07,
             laser_thickness: 0.015,
+            aim_speed: 12.0,
             arm_duration: 0.6,
         }
     }
@@ -86,7 +89,6 @@ impl Plugin for DronePlugin {
             .register_type::<entities::Elbow>()
             .register_type::<entities::LaserPipe>()
             .register_type::<entities::LaserRay>()
-            .register_type::<entities::ArmingTimer>()
             .insert_resource(self.config.clone())
             .init_resource::<entities::CursorRecentered>();
 
@@ -106,6 +108,15 @@ impl Plugin for DronePlugin {
             );
         }
 
+        // Link Elbow's AnimatedBy after spawn_drone has run
+        app.add_systems(
+            Startup,
+            systems::link_elbow_animation.after(systems::spawn_drone),
+        );
+
+        // Start arming animation on state enter
+        app.add_systems(OnEnter(GameState::Arming), systems::start_arming);
+
         #[cfg(not(target_arch = "wasm32"))]
         app.add_systems(Startup, systems::hide_cursor)
             .add_systems(
@@ -120,10 +131,6 @@ impl Plugin for DronePlugin {
             );
 
         app.add_systems(
-            Update,
-            systems::arm_pipe.run_if(in_state(GameState::Arming)),
-        )
-        .add_systems(
             Update,
             systems::draw_crosshair.run_if(in_state(GameState::Running)),
         )
