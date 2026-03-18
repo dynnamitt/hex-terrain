@@ -195,9 +195,11 @@ The project compiles to WebAssembly with `make wasm`. Platform differences:
 - Canvas binding: `#game-canvas` selector, `fit_canvas_to_parent: true`
 - WASM build profile: `wasm-release` (inherits release, `opt-level = "s"`, thin LTO, strip debuginfo)
 
-## Release Notes
+## Release Notes & Deployment
 
-`UPDATES.md` is the source of truth for release notes. The loading overlay in `web/index.html` displays the same bullets — keep both in sync when adding entries.
+`UPDATES.md` is the source of truth for release notes. The loading overlay in `web/index.html` displays the same bullets — `make inject-updates TAG=<version>` substitutes the `__UPDATES__` placeholder with `<li>` items extracted from the tag's section.
+
+The Pages workflow (`.github/workflows/pages.yml`) triggers on version-tag pushes (`v*.*.*`) and deploys the WASM build to `gh-pages/<version>/`. A guard step verifies the tagged commit is on `main` — tags pushed from feature branches are rejected. Manual deploys via `workflow_dispatch` bypass this check.
 
 ## Formatting
 
