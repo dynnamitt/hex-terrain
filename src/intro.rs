@@ -2,13 +2,12 @@
 //!
 //! Tilts the camera from its initial downward-looking orientation to horizontal,
 //! then settles into a slight downward angle before handing control to [`crate::drone`].
-
-mod entities;
-mod systems;
+//!
+//! The actual animation is built as a procedural `AnimationClip` inside
+//! [`crate::drone::systems::spawn_drone`] using Bevy's animation graph.
+//! This module only provides the config resource.
 
 use bevy::prelude::*;
-
-use crate::GameState;
 
 /// Per-plugin configuration for the intro camera animation.
 #[derive(Resource, Clone, Debug, Reflect)]
@@ -34,17 +33,12 @@ impl Default for IntroConfig {
     }
 }
 
-/// Startup camera animation that tilts from looking down to horizontal.
+/// Intro camera animation config plugin.
 pub struct IntroPlugin(pub IntroConfig);
 
 impl Plugin for IntroPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<IntroConfig>()
-            .insert_resource(self.0.clone())
-            .insert_resource(entities::IntroTimer::new())
-            .add_systems(
-                Update,
-                systems::run_intro.run_if(in_state(GameState::Intro)),
-            );
+            .insert_resource(self.0.clone());
     }
 }

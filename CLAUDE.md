@@ -12,6 +12,8 @@ Use the Makefile for all standard operations:
 make build                         # cargo build
 make test                          # unit tests (cargo test)
 make coverage                      # tarpaulin HTML coverage report
+make coverage-xml                  # tarpaulin XML (CI/Codecov)
+make inject-updates TAG=v0.0.1    # inject UPDATES.md notes into web/index.html
 make wasm                          # WASM build + wasm-bindgen + copy web/index.html
 make serve                         # wasm + python3 HTTP server on :8080
 make clean                         # cargo clean
@@ -47,17 +49,15 @@ src/
     h_terrain/systems          # update_ground_level, track_player_fov
     h_terrain/tests            # ECS integration tests (cfg(test))
   drone.rs             # DroneConfig, DronePlugin
-    drone/entities     # Player, Elbow, LaserPipe, LaserRay, ArmingTimer,
-                       # CursorRecentered, DroneInput
+    drone/entities     # Player, Elbow, LaserPipe, LaserRay, ArmingComplete,
+                       # IntroComplete, CursorRecentered, DroneInput
     drone/materials    # DroneMaterials resource (pipe, laser_ray)
-    drone/systems      # create_drone_materials, spawn_drone, fly, arm_pipe,
-                       # draw_crosshair, fire_laser,
+    drone/systems      # create_drone_materials, spawn_drone, link_elbow_animation,
+                       # start_arming, fly, aim_pipe, draw_crosshair, fire_laser,
                        # hide_cursor, recenter_cursor (native),
                        # lock_cursor_on_click (wasm)
     drone/tests        # drone unit tests (cfg(test))
-  intro.rs             # IntroConfig, IntroPlugin
-    intro/entities     # IntroTimer, IntroPhase
-    intro/systems      # run_intro
+  intro.rs             # IntroConfig, IntroPlugin (animation built in spawn_drone)
 ```
 
 ### Config Resources
@@ -98,23 +98,25 @@ HGrid (Component + Transform + Visibility)
         │     │     └── QuadEdge ×4 (emissive cyan cuboid edge lines)
         │     └── Tri (gap mesh child of TriOwner corners, vertices 0,1)
 
-Player (Camera3d + Hdr + Bloom)
-  └── Elbow (pivot for pipe swing-in animation)
+Player (Camera3d + Hdr + Bloom + AnimationPlayer + AnimationGraphHandle)
+  └── Elbow (pivot, AnimatedBy Player — arming animation target)
         └── LaserPipe (cylinder mesh)
 
 LaserRay (root entity, world-space positioned cuboid, Visibility::Hidden until firing)
 ```
 
 ### System Order
-**Startup**: `create_drone_materials` → `generate_h_grid` → `seed_ground_level` (in `TerrainSeededPhase`) → `spawn_drone` (after both)
+**Startup**: `create_drone_materials` → `generate_h_grid` → `seed_ground_level` (in `TerrainSeededPhase`) → `spawn_drone` (after both) → `link_elbow_animation` (after `spawn_drone`)
 **Startup** (debug only): `verify_gap_counts` (after `generate_h_grid`)
+**State transitions** (via AnimationGraph — procedural curves on Player's AnimationPlayer):
+- `Intro → Arming`: intro clip (tilt-up CubicOut → hold → tilt-down CubicIn) fires `IntroComplete` event → observer sets `GameState::Arming`
+- `Arming → Running`: `start_arming` (OnEnter Arming) plays arming clip (BackOut easing) → `ArmingComplete` event → observer sets `GameState::Running` and stops animation to prevent PostUpdate overwrite
 **Update** (via `HTerrainPhase` pipeline, Running only): `UpdateGround` → `TrackFov` → `Highlight` → `Sight`
 - `update_ground_level` — sets `GroundLevel` from terrain interpolation (guarded by `PlayerMoved`)
 - `track_player_fov` — adds/removes `InFov` on nearby HCells
 - `start_fov_transitions` / `animate_fov_transitions` — material color lerp for FoV reveal
 - `track_in_sight` — raycasts screen center, tags aimed HexFace with `InSight` + purple material
-**Update** (Arming only): `arm_pipe` — animates Elbow rotation, transitions to Running
-**Update** (Running only): `draw_crosshair`, `fire_laser` (after Sight phase), `fly` (after `recenter_cursor`)
+**Update** (Running only): `aim_pipe` (slerp with ease-out toward InSight target, eases back to armed when no target), `draw_crosshair`, `fire_laser` (after Sight phase), `fly` (after `recenter_cursor`)
 
 ## Dependencies
 
@@ -193,9 +195,11 @@ The project compiles to WebAssembly with `make wasm`. Platform differences:
 - Canvas binding: `#game-canvas` selector, `fit_canvas_to_parent: true`
 - WASM build profile: `wasm-release` (inherits release, `opt-level = "s"`, thin LTO, strip debuginfo)
 
-## Release Notes
+## Release Notes & Deployment
 
-`UPDATES.md` is the source of truth for release notes. The loading overlay in `web/index.html` displays the same bullets — keep both in sync when adding entries.
+`UPDATES.md` is the source of truth for release notes. The loading overlay in `web/index.html` displays the same bullets — `make inject-updates TAG=<version>` substitutes the `__UPDATES__` placeholder with `<li>` items extracted from the tag's section.
+
+The Pages workflow (`.github/workflows/pages.yml`) triggers on version-tag pushes (`v*.*.*`) and deploys the WASM build to `gh-pages/<version>/`. A guard step verifies the tagged commit is on `main` — tags pushed from feature branches are rejected. Manual deploys via `workflow_dispatch` bypass this check.
 
 ## Formatting
 

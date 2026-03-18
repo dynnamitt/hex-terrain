@@ -1,4 +1,4 @@
-.PHONY: clean build test coverage wasm serve
+.PHONY: clean build test coverage coverage-xml inject-updates wasm serve
 
 WASM_OUT = target/wasm
 
@@ -17,6 +17,16 @@ test:
 coverage:
 	cargo tarpaulin --out html --skip-clean
 	@echo "Coverage report: tarpaulin-report.html"
+
+coverage-xml:
+	cargo tarpaulin --out xml --skip-clean
+
+inject-updates:
+	@test -n "$(TAG)" || { echo "Usage: make inject-updates TAG=v0.0.1"; exit 1; }
+	sed -n '/^## $(TAG)$$/,/^## /{/^## /d;p}' UPDATES.md \
+		| sed -n 's/^- \(.*\)/          <li>\1<\/li>/p' > /tmp/updates.html
+	@test -s /tmp/updates.html || { echo "UPDATES.md missing notes for '$(TAG)'"; exit 1; }
+	sed -i -e '/__UPDATES__/r /tmp/updates.html' -e '/__UPDATES__/d' web/index.html
 
 wasm:
 	cargo build --release --target wasm32-unknown-unknown \

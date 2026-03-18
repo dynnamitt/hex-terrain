@@ -1,5 +1,7 @@
+use bevy::animation::{AnimatedBy, AnimationTargetId, animated_field, prelude::*};
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::input::mouse::MouseScrollUnit;
+use bevy::math::curve::{Interval, adaptors::ConstantCurve, easing::EasingCurve};
 use bevy::post_process::bloom::{Bloom, BloomCompositeMode};
 use bevy::prelude::*;
 use bevy::render::view::Hdr;
@@ -12,9 +14,12 @@ use bevy_egui::egui;
 use super::DroneConfig;
 #[cfg(not(target_arch = "wasm32"))]
 use super::entities::CursorRecentered;
-use super::entities::{ArmingTimer, DroneInput, Elbow, LaserPipe, LaserRay, Player};
+use super::entities::{
+    ArmingComplete, DroneInput, Elbow, IntroComplete, LaserPipe, LaserRay, Player,
+};
 use super::materials::DroneMaterials;
 use crate::h_terrain::{InSight, edge_cuboid_transform};
+use crate::intro::IntroConfig;
 use crate::math;
 
 /// Creates and inserts the [`DroneMaterials`] resource.
@@ -25,25 +30,109 @@ pub fn create_drone_materials(
     commands.insert_resource(DroneMaterials::new(&mut materials));
 }
 
-/// Spawns the Camera3d entity with Player marker, HDR, and bloom.
+/// Hidden rotation of the elbow (pipe tucked sideways).
+pub fn hidden_quat() -> Quat {
+    Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
+        * Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)
+}
+
+/// Armed rotation of the elbow (pipe forward-facing).
+pub fn armed_quat() -> Quat {
+    Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)
+}
+
+/// Spawns the Camera3d entity with Player marker, HDR, bloom, and animation setup.
+///
+/// Builds the animation graph containing intro and arming clips,
+/// attaches `AnimationPlayer` + `AnimationGraphHandle` on Player,
+/// and `AnimationTargetId` + `AnimatedBy` on Elbow.
 ///
 /// Must run after terrain seed so that [`GroundLevel`] is `Some`.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_drone(
     mut commands: Commands,
     cfg: Res<DroneConfig>,
+    intro_cfg: Res<IntroConfig>,
     mut player: ResMut<crate::PlayerPos>,
     ground: Res<crate::GroundLevel>,
     mut moved: ResMut<crate::PlayerMoved>,
     mut meshes: ResMut<Assets<Mesh>>,
     drone_mats: Res<DroneMaterials>,
+    mut animations: ResMut<Assets<AnimationClip>>,
+    mut graphs: ResMut<Assets<AnimationGraph>>,
 ) {
     let ground_y = ground.0.unwrap_or(0.0);
     player.offset = cfg.lowest_offset;
     moved.0 = true;
     let spawn_y = ground_y + cfg.lowest_offset;
+
+    // Names for animation target path resolution
+    let player_name = Name::new("Player");
+    let elbow_name = Name::new("Elbow");
+
+    // ── Arming clip: eases elbow rotation hidden → armed with BackOut ──
+    let mut arming_clip = AnimationClip::default();
+    let elbow_target =
+        AnimationTargetId::from_names([player_name.clone(), elbow_name.clone()].iter());
+    let arming_curve = EasingCurve::new(hidden_quat(), armed_quat(), EaseFunction::BackOut)
+        .reparametrize_linear(Interval::new(0.0, cfg.arm_duration).unwrap())
+        .expect("bounded intervals");
+    arming_clip.add_curve_to_target(
+        elbow_target,
+        AnimatableCurve::new(animated_field!(Transform::rotation), arming_curve),
+    );
+    arming_clip.add_event(cfg.arm_duration, ArmingComplete);
+
+    // ── Intro clip: tilt-up → hold → tilt-down (targeting Player rotation) ──
+    let player_target = AnimationTargetId::from_name(&player_name);
+    let spawn_transform =
+        Transform::from_xyz(0.0, spawn_y, 0.0).looking_at(Vec3::new(5.0, ground_y, 5.0), Vec3::Y);
+    let (yaw, start_pitch, _) = spawn_transform.rotation.to_euler(EulerRot::YXZ);
+    let horizontal = Quat::from_euler(EulerRot::YXZ, yaw, 0.0, 0.0);
+    let tilt_down_rot = Quat::from_euler(
+        EulerRot::YXZ,
+        yaw,
+        -intro_cfg.tilt_down_angle.to_radians(),
+        0.0,
+    );
+    let start_rot = Quat::from_euler(EulerRot::YXZ, yaw, start_pitch, 0.0);
+
+    let mut intro_clip = AnimationClip::default();
+    let tilt_up_curve = EasingCurve::new(start_rot, horizontal, EaseFunction::CubicInOut)
+        .reparametrize_linear(Interval::new(0.0, intro_cfg.tilt_up_duration).unwrap())
+        .expect("bounded intervals");
+    let hold_curve = ConstantCurve::new(
+        Interval::new(0.0, intro_cfg.highlight_delay).unwrap(),
+        horizontal,
+    );
+    let tilt_down_curve = EasingCurve::new(horizontal, tilt_down_rot, EaseFunction::CubicIn)
+        .reparametrize_linear(Interval::new(0.0, intro_cfg.tilt_down_duration).unwrap())
+        .expect("bounded intervals");
+    let intro_rotation_curve = tilt_up_curve
+        .chain(hold_curve)
+        .expect("chain hold")
+        .chain(tilt_down_curve)
+        .expect("chain tilt-down");
+    intro_clip.add_curve_to_target(
+        player_target,
+        AnimatableCurve::new(animated_field!(Transform::rotation), intro_rotation_curve),
+    );
+    let intro_total =
+        intro_cfg.tilt_up_duration + intro_cfg.highlight_delay + intro_cfg.tilt_down_duration;
+    intro_clip.add_event(intro_total, IntroComplete);
+
+    // ── Animation graph with both clips ──
+    let mut graph = AnimationGraph::new();
+    let arming_node = graph.add_clip(animations.add(arming_clip), 1.0, graph.root);
+    let intro_node = graph.add_clip(animations.add(intro_clip), 1.0, graph.root);
+
+    // Start intro animation immediately
+    let mut anim_player = AnimationPlayer::default();
+    anim_player.play(intro_node);
+
     commands
         .spawn((
-            Name::new("Player"),
+            player_name,
             Camera3d::default(),
             Hdr,
             Tonemapping::TonyMcMapface,
@@ -52,21 +141,20 @@ pub fn spawn_drone(
                 composite_mode: BloomCompositeMode::Additive,
                 ..Bloom::NATURAL
             },
-            Transform::from_xyz(0.0, spawn_y, 0.0)
-                .looking_at(Vec3::new(5.0, ground_y, 5.0), Vec3::Y),
+            spawn_transform,
             Player,
+            player_target,
+            AnimationGraphHandle(graphs.add(graph)),
+            anim_player,
         ))
         .with_children(|parent| {
             parent
                 .spawn((
-                    Name::new("Elbow"),
+                    elbow_name,
                     Elbow,
-                    ArmingTimer(0.0),
                     Visibility::default(),
-                    Transform::from_translation(cfg.pipe_offset).with_rotation(
-                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
-                            * Quat::from_rotation_x(std::f32::consts::FRAC_PI_2),
-                    ),
+                    Transform::from_translation(cfg.pipe_offset).with_rotation(hidden_quat()),
+                    elbow_target,
                 ))
                 .with_children(|elbow| {
                     elbow.spawn((
@@ -79,6 +167,32 @@ pub fn spawn_drone(
                 });
         });
 
+    // Observers for animation completion events (global, triggered on AnimationPlayer).
+    // Each observer stops the finished clip so the animation system no longer overwrites
+    // Transform::rotation in PostUpdate — handing control back to aim_pipe / fly.
+    commands.add_observer(
+        |_trigger: On<ArmingComplete>,
+         mut player_q: Single<&mut AnimationPlayer, With<Player>>,
+         node: Res<ArmingAnimNode>,
+         mut next_state: ResMut<NextState<crate::GameState>>| {
+            player_q.stop(node.0);
+            next_state.set(crate::GameState::Running);
+        },
+    );
+    commands.add_observer(
+        |_trigger: On<IntroComplete>,
+         mut player_q: Single<&mut AnimationPlayer, With<Player>>,
+         node: Res<IntroAnimNode>,
+         mut next_state: ResMut<NextState<crate::GameState>>| {
+            player_q.stop(node.0);
+            next_state.set(crate::GameState::Arming);
+        },
+    );
+
+    // Store animation node indices as resources for the observers / start_arming
+    commands.insert_resource(ArmingAnimNode(arming_node));
+    commands.insert_resource(IntroAnimNode(intro_node));
+
     // Laser ray as root entity (world-space positioning)
     commands.spawn((
         Name::new("LaserRay"),
@@ -90,26 +204,33 @@ pub fn spawn_drone(
     ));
 }
 
-/// Animates the laser pipe from its hidden rotation into the armed (forward-facing) position.
-pub fn arm_pipe(
-    time: Res<Time>,
-    cfg: Res<DroneConfig>,
-    mut elbow_q: Single<(&mut Transform, &mut ArmingTimer), With<Elbow>>,
-    mut next_state: ResMut<NextState<crate::GameState>>,
+/// Adds [`AnimatedBy`] to the Elbow entity after it's spawned as a child of Player.
+///
+/// This runs in a separate startup system because `AnimatedBy` requires the Player entity ID,
+/// which isn't available inside `with_children`.
+pub fn link_elbow_animation(
+    mut commands: Commands,
+    player_q: Single<Entity, With<Player>>,
+    elbow_q: Single<Entity, With<Elbow>>,
 ) {
-    let (tf, timer) = &mut *elbow_q;
-    timer.0 += time.delta_secs();
-    let t = (timer.0 / cfg.arm_duration).min(1.0);
-    let eased = crate::math::ease_out_cubic(t);
+    commands.entity(*player_q).insert(AnimatedBy(*player_q));
+    commands.entity(*elbow_q).insert(AnimatedBy(*player_q));
+}
 
-    let hidden = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)
-        * Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
-    let armed = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
-    tf.rotation = hidden.slerp(armed, eased);
+/// Resource storing the arming animation node index for triggering on state enter.
+#[derive(Resource)]
+pub struct ArmingAnimNode(pub AnimationNodeIndex);
 
-    if t >= 1.0 {
-        next_state.set(crate::GameState::Running);
-    }
+/// Resource storing the intro animation node index for stopping on completion.
+#[derive(Resource)]
+pub struct IntroAnimNode(pub AnimationNodeIndex);
+
+/// Starts the arming animation when entering [`GameState::Arming`].
+pub fn start_arming(
+    mut player_q: Single<&mut AnimationPlayer, With<Player>>,
+    arming_node: Res<ArmingAnimNode>,
+) {
+    player_q.play(arming_node.0);
 }
 
 /// WASD + mouse look + Q/E/scroll offset. Writes to [`PlayerPos`].
@@ -283,34 +404,30 @@ pub fn draw_crosshair(mut egui_ctx: Single<&mut bevy_egui::EguiContext>, window:
         });
 }
 
-/// Points the laser pipe at the aimed hex face, or snaps back to resting angle.
+/// Smoothly rotates the laser pipe toward the aimed hex face, or back to resting angle.
+///
+/// Uses slerp with an ease-out factor (`aim_speed * dt`) so the pipe decelerates
+/// as it approaches the target, giving a physical feel.
 pub fn aim_pipe(
+    time: Res<Time>,
+    cfg: Res<DroneConfig>,
     player_q: Single<&GlobalTransform, With<Player>>,
     mut elbow_q: Single<(&mut Transform, &GlobalTransform), With<Elbow>>,
     sight_target: Query<&GlobalTransform, With<InSight>>,
 ) {
-    let armed = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+    let goal = sight_target.single().ok().and_then(|target_gt| {
+        let dir = (target_gt.translation() - elbow_q.1.translation()).normalize_or_zero();
+        (dir != Vec3::ZERO).then(|| {
+            let (_, player_rot, _) = player_q.to_scale_rotation_translation();
+            Quat::from_rotation_arc(Vec3::NEG_Y, player_rot.inverse() * dir)
+        })
+    });
+    let goal = goal.unwrap_or_else(armed_quat);
 
-    let Ok(target_gt) = sight_target.single() else {
-        elbow_q.0.rotation = armed;
-        return;
-    };
-
-    let elbow_world = elbow_q.1.translation();
-    let target_world = target_gt.translation();
-    let desired_world_dir = (target_world - elbow_world).normalize_or_zero();
-
-    if desired_world_dir == Vec3::ZERO {
-        elbow_q.0.rotation = armed;
-        return;
-    }
-
-    // Convert world direction to Player-local space
-    let (_, player_rot, _) = player_q.to_scale_rotation_translation();
-    let desired_local_dir = player_rot.inverse() * desired_world_dir;
-
-    // Pipe extends along Elbow's local -Y; rotate -Y to aim at target
-    elbow_q.0.rotation = Quat::from_rotation_arc(Vec3::NEG_Y, desired_local_dir);
+    // Ease-out slerp: large steps when far, small steps near the target
+    let t = (cfg.aim_speed * time.delta_secs()).min(1.0);
+    let eased = math::ease_out_cubic(t);
+    elbow_q.0.rotation = elbow_q.0.rotation.slerp(goal, eased);
 }
 
 /// Shows a red laser ray from the pipe tip to the aimed hex face on Space or Left Click.

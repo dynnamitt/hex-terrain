@@ -1,17 +1,18 @@
 //! Runtime systems for height-based terrain.
 
+use bevy::ecs::relationship::Relationship;
 use bevy::ecs::system::SystemParam;
 use bevy::picking::mesh_picking::ray_cast::{MeshRayCast, MeshRayCastSettings, RayCastVisibility};
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 use hexx::{Hex, shapes};
 
-use super::HTerrainConfig;
-
 use super::entities::{
-    Corner, HGrid, HexFace, InFov, Quad, QuadPos2Emitter, QuadPos3Emitter, Tri, TriPos1Emitter,
-    TriPos2Emitter,
+    Corner, EmitterMark, HCell, HGrid, HexFace, InFov, InSight, Mark, Quad, QuadEdge, QuadOwner,
+    QuadPos1Emitter, QuadPos2Emitter, Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
+use super::gaps::GapMeshAccess;
+use super::{HTerrainConfig, LaserStrength};
 use crate::{GroundLevel, PlayerPos};
 
 /// Bundles queries for discovering gap entities (Quad/Tri) reachable from an HCell.
@@ -23,8 +24,8 @@ pub(super) struct GapLookup<'w, 's> {
         'w,
         's,
         (
+            Option<&'static QuadPos1Emitter>,
             Option<&'static QuadPos2Emitter>,
-            Option<&'static QuadPos3Emitter>,
             Option<&'static TriPos1Emitter>,
             Option<&'static TriPos2Emitter>,
         ),
@@ -43,7 +44,7 @@ fn gap_entities_for_cell(cell: Entity, lookup: &GapLookup) -> Vec<Entity> {
         return out;
     };
     for corner_entity in cell_children.iter() {
-        let Ok((qp2, qp3, tp1, tp2)) = lookup.corners.get(corner_entity) else {
+        let Ok((qp1, qp2, tp1, tp2)) = lookup.corners.get(corner_entity) else {
             continue;
         };
         // Owner path: scan corner's children for gap meshes
@@ -55,10 +56,10 @@ fn gap_entities_for_cell(cell: Entity, lookup: &GapLookup) -> Vec<Entity> {
             }
         }
         // Emitter path: stored entity refs
-        if let Some(e) = qp2 {
+        if let Some(e) = qp1 {
             out.push(e.0);
         }
-        if let Some(e) = qp3 {
+        if let Some(e) = qp2 {
             out.push(e.0);
         }
         if let Some(e) = tp1 {
@@ -149,4 +150,93 @@ pub fn track_player_fov(
     }
 
     *prev_hex = Some(current_hex);
+}
+
+/// Lowers an [`HCell`] when the player fires the laser at its [`HexFace`].
+///
+/// Tick-based: a [`Local`] timer advances only while firing at a target and
+/// resets when not. Each tick lowers the cell by [`LaserStrength::extract_height`],
+/// then realigns neighboring gap vertices via [`GapMeshAccess`].
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
+pub fn extract_ore(
+    time: Res<Time>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    strength: Res<LaserStrength>,
+    sight_face: Query<&ChildOf, With<InSight>>,
+    mut cells: Query<&mut Transform, (With<HCell>, Without<QuadEdge>)>,
+    children: Query<&Children>,
+    emitters: Query<
+        (
+            Option<&QuadPos1Emitter>,
+            Option<&QuadPos2Emitter>,
+            Option<&TriPos1Emitter>,
+            Option<&TriPos2Emitter>,
+        ),
+        With<Corner>,
+    >,
+    owners: Query<(Option<&QuadOwner>, Option<&TriOwner>), With<Corner>>,
+    mut gap_mesh: GapMeshAccess,
+    mut timer: Local<Option<Timer>>,
+) {
+    let firing = keys.pressed(KeyCode::Space) || mouse.pressed(MouseButton::Left);
+
+    if !firing {
+        *timer = None;
+        return;
+    }
+
+    let Some(face_parent) = sight_face.iter().next() else {
+        return;
+    };
+    let cell = face_parent.get();
+
+    let t = timer
+        .get_or_insert_with(|| Timer::from_seconds(strength.extraction_time, TimerMode::Repeating));
+    t.tick(time.delta());
+    if !t.just_finished() {
+        return;
+    }
+
+    let Ok(mut tf) = cells.get_mut(cell) else {
+        return;
+    };
+    tf.translation.y -= strength.extract_height;
+    let new_y = tf.translation.y;
+
+    let Ok(cell_children) = children.get(cell) else {
+        return;
+    };
+    for corner in cell_children.iter() {
+        let Ok((qp1, qp2, tp1, tp2)) = emitters.get(corner) else {
+            continue;
+        };
+        if let Some(e) = qp1 {
+            gap_mesh.realign_neighboring_vertex(e.not_owned_by_parent(), e.vertex_index(), new_y);
+        }
+        if let Some(e) = qp2 {
+            gap_mesh.realign_neighboring_vertex(e.not_owned_by_parent(), e.vertex_index(), new_y);
+        }
+        if let Some(e) = tp1 {
+            gap_mesh.realign_neighboring_vertex(e.not_owned_by_parent(), e.vertex_index(), new_y);
+        }
+        if let Some(e) = tp2 {
+            gap_mesh.realign_neighboring_vertex(e.not_owned_by_parent(), e.vertex_index(), new_y);
+        }
+    }
+
+    // Owner-side: owned gap meshes' neighbor vertices shift up in local space
+    for corner in cell_children.iter() {
+        let Ok((qo, to)) = owners.get(corner) else {
+            continue;
+        };
+        if let Some(o) = qo {
+            gap_mesh.shift_vertex_y(o.not_owned_by_parent(), 1, strength.extract_height);
+            gap_mesh.shift_vertex_y(o.not_owned_by_parent(), 2, strength.extract_height);
+        }
+        if let Some(o) = to {
+            gap_mesh.shift_vertex_y(o.not_owned_by_parent(), 1, strength.extract_height);
+            gap_mesh.shift_vertex_y(o.not_owned_by_parent(), 2, strength.extract_height);
+        }
+    }
 }

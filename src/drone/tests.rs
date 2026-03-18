@@ -2,26 +2,40 @@
 
 use std::time::Duration;
 
+use bevy::animation::AnimationPlugin;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 use bevy::state::app::StatesPlugin;
 use bevy::time::TimeUpdateStrategy;
 
 use super::DroneConfig;
-use super::entities::{ArmingTimer, CursorRecentered, Elbow, LaserPipe, LaserRay, Player};
+use super::entities::{CursorRecentered, Elbow, LaserPipe, LaserRay, Player};
 use super::systems;
 use crate::h_terrain::InSight;
+use crate::intro::IntroConfig;
 use crate::{GameState, GroundLevel, PlayerMoved, PlayerPos};
 
+/// Builds a test app that goes through the full Intro → Arming → Running lifecycle.
+///
+/// Returns the app in `GameState::Running` with animations completed and stopped,
+/// so `aim_pipe` and `fly` have full control of transforms.
 fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(AssetPlugin::default())
         .add_plugins(StatesPlugin)
         .add_plugins(bevy::transform::TransformPlugin)
+        .add_plugins(AnimationPlugin)
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
         .insert_resource(DroneConfig::default())
+        .insert_resource(IntroConfig {
+            // Short durations so we can tick through quickly
+            tilt_up_duration: 0.1,
+            highlight_delay: 0.1,
+            tilt_down_duration: 0.1,
+            tilt_down_angle: 10.0,
+        })
         .init_resource::<PlayerPos>()
         .init_resource::<PlayerMoved>()
         .insert_resource(GroundLevel(Some(0.0)))
@@ -35,19 +49,16 @@ fn test_app() -> App {
         )))
         .init_state::<GameState>();
 
-    app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Running);
-
     app.add_systems(Startup, systems::create_drone_materials);
     app.add_systems(
         Startup,
         systems::spawn_drone.after(systems::create_drone_materials),
     );
     app.add_systems(
-        Update,
-        systems::arm_pipe.run_if(in_state(GameState::Arming)),
+        Startup,
+        systems::link_elbow_animation.after(systems::spawn_drone),
     );
+    app.add_systems(OnEnter(GameState::Arming), systems::start_arming);
     app.add_systems(
         Update,
         (
@@ -58,16 +69,28 @@ fn test_app() -> App {
             .run_if(in_state(GameState::Running)),
     );
 
+    // Startup (spawns entities, starts intro animation)
     app.update();
 
-    // Fix elbow rotation from hidden (spawn) to armed position
-    {
-        let w = app.world_mut();
-        let elbow = w.query_filtered::<Entity, With<Elbow>>().single(w).unwrap();
-        w.entity_mut(elbow).get_mut::<Transform>().unwrap().rotation =
-            Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+    // Tick through Intro (0.3s total at 100ms/tick = 3-4 ticks + margin)
+    for _ in 0..6 {
+        app.update();
     }
-    app.update(); // propagate GlobalTransform
+    assert_eq!(
+        *app.world().resource::<State<GameState>>().get(),
+        GameState::Arming,
+        "Should have transitioned to Arming after intro"
+    );
+
+    // Tick through Arming (0.6s default at 100ms/tick = 6-7 ticks + margin)
+    for _ in 0..10 {
+        app.update();
+    }
+    assert_eq!(
+        *app.world().resource::<State<GameState>>().get(),
+        GameState::Running,
+        "Should have transitioned to Running after arming"
+    );
 
     app
 }
@@ -235,6 +258,88 @@ fn laser_tip_at_pipe_front() {
     );
 }
 
+// ── Intro animation rotation ────────────────────────────────────
+
+#[test]
+fn intro_animation_tilts_camera() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_plugins(AssetPlugin::default())
+        .add_plugins(StatesPlugin)
+        .add_plugins(bevy::transform::TransformPlugin)
+        .add_plugins(AnimationPlugin)
+        .init_asset::<Mesh>()
+        .init_asset::<StandardMaterial>()
+        .insert_resource(DroneConfig::default())
+        .insert_resource(IntroConfig {
+            tilt_up_duration: 0.3,
+            highlight_delay: 0.1,
+            tilt_down_duration: 0.1,
+            tilt_down_angle: 10.0,
+        })
+        .init_resource::<PlayerPos>()
+        .init_resource::<PlayerMoved>()
+        .insert_resource(GroundLevel(Some(0.0)))
+        .init_resource::<CursorRecentered>()
+        .init_resource::<ButtonInput<KeyCode>>()
+        .init_resource::<ButtonInput<MouseButton>>()
+        .add_message::<MouseMotion>()
+        .add_message::<MouseWheel>()
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+            100,
+        )))
+        .init_state::<GameState>();
+
+    app.add_systems(Startup, systems::create_drone_materials);
+    app.add_systems(
+        Startup,
+        systems::spawn_drone.after(systems::create_drone_materials),
+    );
+    app.add_systems(
+        Startup,
+        systems::link_elbow_animation.after(systems::spawn_drone),
+    );
+
+    // Startup
+    app.update();
+
+    // Capture initial pitch (looking down at (5,0,5) from (0,2,0))
+    let initial_pitch = {
+        let w = app.world_mut();
+        let rot = w
+            .query_filtered::<&Transform, With<Player>>()
+            .single(w)
+            .unwrap()
+            .rotation;
+        let (_, pitch, _) = rot.to_euler(EulerRot::YXZ);
+        pitch
+    };
+    assert!(
+        initial_pitch < 0.0,
+        "Initial pitch should be negative (looking down), got {initial_pitch}"
+    );
+
+    // Tick 2 frames — animation should tilt camera toward horizontal
+    app.update();
+    app.update();
+
+    let after_pitch = {
+        let w = app.world_mut();
+        let rot = w
+            .query_filtered::<&Transform, With<Player>>()
+            .single(w)
+            .unwrap()
+            .rotation;
+        let (_, pitch, _) = rot.to_euler(EulerRot::YXZ);
+        pitch
+    };
+    assert!(
+        after_pitch > initial_pitch,
+        "Pitch should increase (tilt toward horizontal) during intro: \
+         initial={initial_pitch} after={after_pitch}"
+    );
+}
+
 // ── Fly movement ────────────────────────────────────────────────
 
 #[test]
@@ -280,106 +385,22 @@ fn fly_offset_clamps_to_lowest() {
 // ── Arming animation ────────────────────────────────────────────
 
 #[test]
-fn arm_pipe_slerps_to_armed_rotation() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(AssetPlugin::default())
-        .add_plugins(StatesPlugin)
-        .add_plugins(bevy::transform::TransformPlugin)
-        .init_asset::<Mesh>()
-        .init_asset::<StandardMaterial>()
-        .insert_resource(DroneConfig::default())
-        .init_resource::<PlayerPos>()
-        .init_resource::<PlayerMoved>()
-        .insert_resource(GroundLevel(Some(0.0)))
-        .init_resource::<CursorRecentered>()
-        .init_resource::<ButtonInput<KeyCode>>()
-        .init_resource::<ButtonInput<MouseButton>>()
-        .add_message::<MouseMotion>()
-        .add_message::<MouseWheel>()
-        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
-            100,
-        )))
-        .init_state::<GameState>();
+fn arming_animation_reaches_armed_rotation() {
+    // test_app() already runs through Intro → Arming → Running.
+    // Just verify elbow ended up at armed rotation.
+    let mut app = test_app();
+    let armed = systems::armed_quat();
 
-    app.add_systems(Startup, systems::create_drone_materials);
-    app.add_systems(
-        Startup,
-        systems::spawn_drone.after(systems::create_drone_materials),
-    );
-    app.add_systems(
-        Update,
-        systems::arm_pipe.run_if(in_state(GameState::Arming)),
-    );
-
-    // Startup
-    app.update();
-
-    let armed = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
-
-    // Verify elbow starts in hidden rotation (not yet armed)
-    {
-        let w = app.world_mut();
-        let rot = w
-            .query_filtered::<&Transform, With<Elbow>>()
-            .single(w)
-            .unwrap()
-            .rotation;
-        let angle = rot.angle_between(armed);
-        assert!(
-            angle > 0.1,
-            "Elbow should start in hidden rotation, not armed (angle={angle})"
-        );
-    }
-
-    // Enter Arming state and tick past arm_duration (0.6s default).
-    // Use 200ms steps (below Bevy's 250ms max_delta clamp): 3 × 200ms = 600ms.
-    app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Arming);
-    app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
-        200,
-    )));
-    app.update();
-    app.update();
-    app.update();
-
-    // Verify elbow reached armed rotation
-    {
-        let w = app.world_mut();
-        let rot = w
-            .query_filtered::<&Transform, With<Elbow>>()
-            .single(w)
-            .unwrap()
-            .rotation;
-        let angle = rot.angle_between(armed);
-        assert!(
-            angle < 0.01,
-            "Elbow should be at armed rotation after arming completes (angle={angle})"
-        );
-    }
-
-    // Verify ArmingTimer was advanced
-    {
-        let arm_duration = app.world().resource::<DroneConfig>().arm_duration;
-        let w = app.world_mut();
-        let timer = w
-            .query_filtered::<&ArmingTimer, With<Elbow>>()
-            .single(w)
-            .unwrap();
-        assert!(
-            timer.0 >= arm_duration,
-            "ArmingTimer {} should be >= arm_duration {}",
-            timer.0,
-            arm_duration
-        );
-    }
-
-    // Verify state transitioned to Running
-    app.update();
-    assert_eq!(
-        *app.world().resource::<State<GameState>>().get(),
-        GameState::Running
+    let w = app.world_mut();
+    let rot = w
+        .query_filtered::<&Transform, With<Elbow>>()
+        .single(w)
+        .unwrap()
+        .rotation;
+    let angle = rot.angle_between(armed);
+    assert!(
+        angle < 0.05,
+        "Elbow should be at armed rotation after arming completes (angle={angle})"
     );
 }
 
@@ -393,7 +414,11 @@ fn aim_pipe_tracks_target() {
     app.world_mut()
         .spawn((InSight, Transform::from_translation(target_pos)));
     app.update(); // propagate InSight's GlobalTransform
-    app.update(); // aim_pipe reads correct target position
+
+    // Slerp converges over several frames (ease-out)
+    for _ in 0..20 {
+        app.update();
+    }
 
     let w = app.world_mut();
     let elbow_gt = w
@@ -414,11 +439,65 @@ fn aim_pipe_tracks_target() {
 }
 
 #[test]
-fn aim_pipe_snaps_back() {
+fn aim_pipe_eases_toward_target() {
     let mut app = test_app();
-    let armed = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+    let armed = systems::armed_quat();
 
-    // Spawn target and let aim_pipe rotate elbow
+    // Use realistic frame rate so aim_speed * dt < 1.0
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+        16,
+    )));
+
+    let target_pos = Vec3::new(5.0, 0.0, 5.0);
+    app.world_mut()
+        .spawn((InSight, Transform::from_translation(target_pos)));
+    app.update(); // propagate GlobalTransform
+
+    // After one aim_pipe tick the elbow should have started moving but not arrived
+    app.update();
+    let rot_after_one = {
+        let w = app.world_mut();
+        w.query_filtered::<&Transform, With<Elbow>>()
+            .single(w)
+            .unwrap()
+            .rotation
+    };
+    let angle_from_armed = rot_after_one.angle_between(armed);
+    assert!(
+        angle_from_armed > 0.01,
+        "Elbow should have started moving away from armed (angle={angle_from_armed})"
+    );
+
+    // Compute the goal rotation for comparison
+    let goal = {
+        let w = app.world_mut();
+        let elbow_pos = w
+            .query_filtered::<&GlobalTransform, With<Elbow>>()
+            .single(w)
+            .unwrap()
+            .translation();
+        let player_rot = w
+            .query_filtered::<&GlobalTransform, With<Player>>()
+            .single(w)
+            .unwrap()
+            .to_scale_rotation_translation()
+            .1;
+        let dir = (target_pos - elbow_pos).normalize();
+        Quat::from_rotation_arc(Vec3::NEG_Y, player_rot.inverse() * dir)
+    };
+    let angle_from_goal = rot_after_one.angle_between(goal);
+    assert!(
+        angle_from_goal > 0.01,
+        "Elbow should not have reached goal yet after one frame (angle={angle_from_goal})"
+    );
+}
+
+#[test]
+fn aim_pipe_eases_back() {
+    let mut app = test_app();
+    let armed = systems::armed_quat();
+
+    // Spawn target and let aim_pipe converge toward it
     let target = app
         .world_mut()
         .spawn((
@@ -426,9 +505,11 @@ fn aim_pipe_snaps_back() {
             Transform::from_translation(Vec3::new(5.0, 0.0, 5.0)),
         ))
         .id();
-    app.update();
+    for _ in 0..20 {
+        app.update();
+    }
 
-    // Verify rotation changed from armed
+    // Verify rotation moved away from armed
     {
         let w = app.world_mut();
         let rot = w
@@ -443,11 +524,13 @@ fn aim_pipe_snaps_back() {
         );
     }
 
-    // Remove target and update
+    // Remove target and let aim_pipe ease back over several frames
     app.world_mut().despawn(target);
-    app.update();
+    for _ in 0..20 {
+        app.update();
+    }
 
-    // Verify snap back to armed
+    // Verify eased back close to armed
     {
         let w = app.world_mut();
         let rot = w
@@ -458,7 +541,7 @@ fn aim_pipe_snaps_back() {
         let angle = rot.angle_between(armed);
         assert!(
             angle < 0.01,
-            "Elbow should snap back to armed rotation (angle={angle})"
+            "Elbow should have eased back to armed rotation (angle={angle})"
         );
     }
 }

@@ -2,17 +2,14 @@
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
-use bevy::picking::mesh_picking::ray_cast::RayCastBackfaces;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
-use hexx::{EdgeDirection, Hex, HexLayout, PlaneMeshBuilder, VertexDirection, shapes};
+use hexx::{Hex, HexLayout, PlaneMeshBuilder, shapes};
 
 use super::HTerrainConfig;
-use super::entities::{
-    Corner, HCell, HGrid, HexFace, Quad, QuadEdge, QuadOwner, QuadPos2Emitter, QuadPos3Emitter,
-    QuadTail, Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
-};
+use super::entities::{Corner, HCell, HGrid, HexFace, Quad, Tri};
+use super::gaps;
 use super::h_grid_layout::HGridLayout;
 use super::materials::TerrainMaterials;
 use super::math;
@@ -31,7 +28,7 @@ pub fn generate_h_grid(
     let terrain = HGridLayout::from_settings(g);
 
     let edge_thickness = 0.02;
-    let fov = TerrainMaterials::new(&mut materials);
+    let fov = TerrainMaterials::new(&mut materials, &mut meshes);
     let debug_assets = debug.0.then(|| {
         let sphere_mesh = meshes.add(Sphere::new(0.08));
         let material = TerrainMaterials::debug_material(&mut materials);
@@ -128,13 +125,14 @@ pub fn generate_h_grid(
     for hex in shapes::hexagon(Hex::ZERO, g.radius) {
         // Quads: even edge indices 0, 2, 4
         for edge_index in [0u8, 2, 4] {
-            spawn_quad(
+            gaps::spawn_quad(
                 &mut commands,
                 &mut meshes,
                 &fov.gap_original,
                 &fov.edge,
                 &terrain,
                 &corner_entities,
+                &hex_entities,
                 hex,
                 edge_index,
             );
@@ -142,12 +140,13 @@ pub fn generate_h_grid(
 
         // Tris: vertex indices 0, 1
         for vertex_index in [0u8, 1] {
-            spawn_tri(
+            gaps::spawn_tri(
                 &mut commands,
                 &mut meshes,
                 &fov.gap_original,
                 &terrain,
                 &corner_entities,
+                &hex_entities,
                 hex,
                 vertex_index,
             );
@@ -159,153 +158,6 @@ pub fn generate_h_grid(
         hex_entities,
     });
     commands.insert_resource(fov);
-}
-
-// ── Quad gap spawning ────────────────────────────────────────────
-
-#[allow(clippy::too_many_arguments)]
-fn spawn_quad(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    gap_material: &Handle<StandardMaterial>,
-    edge_material: &Handle<StandardMaterial>,
-    terrain: &HGridLayout,
-    corner_entities: &HashMap<(Hex, u8), Entity>,
-    hex: Hex,
-    edge_index: u8,
-) -> Option<()> {
-    let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
-    let neighbor = hex.neighbor(dir);
-
-    let (v0_idx, v1_idx, n0_idx, n1_idx) = math::quad_corner_indices(edge_index);
-
-    // All 4 corner entities must exist (grid-edge guard)
-    let &owner_entity = corner_entities.get(&(hex, v0_idx))?;
-    let &tail_entity = corner_entities.get(&(hex, v1_idx))?;
-    let &pos2_entity = corner_entities.get(&(neighbor, n0_idx))?;
-    let &pos3_entity = corner_entities.get(&(neighbor, n1_idx))?;
-
-    // All 4 vertex positions
-    let v0 = terrain.vertex(hex, v0_idx)?;
-    let v1 = terrain.vertex(neighbor, n0_idx)?;
-    let v2 = terrain.vertex(neighbor, n1_idx)?;
-    let v3 = terrain.vertex(hex, v1_idx)?;
-
-    // Build mesh in corner-local space
-    let mesh = math::build_gap_mesh(&[v0, v1, v2, v3]);
-    let mesh_entity = commands
-        .spawn((
-            Quad,
-            RayCastBackfaces,
-            Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(gap_material.clone()),
-            Transform::default(),
-        ))
-        .id();
-    commands.entity(owner_entity).add_child(mesh_entity);
-
-    // Add marker components to corner entities
-    commands.entity(owner_entity).insert(QuadOwner);
-    commands
-        .entity(pos2_entity)
-        .insert(QuadPos2Emitter(mesh_entity));
-    commands
-        .entity(pos3_entity)
-        .insert(QuadPos3Emitter(mesh_entity));
-    commands.entity(tail_entity).insert(QuadTail);
-
-    // Spawn edge lines as children of the Quad mesh entity
-    let edge_thickness = 0.03;
-    let origin = v0;
-    let edges = [(v0, v3), (v1, v2), (v0, v1), (v3, v2)];
-    for (from, to) in edges {
-        let local_from = from - origin;
-        let local_to = to - origin;
-        let (midpoint, length, rotation) = math::edge_cuboid_transform(local_from, local_to);
-        let edge_entity = commands
-            .spawn((
-                QuadEdge,
-                Mesh3d(meshes.add(Cuboid::new(length, edge_thickness, edge_thickness))),
-                MeshMaterial3d(edge_material.clone()),
-                Transform::from_translation(midpoint).with_rotation(rotation),
-            ))
-            .id();
-        commands.entity(mesh_entity).add_child(edge_entity);
-    }
-
-    Some(())
-}
-
-// ── Tri gap spawning ─────────────────────────────────────────────
-
-fn spawn_tri(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    gap_material: &Handle<StandardMaterial>,
-    terrain: &HGridLayout,
-    corner_entities: &HashMap<(Hex, u8), Entity>,
-    hex: Hex,
-    vertex_index: u8,
-) -> Option<()> {
-    let dir = VertexDirection::ALL_DIRECTIONS[vertex_index as usize];
-    let grid_vertex = hexx::GridVertex {
-        origin: hex,
-        direction: dir,
-    };
-    let coords = grid_vertex.coordinates();
-
-    // Canonical ownership: this hex must be coords[0]
-    (coords[0] == hex).then_some(())?;
-
-    let v0_idx = dir.index();
-    let idx1 = corner_index_for_vertex(coords[1], &grid_vertex)?;
-    let idx2 = corner_index_for_vertex(coords[2], &grid_vertex)?;
-
-    // All 3 corner entities must exist
-    let &owner_entity = corner_entities.get(&(hex, v0_idx))?;
-    let &pos1_entity = corner_entities.get(&(coords[1], idx1))?;
-    let &pos2_entity = corner_entities.get(&(coords[2], idx2))?;
-
-    // All 3 vertex positions
-    let v0 = terrain.vertex(coords[0], v0_idx)?;
-    let v1 = terrain.vertex(coords[1], idx1)?;
-    let v2 = terrain.vertex(coords[2], idx2)?;
-
-    // Build mesh in corner-local space
-    let mesh = math::build_gap_mesh(&[v0, v1, v2]);
-    let mesh_entity = commands
-        .spawn((
-            Tri,
-            RayCastBackfaces,
-            Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(gap_material.clone()),
-            Transform::default(),
-        ))
-        .id();
-    commands.entity(owner_entity).add_child(mesh_entity);
-
-    // Add marker components to corner entities
-    commands.entity(owner_entity).insert(TriOwner);
-    commands
-        .entity(pos1_entity)
-        .insert(TriPos1Emitter(mesh_entity));
-    commands
-        .entity(pos2_entity)
-        .insert(TriPos2Emitter(mesh_entity));
-    Some(())
-}
-
-// ── Helper functions ─────────────────────────────────────────────
-
-/// Find which corner index on `hex` corresponds to the given vertex junction.
-fn corner_index_for_vertex(hex: Hex, target: &hexx::GridVertex) -> Option<u8> {
-    VertexDirection::ALL_DIRECTIONS.iter().find_map(|&dir| {
-        let candidate = hexx::GridVertex {
-            origin: hex,
-            direction: dir,
-        };
-        candidate.equivalent(target).then_some(dir.index())
-    })
 }
 
 /// Seeds [`GroundLevel`](crate::GroundLevel) from terrain height at the origin.

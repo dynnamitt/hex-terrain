@@ -22,6 +22,10 @@
           {
             "type": "command",
             "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '\\[lints'; then echo 'BLOCKED: Do not modify lint configuration'; exit 1; fi"
+          },
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qF 'web/index.html' && echo \"$CLAUDE_TOOL_INPUT\" | grep -q '__UPDATES__'; then echo 'BLOCKED: __UPDATES__ placeholder is injected by CI — edit UPDATES.md instead'; exit 2; fi"
           }
         ]
       }

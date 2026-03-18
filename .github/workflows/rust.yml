@@ -32,7 +32,7 @@ jobs:
         sudo mv cargo-tarpaulin /usr/local/bin/
 
     - name: Generate coverage
-      run: cargo tarpaulin --out xml
+      run: make coverage-xml
 
     - name: Upload to Codecov
       uses: codecov/codecov-action@v5

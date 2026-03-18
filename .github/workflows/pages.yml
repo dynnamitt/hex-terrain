@@ -25,6 +25,16 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
           path: src
+          fetch-depth: 0
+
+      - name: Verify tag is on main
+        if: github.event_name != 'workflow_dispatch'
+        working-directory: src
+        run: |
+          if ! git merge-base --is-ancestor ${{ github.sha }} origin/main; then
+            echo "::error::Tag is not on main branch — skipping deploy"
+            exit 1
+          fi
 
       - name: Checkout main templates
         uses: actions/checkout@v4
@@ -38,6 +48,10 @@ jobs:
       - name: Extract version from tag
         id: version
         run: echo "tag=${{ inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Inject release notes into index.html
+        working-directory: src
+        run: make inject-updates TAG=${{ steps.version.outputs.tag }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
