@@ -1,6 +1,7 @@
 //! Height-based terrain: pivot-point grid with per-hex corners.
 
 mod entities;
+mod gaps;
 mod h_grid_layout;
 pub(crate) mod materials;
 mod math;
@@ -29,6 +30,27 @@ pub enum HTerrainPhase {
     Highlight,
     /// Raycasts screen center to tag the aimed hex face with [`InSight`].
     Sight,
+}
+
+/// Laser mining strength, controlling extraction rate and tick interval.
+#[derive(Resource, Reflect)]
+pub struct LaserStrength {
+    /// Numeric upgrade tier.
+    pub level: u8,
+    /// Y units to lower per extraction tick.
+    pub extract_height: f32,
+    /// Seconds between extraction ticks.
+    pub extraction_time: f32,
+}
+
+impl Default for LaserStrength {
+    fn default() -> Self {
+        Self {
+            level: 1,
+            extract_height: 0.2,
+            extraction_time: 0.5,
+        }
+    }
 }
 
 /// Configuration for the height-based terrain subsystem.
@@ -106,12 +128,14 @@ pub struct HTerrainPlugin {
 
 impl Plugin for HTerrainPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<HTerrainConfig>()
+        app.init_resource::<LaserStrength>()
+            .register_type::<LaserStrength>()
+            .register_type::<HTerrainConfig>()
             .register_type::<entities::HCell>()
             .register_type::<entities::Corner>()
             .register_type::<entities::QuadOwner>()
+            .register_type::<entities::QuadPos1Emitter>()
             .register_type::<entities::QuadPos2Emitter>()
-            .register_type::<entities::QuadPos3Emitter>()
             .register_type::<entities::QuadTail>()
             .register_type::<entities::TriOwner>()
             .register_type::<entities::TriPos1Emitter>()
@@ -164,6 +188,7 @@ impl Plugin for HTerrainPlugin {
                 materials::start_fov_transitions.in_set(HTerrainPhase::Highlight),
                 materials::animate_fov_transitions.after(HTerrainPhase::Highlight),
                 materials::track_in_sight.in_set(HTerrainPhase::Sight),
+                systems::extract_ore.after(HTerrainPhase::Sight),
             )
                 .run_if(in_state(GameState::Running)),
         );

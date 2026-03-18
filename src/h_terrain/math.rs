@@ -1,13 +1,9 @@
 //! Pure computation helpers for the h_terrain subsystem.
 //!
 //! All functions are free of Bevy ECS dependencies and operate on plain
-//! numeric / `Vec3` inputs. `build_gap_mesh` is the sole exception — it
-//! constructs a [`Mesh`] but has no ECS side effects.
+//! numeric / `Vec3` inputs.
 
-use bevy::asset::RenderAssetUsages;
-use bevy::mesh::Indices;
 use bevy::prelude::*;
-use bevy::render::render_resource::PrimitiveTopology;
 use hexx::{EdgeDirection, GridVertex, Hex, VertexDirection};
 
 /// Maps a noise value from the standard `[-1, 1]` range into `[min, max]`.
@@ -29,10 +25,23 @@ pub(crate) fn map_noise_to_range(noise_val: f64, min: f32, max: f32) -> f32 {
 ///
 /// Uses the cross product of edges `(v1 - v0)` and `(v2 - v0)`.
 /// Returns `Vec3::ZERO` if the triangle is degenerate (collinear points).
-pub(crate) fn compute_normal(v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
+fn compute_normal(v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
     let edge1 = v1 - v0;
     let edge2 = v2 - v0;
     edge1.cross(edge2).normalize_or_zero()
+}
+
+/// Converts world-space gap vertices to origin-local positions and a flat normal.
+///
+/// Subtracts the first vertex as origin, then computes the face normal from
+/// the first three local-space vertices. Works for both triangle (3) and
+/// quad (4) gaps.
+pub(super) fn gap_vertex_data(world_verts: &[Vec3]) -> (Vec<[f32; 3]>, [f32; 3]) {
+    let origin = world_verts[0];
+    let local: Vec<Vec3> = world_verts.iter().map(|&v| v - origin).collect();
+    let normal = compute_normal(local[0], local[1], local[2]);
+    let positions = local.iter().map(|v| v.to_array()).collect();
+    (positions, normal.to_array())
 }
 
 /// Count total (quads, tris) for a grid using the same ownership rules
@@ -111,49 +120,6 @@ pub fn edge_cuboid_transform(from: Vec3, to: Vec3) -> (Vec3, f32, Quat) {
         Quat::from_rotation_arc(Vec3::X, direction)
     };
     (midpoint, length, rotation)
-}
-
-/// Corner indices for a quad gap: (owner_v0, owner_v1, neighbor_n0, neighbor_n1).
-pub(crate) fn quad_corner_indices(edge_index: u8) -> (u8, u8, u8, u8) {
-    let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
-    let vertex_dirs = dir.vertex_directions();
-    let v0_idx = vertex_dirs[0].index();
-    let v1_idx = vertex_dirs[1].index();
-
-    let opp_dir = dir.const_neg();
-    let opp_vertex_dirs = opp_dir.vertex_directions();
-    let n0_idx = opp_vertex_dirs[1].index();
-    let n1_idx = opp_vertex_dirs[0].index();
-
-    (v0_idx, v1_idx, n0_idx, n1_idx)
-}
-
-/// Builds a gap mesh (3 or 4 world-space vertices) in the first vertex's local space.
-pub(crate) fn build_gap_mesh(world_verts: &[Vec3]) -> Mesh {
-    let origin = world_verts[0];
-    let local: Vec<Vec3> = world_verts.iter().map(|&v| v - origin).collect();
-
-    let normal = compute_normal(local[0], local[1], local[2]);
-    let positions: Vec<[f32; 3]> = local.iter().map(|v| v.to_array()).collect();
-    let normals = vec![normal.to_array(); positions.len()];
-
-    let (uvs, indices): (Vec<[f32; 2]>, Vec<u16>) = if world_verts.len() == 4 {
-        (
-            vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
-            vec![0, 1, 2, 0, 2, 3],
-        )
-    } else {
-        (vec![[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]], vec![0, 1, 2])
-    };
-
-    Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-    )
-    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
-    .with_inserted_indices(Indices::U16(indices))
 }
 
 #[cfg(test)]
@@ -239,6 +205,57 @@ mod tests {
         // Collinear points
         let n = compute_normal(Vec3::ZERO, Vec3::X, Vec3::X * 2.0);
         assert_eq!(n, Vec3::ZERO);
+    }
+
+    // ── gap_vertex_data ────────────────────────────────────────────────
+
+    #[test]
+    fn gap_vertex_data_triangle() {
+        let verts = [
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(2.0, 0.0, 0.0),
+            Vec3::new(1.0, 0.0, 1.0),
+        ];
+        let (positions, normal) = gap_vertex_data(&verts);
+        assert_eq!(positions.len(), 3);
+        assert_eq!(positions[0], [0.0, 0.0, 0.0], "first vertex is origin");
+        assert_eq!(positions[1], [1.0, 0.0, 0.0]);
+        assert_eq!(positions[2], [0.0, 0.0, 1.0]);
+        // X × Z cross in local space → -Y normal
+        let n = Vec3::from_array(normal);
+        assert!(
+            (n - Vec3::NEG_Y).length() < 1e-6,
+            "expected -Y normal, got {n}"
+        );
+    }
+
+    #[test]
+    fn gap_vertex_data_quad() {
+        let verts = [
+            Vec3::new(0.0, 0.0, 0.0),
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(1.0, 0.0, 1.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        ];
+        let (positions, normal) = gap_vertex_data(&verts);
+        assert_eq!(positions.len(), 4);
+        assert_eq!(positions[0], [0.0, 0.0, 0.0]);
+        let n = Vec3::from_array(normal);
+        assert!(
+            (n - Vec3::NEG_Y).length() < 1e-6,
+            "expected -Y normal, got {n}"
+        );
+    }
+
+    #[test]
+    fn gap_vertex_data_degenerate() {
+        let verts = [
+            Vec3::ZERO,
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(2.0, 0.0, 0.0),
+        ];
+        let (_, normal) = gap_vertex_data(&verts);
+        assert_eq!(normal, [0.0, 0.0, 0.0], "collinear points → zero normal");
     }
 
     // ── idw_interpolate_height ───────────────────────────────────────
@@ -353,62 +370,5 @@ mod tests {
         assert!((len - 0.0).abs() < 1e-6);
         assert!((mid - p).length() < 1e-6);
         assert_eq!(rot, Quat::IDENTITY);
-    }
-
-    // ── quad_corner_indices ──────────────────────────────────────────
-
-    #[test]
-    fn quad_corner_edge0() {
-        let (v0, v1, n0, n1) = quad_corner_indices(0);
-        let dir = EdgeDirection::ALL_DIRECTIONS[0];
-        let vd = dir.vertex_directions();
-        let opp = dir.const_neg();
-        let od = opp.vertex_directions();
-        assert_eq!(
-            (v0, v1, n0, n1),
-            (vd[0].index(), vd[1].index(), od[1].index(), od[0].index())
-        );
-    }
-
-    #[test]
-    fn quad_corner_edge2() {
-        let (v0, v1, n0, n1) = quad_corner_indices(2);
-        let dir = EdgeDirection::ALL_DIRECTIONS[2];
-        let vd = dir.vertex_directions();
-        let opp = dir.const_neg();
-        let od = opp.vertex_directions();
-        assert_eq!(
-            (v0, v1, n0, n1),
-            (vd[0].index(), vd[1].index(), od[1].index(), od[0].index())
-        );
-    }
-
-    #[test]
-    fn quad_corner_edge4() {
-        let (v0, v1, n0, n1) = quad_corner_indices(4);
-        let dir = EdgeDirection::ALL_DIRECTIONS[4];
-        let vd = dir.vertex_directions();
-        let opp = dir.const_neg();
-        let od = opp.vertex_directions();
-        assert_eq!(
-            (v0, v1, n0, n1),
-            (vd[0].index(), vd[1].index(), od[1].index(), od[0].index())
-        );
-    }
-
-    #[test]
-    fn quad_corner_owner_indices_distinct() {
-        for edge in [0u8, 2, 4] {
-            let (v0, v1, _, _) = quad_corner_indices(edge);
-            assert_ne!(v0, v1, "edge {edge}: owner indices must be distinct");
-        }
-    }
-
-    #[test]
-    fn quad_corner_neighbor_indices_distinct() {
-        for edge in [0u8, 2, 4] {
-            let (_, _, n0, n1) = quad_corner_indices(edge);
-            assert_ne!(n0, n1, "edge {edge}: neighbor indices must be distinct");
-        }
     }
 }

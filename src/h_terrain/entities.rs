@@ -35,41 +35,131 @@ pub struct Corner {
     pub index: u8,
 }
 
-// ── Quad gap markers ─────────────────────────────────────────────
+pub(crate) mod gap_marks {
+    use bevy::prelude::*;
 
-/// Corner that owns a quad gap mesh (vertex 0 of the quad).
-#[derive(Component, Reflect)]
-pub struct QuadOwner;
+    /// Gap mesh entity accessor, implemented by both owner and emitter markers.
+    pub(crate) trait Mark {
+        /// The gap mesh entity this marker references (not a child of this corner's parent).
+        fn not_owned_by_parent(&self) -> Entity;
+    }
+    /// Implemented by emitter markers that reference a non-owned gap mesh.
+    pub(crate) trait EmitterMark {
+        /// Mesh vertex index this emitter contributes to.
+        fn vertex_index(&self) -> u8;
+    }
 
-/// Neighbor corner contributing vertex 1 of a quad gap.
-/// Holds the [`Quad`] mesh entity this corner aids.
-#[derive(Component, Reflect)]
-pub struct QuadPos2Emitter(pub Entity);
+    // ── Quad gap markers ─────────────────────────────────────────────
 
-/// Neighbor corner contributing vertex 2 of a quad gap.
-/// Holds the [`Quad`] mesh entity this corner aids.
-#[derive(Component, Reflect)]
-pub struct QuadPos3Emitter(pub Entity);
+    /// Corner that owns a quad gap mesh (vertex 0 of the quad).
+    /// Holds the owned mesh entity and the neighbor HCell across the edge.
+    #[derive(Component, Reflect)]
+    pub struct QuadOwner {
+        /// The owned Quad mesh entity (child of this corner).
+        pub gap: Entity,
+        /// The single neighbor HCell across the edge.
+        pub neighbor_hex: Entity,
+    }
 
-/// Corner at vertex 3 of a quad gap (corner i+1 on the owning hex).
-#[derive(Component, Reflect)]
-pub struct QuadTail;
+    /// Neighbor corner contributing vertex 1 of a quad gap.
+    /// Holds the [`Quad`] mesh entity this corner aids.
+    #[derive(Component, Reflect)]
+    pub struct QuadPos1Emitter(pub Entity);
 
-// ── Tri gap markers ──────────────────────────────────────────────
+    /// Neighbor corner contributing vertex 2 of a quad gap.
+    /// Holds the [`Quad`] mesh entity this corner aids.
+    #[derive(Component, Reflect)]
+    pub struct QuadPos2Emitter(pub Entity);
 
-/// Corner that owns a tri gap mesh (vertex 0 of the triangle).
-#[derive(Component, Reflect)]
-pub struct TriOwner;
+    /// Corner at vertex 3 of a quad gap (corner i+1 on the owning hex).
+    #[derive(Component, Reflect)]
+    pub struct QuadTail;
 
-/// Neighbor corner contributing vertex 1 of a tri gap.
-/// Holds the [`Tri`] mesh entity this corner aids.
-#[derive(Component, Reflect)]
-pub struct TriPos1Emitter(pub Entity);
+    // ── Tri gap markers ──────────────────────────────────────────────
 
-/// Neighbor corner contributing vertex 2 of a tri gap.
-/// Holds the [`Tri`] mesh entity this corner aids.
-#[derive(Component, Reflect)]
-pub struct TriPos2Emitter(pub Entity);
+    /// Corner that owns a tri gap mesh (vertex 0 of the triangle).
+    /// Holds the owned mesh entity and the two neighbor HCell entities.
+    #[derive(Component, Reflect)]
+    pub struct TriOwner {
+        /// The owned Tri mesh entity (child of this corner).
+        pub gap: Entity,
+        /// HCell entity holding the TriPos1Emitter corner.
+        pub neighbor1_hex: Entity,
+        /// HCell entity holding the TriPos2Emitter corner.
+        pub neighbor2_hex: Entity,
+    }
+
+    /// Neighbor corner contributing vertex 1 of a tri gap.
+    /// Holds the [`Tri`] mesh entity this corner aids.
+    #[derive(Component, Reflect)]
+    pub struct TriPos1Emitter(pub Entity);
+
+    /// Neighbor corner contributing vertex 2 of a tri gap.
+    /// Holds the [`Tri`] mesh entity this corner aids.
+    #[derive(Component, Reflect)]
+    pub struct TriPos2Emitter(pub Entity);
+
+    impl EmitterMark for QuadPos1Emitter {
+        fn vertex_index(&self) -> u8 {
+            1
+        }
+    }
+
+    impl EmitterMark for QuadPos2Emitter {
+        fn vertex_index(&self) -> u8 {
+            2
+        }
+    }
+
+    impl EmitterMark for TriPos1Emitter {
+        fn vertex_index(&self) -> u8 {
+            1
+        }
+    }
+
+    impl EmitterMark for TriPos2Emitter {
+        fn vertex_index(&self) -> u8 {
+            2
+        }
+    }
+
+    impl Mark for QuadOwner {
+        fn not_owned_by_parent(&self) -> Entity {
+            self.gap
+        }
+    }
+
+    impl Mark for TriOwner {
+        fn not_owned_by_parent(&self) -> Entity {
+            self.gap
+        }
+    }
+
+    impl Mark for QuadPos1Emitter {
+        fn not_owned_by_parent(&self) -> Entity {
+            self.0
+        }
+    }
+
+    impl Mark for QuadPos2Emitter {
+        fn not_owned_by_parent(&self) -> Entity {
+            self.0
+        }
+    }
+
+    impl Mark for TriPos1Emitter {
+        fn not_owned_by_parent(&self) -> Entity {
+            self.0
+        }
+    }
+
+    impl Mark for TriPos2Emitter {
+        fn not_owned_by_parent(&self) -> Entity {
+            self.0
+        }
+    }
+}
+pub(crate) use gap_marks::*;
 
 // ── Mesh entity markers ─────────────────────────────────────────
 
