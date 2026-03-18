@@ -195,3 +195,7 @@ pub struct InSight;
 /// Stashed material handle from before [`InSight`] was applied.
 #[derive(Component, Reflect)]
 pub struct PreSightMaterial(pub Handle<StandardMaterial>);
+
+/// Marker on aim-star line entities spawned on the [`InSight`] hex face.
+#[derive(Component, Reflect)]
+pub struct AimStar;

@@ -28,7 +28,7 @@ pub fn generate_h_grid(
     let terrain = HGridLayout::from_settings(g);
 
     let edge_thickness = 0.02;
-    let fov = TerrainMaterials::new(&mut materials);
+    let fov = TerrainMaterials::new(&mut materials, &mut meshes);
     let debug_assets = debug.0.then(|| {
         let sphere_mesh = meshes.add(Sphere::new(0.08));
         let material = TerrainMaterials::debug_material(&mut materials);

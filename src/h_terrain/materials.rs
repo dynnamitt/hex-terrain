@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 use super::HTerrainConfig;
 use super::entities::{
-    FovTransition, HCell, HexFace, InFov, InSight, PreSightMaterial, Quad, QuadEdge, Tri,
+    AimStar, FovTransition, HCell, HexFace, InFov, InSight, PreSightMaterial, Quad, QuadEdge, Tri,
 };
 use crate::drone::Player;
 
@@ -84,8 +84,12 @@ pub struct TerrainMaterials {
     pub gap_original: Handle<StandardMaterial>,
     /// Highlight gap material (emissive cyan glow).
     pub gap_highlight: Handle<StandardMaterial>,
-    /// Purple emissive material for the aimed-at hex face (screen center + within FoV).
+    /// Green emissive material for the aimed-at hex face (screen center + within FoV).
     pub hex_in_aim: Handle<StandardMaterial>,
+    /// Aim-star line material (azure glow, slightly more intense than edges).
+    pub aim_star: Handle<StandardMaterial>,
+    /// Pre-built aim-star cuboid mesh handle.
+    pub aim_star_mesh: Handle<Mesh>,
     /// Bright emissive edge-line material for quad edges.
     pub edge: Handle<StandardMaterial>,
     /// Highlight edge-line material for quad edges within FoV.
@@ -93,7 +97,7 @@ pub struct TerrainMaterials {
 }
 
 impl TerrainMaterials {
-    pub fn new(materials: &mut Assets<StandardMaterial>) -> Self {
+    pub fn new(materials: &mut Assets<StandardMaterial>, meshes: &mut Assets<Mesh>) -> Self {
         Self {
             hex_original: materials.add(StandardMaterial {
                 base_color: OrigPalette::Hex.into(),
@@ -117,10 +121,17 @@ impl TerrainMaterials {
                 ..default()
             }),
             hex_in_aim: materials.add(StandardMaterial {
-                base_color: FovPalette::Aim.into(),
-                emissive: FovPalette::Aim.into(),
+                base_color: FovPalette::Hex.into(),
+                emissive: LinearRgba::rgb(0.06, 0.27, 0.09),
                 ..default()
             }),
+            aim_star: materials.add(StandardMaterial {
+                base_color: FovPalette::Edge.into(),
+                emissive: FovPalette::Edge.into(),
+                unlit: true,
+                ..default()
+            }),
+            aim_star_mesh: meshes.add(Cuboid::new(1.6, 0.03, 0.03)),
             edge: materials.add(StandardMaterial {
                 base_color: OrigPalette::Edge.into(),
                 emissive: OrigPalette::Edge.into(),
@@ -339,50 +350,88 @@ pub(super) struct SightParams<'w, 's> {
     raycast: MeshRayCast<'w, 's>,
     hex_faces: Query<'w, 's, (), With<HexFace>>,
     current_sight: Query<'w, 's, (Entity, &'static PreSightMaterial), With<InSight>>,
+    aim_stars: Query<'w, 's, Entity, With<AimStar>>,
     mats: Res<'w, TerrainMaterials>,
     materials: Query<'w, 's, &'static mut MeshMaterial3d<StandardMaterial>>,
     parents: Query<'w, 's, &'static ChildOf>,
     in_fov: Query<'w, 's, (), With<InFov>>,
 }
 
-/// Tags the single hex face at screen center with [`InSight`] and applies a purple material.
+/// Tags the single hex face at screen center with [`InSight`], applies aim material, and
+/// spawns aim-star line children on the targeted face.
+///
+/// Raycasts first, then compares with the current target — skips all work when the target
+/// is unchanged, and performs teardown + apply in a single frame when it changes.
 pub(super) fn track_in_sight(mut sight: SightParams, mut commands: Commands) {
-    // Remove previous InSight — restore pre-sight material
-    for (entity, stashed) in &sight.current_sight {
-        commands
-            .entity(entity)
-            .remove::<(InSight, PreSightMaterial)>();
-        if let Ok(mut mat) = sight.materials.get_mut(entity) {
-            mat.0 = stashed.0.clone();
-        }
+    let old_target = sight.current_sight.iter().next().map(|(e, _)| e);
+    let new_target = find_aimed_hex_face(&mut sight);
+
+    if old_target == new_target {
+        return;
     }
 
-    // Ray from screen center
+    // Teardown old target (if any)
+    if let Some(old) = old_target {
+        for entity in &sight.aim_stars {
+            commands.entity(entity).despawn();
+        }
+        if let Ok((_, stashed)) = sight.current_sight.get(old) {
+            if let Ok(mut mat) = sight.materials.get_mut(old) {
+                mat.0 = stashed.0.clone();
+            }
+        }
+        commands.entity(old).remove::<(InSight, PreSightMaterial)>();
+    }
+
+    // Apply to new target (if any)
+    if let Some(new) = new_target {
+        if let Ok(mut mat) = sight.materials.get_mut(new) {
+            let stash = PreSightMaterial(mat.0.clone());
+            mat.0 = sight.mats.hex_in_aim.clone();
+            commands
+                .entity(new)
+                .insert((InSight, stash))
+                .remove::<FovTransition>();
+        }
+        for i in 0..3u32 {
+            let angle = i as f32 * std::f32::consts::FRAC_PI_3;
+            let child = commands
+                .spawn((
+                    AimStar,
+                    Mesh3d(sight.mats.aim_star_mesh.clone()),
+                    MeshMaterial3d(sight.mats.aim_star.clone()),
+                    Transform::from_xyz(0.0, 0.01, 0.0).with_rotation(Quat::from_rotation_y(angle)),
+                ))
+                .id();
+            commands.entity(new).add_child(child);
+        }
+    }
+}
+
+/// Raycasts screen center and returns the first in-FoV [`HexFace`] entity hit.
+fn find_aimed_hex_face(sight: &mut SightParams) -> Option<Entity> {
     let center = Vec2::new(sight.windows.width() / 2.0, sight.windows.height() / 2.0);
     let (camera, cam_gt) = *sight.camera;
-    let Ok(ray) = camera.viewport_to_world(cam_gt, center) else {
-        return;
-    };
-
-    // Cast and find first HexFace hit
+    let ray = camera.viewport_to_world(cam_gt, center).ok()?;
     let hits = sight.raycast.cast_ray(ray, &default());
     for &(entity, _) in hits {
-        if sight.hex_faces.contains(entity) {
-            // Only highlight if parent HCell is within FoV
-            let in_fov = sight
-                .parents
-                .get(entity)
-                .ok()
-                .is_some_and(|parent| sight.in_fov.contains(parent.get()));
-            if !in_fov {
-                return;
+        // Resolve AimStar hits to their parent HexFace.
+        let face = if sight.hex_faces.contains(entity) {
+            entity
+        } else if sight.aim_stars.contains(entity) {
+            match sight.parents.get(entity) {
+                Ok(parent) if sight.hex_faces.contains(parent.get()) => parent.get(),
+                _ => continue,
             }
-            if let Ok(mut mat) = sight.materials.get_mut(entity) {
-                let stash = PreSightMaterial(mat.0.clone());
-                mat.0 = sight.mats.hex_in_aim.clone();
-                commands.entity(entity).insert((InSight, stash));
-            }
-            return;
-        }
+        } else {
+            continue;
+        };
+        let in_fov = sight
+            .parents
+            .get(face)
+            .ok()
+            .is_some_and(|parent| sight.in_fov.contains(parent.get()));
+        return in_fov.then_some(face);
     }
+    None
 }

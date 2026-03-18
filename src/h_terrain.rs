@@ -148,6 +148,7 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::FovTransition>()
             .register_type::<entities::InSight>()
             .register_type::<entities::PreSightMaterial>()
+            .register_type::<entities::AimStar>()
             .insert_resource(self.config.clone())
             .insert_resource(ClearColor(self.config.clear_color))
             .configure_sets(
@@ -186,7 +187,9 @@ impl Plugin for HTerrainPlugin {
                 systems::update_ground_level.in_set(HTerrainPhase::UpdateGround),
                 systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
                 materials::start_fov_transitions.in_set(HTerrainPhase::Highlight),
-                materials::animate_fov_transitions.after(HTerrainPhase::Highlight),
+                materials::animate_fov_transitions
+                    .after(HTerrainPhase::Highlight)
+                    .before(HTerrainPhase::Sight),
                 materials::track_in_sight.in_set(HTerrainPhase::Sight),
                 systems::extract_ore.after(HTerrainPhase::Sight),
             )
