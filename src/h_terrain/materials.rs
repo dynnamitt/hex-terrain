@@ -375,10 +375,10 @@ pub(super) fn track_in_sight(mut sight: SightParams, mut commands: Commands) {
         for entity in &sight.aim_stars {
             commands.entity(entity).despawn();
         }
-        if let Ok((_, stashed)) = sight.current_sight.get(old) {
-            if let Ok(mut mat) = sight.materials.get_mut(old) {
-                mat.0 = stashed.0.clone();
-            }
+        if let Ok((_, stashed)) = sight.current_sight.get(old)
+            && let Ok(mut mat) = sight.materials.get_mut(old)
+        {
+            mat.0 = stashed.0.clone();
         }
         commands.entity(old).remove::<(InSight, PreSightMaterial)>();
     }

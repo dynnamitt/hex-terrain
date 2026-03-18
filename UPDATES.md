@@ -1,5 +1,13 @@
 # Updates
 
+## v0.0.4
+
+- Ore extraction lowers hex faces and realigns gap geometry on both owner and neighbor sides
+- Aim-star lines highlight the targeted hex face with rotating cuboid overlays
+- Stable InSight targeting — no more flicker when crosshair sits on aim-star edges
+- Intro animation refactored into drone's AnimationGraph with smoother CubicInOut easing
+- Release notes auto-injected from UPDATES.md into the loading overlay at deploy time
+
 ## v0.0.3
 
 - Laser pipe snaps to aimed hex face — points at InSight target in real-time

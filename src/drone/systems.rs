@@ -48,6 +48,7 @@ pub fn armed_quat() -> Quat {
 /// and `AnimationTargetId` + `AnimatedBy` on Elbow.
 ///
 /// Must run after terrain seed so that [`GroundLevel`] is `Some`.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_drone(
     mut commands: Commands,
     cfg: Res<DroneConfig>,
