@@ -56,18 +56,16 @@ fn gap_entities_for_cell(cell: Entity, lookup: &GapLookup) -> Vec<Entity> {
             }
         }
         // Emitter path: stored entity refs
-        if let Some(e) = qp1 {
-            out.push(e.0);
-        }
-        if let Some(e) = qp2 {
-            out.push(e.0);
-        }
-        if let Some(e) = tp1 {
-            out.push(e.0);
-        }
-        if let Some(e) = tp2 {
-            out.push(e.0);
-        }
+        out.extend(
+            [
+                qp1.map(|e| e.0),
+                qp2.map(|e| e.0),
+                tp1.map(|e| e.0),
+                tp2.map(|e| e.0),
+            ]
+            .into_iter()
+            .flatten(),
+        );
     }
     out
 }
@@ -152,91 +150,95 @@ pub fn track_player_fov(
     *prev_hex = Some(current_hex);
 }
 
+/// Bundles queries for the [`extract_ore`] system.
+#[derive(SystemParam)]
+#[allow(clippy::type_complexity)]
+pub(super) struct OreExtraction<'w, 's> {
+    time: Res<'w, Time>,
+    keys: Res<'w, ButtonInput<KeyCode>>,
+    mouse: Res<'w, ButtonInput<MouseButton>>,
+    strength: Res<'w, LaserStrength>,
+    sight_face: Query<'w, 's, &'static ChildOf, With<InSight>>,
+    cells: Query<'w, 's, &'static mut Transform, (With<HCell>, Without<QuadEdge>)>,
+    children: Query<'w, 's, &'static Children>,
+    emitters: Query<
+        'w,
+        's,
+        (
+            Option<&'static QuadPos1Emitter>,
+            Option<&'static QuadPos2Emitter>,
+            Option<&'static TriPos1Emitter>,
+            Option<&'static TriPos2Emitter>,
+        ),
+        With<Corner>,
+    >,
+    owners: Query<'w, 's, (Option<&'static QuadOwner>, Option<&'static TriOwner>), With<Corner>>,
+}
+
 /// Lowers an [`HCell`] when the player fires the laser at its [`HexFace`].
 ///
 /// Tick-based: a [`Local`] timer advances only while firing at a target and
 /// resets when not. Each tick lowers the cell by [`LaserStrength::extract_height`],
 /// then realigns neighboring gap vertices via [`GapMeshAccess`].
-#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn extract_ore(
-    time: Res<Time>,
-    keys: Res<ButtonInput<KeyCode>>,
-    mouse: Res<ButtonInput<MouseButton>>,
-    strength: Res<LaserStrength>,
-    sight_face: Query<&ChildOf, With<InSight>>,
-    mut cells: Query<&mut Transform, (With<HCell>, Without<QuadEdge>)>,
-    children: Query<&Children>,
-    emitters: Query<
-        (
-            Option<&QuadPos1Emitter>,
-            Option<&QuadPos2Emitter>,
-            Option<&TriPos1Emitter>,
-            Option<&TriPos2Emitter>,
-        ),
-        With<Corner>,
-    >,
-    owners: Query<(Option<&QuadOwner>, Option<&TriOwner>), With<Corner>>,
+    mut ore: OreExtraction,
     mut gap_mesh: GapMeshAccess,
     mut timer: Local<Option<Timer>>,
 ) {
-    let firing = keys.pressed(KeyCode::Space) || mouse.pressed(MouseButton::Left);
+    let firing = ore.keys.pressed(KeyCode::Space) || ore.mouse.pressed(MouseButton::Left);
 
     if !firing {
         *timer = None;
         return;
     }
 
-    let Some(face_parent) = sight_face.iter().next() else {
+    let Some(face_parent) = ore.sight_face.iter().next() else {
         return;
     };
     let cell = face_parent.get();
 
-    let t = timer
-        .get_or_insert_with(|| Timer::from_seconds(strength.extraction_time, TimerMode::Repeating));
-    t.tick(time.delta());
+    let t = timer.get_or_insert_with(|| {
+        Timer::from_seconds(ore.strength.extraction_time, TimerMode::Repeating)
+    });
+    t.tick(ore.time.delta());
     if !t.just_finished() {
         return;
     }
 
-    let Ok(mut tf) = cells.get_mut(cell) else {
+    let Ok(mut tf) = ore.cells.get_mut(cell) else {
         return;
     };
-    tf.translation.y -= strength.extract_height;
+    let extract_h = ore.strength.extract_height;
+    tf.translation.y -= extract_h;
     let new_y = tf.translation.y;
 
-    let Ok(cell_children) = children.get(cell) else {
+    let Ok(cell_children) = ore.children.get(cell) else {
         return;
     };
     for corner in cell_children.iter() {
-        let Ok((qp1, qp2, tp1, tp2)) = emitters.get(corner) else {
-            continue;
-        };
-        if let Some(e) = qp1 {
-            gap_mesh.realign_neighboring_vertex(e.not_owned_by_parent(), e.vertex_index(), new_y);
+        // Emitter-side: realign neighbor vertices to new world Y
+        if let Ok((qp1, qp2, tp1, tp2)) = ore.emitters.get(corner) {
+            for (gap, vi) in [
+                qp1.map(|e| (e.gap_entity(), e.vertex_index())),
+                qp2.map(|e| (e.gap_entity(), e.vertex_index())),
+                tp1.map(|e| (e.gap_entity(), e.vertex_index())),
+                tp2.map(|e| (e.gap_entity(), e.vertex_index())),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                gap_mesh.realign_neighboring_vertex(gap, vi, new_y);
+            }
         }
-        if let Some(e) = qp2 {
-            gap_mesh.realign_neighboring_vertex(e.not_owned_by_parent(), e.vertex_index(), new_y);
-        }
-        if let Some(e) = tp1 {
-            gap_mesh.realign_neighboring_vertex(e.not_owned_by_parent(), e.vertex_index(), new_y);
-        }
-        if let Some(e) = tp2 {
-            gap_mesh.realign_neighboring_vertex(e.not_owned_by_parent(), e.vertex_index(), new_y);
-        }
-    }
-
-    // Owner-side: owned gap meshes' neighbor vertices shift up in local space
-    for corner in cell_children.iter() {
-        let Ok((qo, to)) = owners.get(corner) else {
-            continue;
-        };
-        if let Some(o) = qo {
-            gap_mesh.shift_vertex_y(o.not_owned_by_parent(), 1, strength.extract_height);
-            gap_mesh.shift_vertex_y(o.not_owned_by_parent(), 2, strength.extract_height);
-        }
-        if let Some(o) = to {
-            gap_mesh.shift_vertex_y(o.not_owned_by_parent(), 1, strength.extract_height);
-            gap_mesh.shift_vertex_y(o.not_owned_by_parent(), 2, strength.extract_height);
+        // Owner-side: shift neighbor vertices up in local space
+        if let Ok((qo, to)) = ore.owners.get(corner) {
+            for gap in [qo.map(|o| o.gap_entity()), to.map(|o| o.gap_entity())]
+                .into_iter()
+                .flatten()
+            {
+                gap_mesh.shift_vertex_y(gap, 1, extract_h);
+                gap_mesh.shift_vertex_y(gap, 2, extract_h);
+            }
         }
     }
 }

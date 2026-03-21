@@ -17,6 +17,8 @@ use super::entities::{
 use super::h_grid_layout::HGridLayout;
 use super::math;
 
+const EDGE_THICKNESS: f32 = 0.03;
+
 /// Spawns a quad gap mesh bridging an even edge between `hex` and its neighbor.
 ///
 /// The quad's four corners come from two vertices on `hex` and two on the
@@ -87,7 +89,6 @@ pub(super) fn spawn_quad(
     commands.entity(tail_entity).insert(QuadTail);
 
     // Spawn edge lines as children of the Quad mesh entity
-    let edge_thickness = 0.03;
     let origin = v0;
     let edges = [(v0, v3), (v1, v2), (v0, v1), (v3, v2)];
     for (from, to) in edges {
@@ -97,7 +98,7 @@ pub(super) fn spawn_quad(
         let edge_entity = commands
             .spawn((
                 QuadEdge,
-                Mesh3d(meshes.add(Cuboid::new(length, edge_thickness, edge_thickness))),
+                Mesh3d(meshes.add(Cuboid::new(length, EDGE_THICKNESS, EDGE_THICKNESS))),
                 MeshMaterial3d(edge_material.clone()),
                 Transform::from_translation(midpoint).with_rotation(rotation),
             ))
@@ -266,29 +267,15 @@ impl GapMeshAccess<'_, '_> {
         let owner = self.parents.get(gap).ok()?.get();
         let owner_world = self.transforms.get(owner).ok()?.translation();
 
-        let handle = &self.mesh_handles.get(gap).ok()?.0;
-        let mesh = self.meshes.get(handle)?;
-        let positions: Vec<[f32; 3]> = mesh
-            .attribute(Mesh::ATTRIBUTE_POSITION)?
-            .as_float3()?
-            .to_vec();
-
+        let positions = self.read_positions(gap)?;
         let mut world_verts: Vec<Vec3> = positions
             .iter()
             .map(|&p| owner_world + Vec3::from(p))
             .collect();
         world_verts[vertex_index as usize].y = new_y;
 
-        let (new_positions, normal) = math::gap_vertex_data(&world_verts);
-        let normals = vec![normal; new_positions.len()];
-
-        let handle = &self.mesh_handles.get(gap).ok()?.0;
-        let mesh = self.meshes.get_mut(handle)?;
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, new_positions);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-
+        self.write_gap_geometry(gap, &world_verts);
         self.reposition_edges(gap);
-
         Some(())
     }
 
@@ -298,45 +285,47 @@ impl GapMeshAccess<'_, '_> {
     /// must shift up in local space to maintain their world position.
     /// Also repositions any [`QuadEdge`] children to match the updated geometry.
     pub fn shift_vertex_y(&mut self, gap: Entity, vertex_index: u8, delta_y: f32) -> Option<()> {
-        let handle = &self.mesh_handles.get(gap).ok()?.0;
-        let mesh = self.meshes.get(handle)?;
-        let mut positions: Vec<[f32; 3]> = mesh
-            .attribute(Mesh::ATTRIBUTE_POSITION)?
-            .as_float3()?
-            .to_vec();
-
+        let mut positions = self.read_positions(gap)?;
         positions[vertex_index as usize][1] += delta_y;
 
         // positions[0] is always [0,0,0] so they work as pseudo-world coords
         let world_verts: Vec<Vec3> = positions.iter().map(|&p| Vec3::from(p)).collect();
-        let (new_positions, normal) = math::gap_vertex_data(&world_verts);
-        let normals = vec![normal; new_positions.len()];
-
-        let handle = &self.mesh_handles.get(gap).ok()?.0;
-        let mesh = self.meshes.get_mut(handle)?;
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, new_positions);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-
+        self.write_gap_geometry(gap, &world_verts);
         self.reposition_edges(gap);
-
         Some(())
+    }
+
+    /// Reads mesh vertex positions from a gap entity's [`Mesh3d`] handle.
+    fn read_positions(&self, gap: Entity) -> Option<Vec<[f32; 3]>> {
+        let handle = &self.mesh_handles.get(gap).ok()?.0;
+        let mesh = self.meshes.get(handle)?;
+        Some(
+            mesh.attribute(Mesh::ATTRIBUTE_POSITION)?
+                .as_float3()?
+                .to_vec(),
+        )
+    }
+
+    /// Recomputes local positions and normals from world-space vertices
+    /// and writes them back to the gap entity's mesh.
+    fn write_gap_geometry(&mut self, gap: Entity, world_verts: &[Vec3]) {
+        let (new_positions, normal) = math::gap_vertex_data(world_verts);
+        let normals = vec![normal; new_positions.len()];
+        let Some(handle) = self.mesh_handles.get(gap).ok().map(|h| h.0.clone()) else {
+            return;
+        };
+        if let Some(mesh) = self.meshes.get_mut(&handle) {
+            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, new_positions);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        }
     }
 
     /// Recomputes [`QuadEdge`] transforms and meshes from the parent gap's
     /// current vertex positions. No-op for Tri meshes (no edge children).
     fn reposition_edges(&mut self, gap: Entity) {
-        let handle = &self.mesh_handles.get(gap).ok();
-        let Some(handle) = handle else { return };
-        let Some(mesh) = self.meshes.get(&handle.0) else {
+        let Some(positions) = self.read_positions(gap) else {
             return;
         };
-        let Some(positions) = mesh
-            .attribute(Mesh::ATTRIBUTE_POSITION)
-            .and_then(|a| a.as_float3())
-        else {
-            return;
-        };
-        let positions: Vec<[f32; 3]> = positions.to_vec();
 
         // Only quads have edges (4 vertices)
         if positions.len() != 4 {
@@ -355,7 +344,6 @@ impl GapMeshAccess<'_, '_> {
         }
 
         let p: Vec<Vec3> = positions.iter().map(|p| Vec3::from_array(*p)).collect();
-        let edge_thickness = 0.03;
         let edges = [(p[0], p[3]), (p[1], p[2]), (p[0], p[1]), (p[3], p[2])];
 
         for (i, (from, to)) in edges.iter().enumerate() {
@@ -371,7 +359,7 @@ impl GapMeshAccess<'_, '_> {
             if let Ok(mesh3d) = self.mesh_handles.get(edge_entity)
                 && let Some(edge_mesh) = self.meshes.get_mut(&mesh3d.0)
             {
-                *edge_mesh = Cuboid::new(length, edge_thickness, edge_thickness).into();
+                *edge_mesh = Cuboid::new(length, EDGE_THICKNESS, EDGE_THICKNESS).into();
             }
         }
     }
@@ -508,7 +496,6 @@ mod tests {
     /// Spawns 4 QuadEdge children on a gap, matching the spawn order in `spawn_quad`.
     fn spawn_quad_edges(app: &mut App, gap: Entity, positions: &[[f32; 3]; 4]) -> [Entity; 4] {
         let p: Vec<Vec3> = positions.iter().map(|p| Vec3::from_array(*p)).collect();
-        let edge_thickness = 0.03;
         let pairs = [(p[0], p[3]), (p[1], p[2]), (p[0], p[1]), (p[3], p[2])];
         let mut edges = [Entity::PLACEHOLDER; 4];
         for (i, (from, to)) in pairs.iter().enumerate() {
@@ -516,7 +503,7 @@ mod tests {
             let mesh = app
                 .world_mut()
                 .resource_mut::<Assets<Mesh>>()
-                .add(Cuboid::new(length, edge_thickness, edge_thickness));
+                .add(Cuboid::new(length, EDGE_THICKNESS, EDGE_THICKNESS));
             let edge = app
                 .world_mut()
                 .spawn((

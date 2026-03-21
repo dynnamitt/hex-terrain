@@ -1,4 +1,17 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(cargo test*)",
+      "Bash(cargo clippy*)",
+      "Bash(cargo build*)",
+      "Bash(cargo fmt*)",
+      "Bash(cargo check*)",
+      "Bash(make *)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git status*)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {

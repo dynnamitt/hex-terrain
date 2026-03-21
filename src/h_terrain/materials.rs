@@ -278,33 +278,17 @@ pub(super) fn animate_fov_transitions(
     let duration = cfg.fov_transition_secs;
 
     // Copy target colors upfront to avoid borrow conflicts with get_mut below.
-    let hex_orig = mat_assets
-        .get(&mats.hex_original)
-        .map(|m| (m.base_color, m.emissive));
-    let hex_hi = mat_assets
-        .get(&mats.hex_highlight)
-        .map(|m| (m.base_color, m.emissive));
-    let gap_orig = mat_assets
-        .get(&mats.gap_original)
-        .map(|m| (m.base_color, m.emissive));
-    let gap_hi = mat_assets
-        .get(&mats.gap_highlight)
-        .map(|m| (m.base_color, m.emissive));
-    let edge_orig = mat_assets
-        .get(&mats.edge)
-        .map(|m| (m.base_color, m.emissive));
-    let edge_hi = mat_assets
-        .get(&mats.edge_highlight)
-        .map(|m| (m.base_color, m.emissive));
-
-    let (
-        Some(hex_orig),
-        Some(hex_hi),
-        Some(gap_orig),
-        Some(gap_hi),
-        Some(edge_orig),
-        Some(edge_hi),
-    ) = (hex_orig, hex_hi, gap_orig, gap_hi, edge_orig, edge_hi)
+    let grab = |h: &Handle<StandardMaterial>| mat_assets.get(h).map(|m| (m.base_color, m.emissive));
+    let pairs = [
+        (grab(&mats.hex_original), grab(&mats.hex_highlight)),
+        (grab(&mats.gap_original), grab(&mats.gap_highlight)),
+        (grab(&mats.edge), grab(&mats.edge_highlight)),
+    ];
+    let [
+        (Some(hex_orig), Some(hex_hi)),
+        (Some(gap_orig), Some(gap_hi)),
+        (Some(edge_orig), Some(edge_hi)),
+    ] = pairs
     else {
         return;
     };

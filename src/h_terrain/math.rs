@@ -48,33 +48,25 @@ pub(super) fn gap_vertex_data(world_verts: &[Vec3]) -> (Vec<[f32; 3]>, [f32; 3])
 /// as `generate_h_grid`: quads on even edges [0,2,4] where neighbor exists,
 /// tris on vertices [0,1] with canonical ownership and all 3 coords in grid.
 pub(crate) fn gap_filler(grid: &[Hex]) -> (usize, usize) {
-    let mut quads = 0;
-    let mut tris = 0;
+    let quads = grid
+        .iter()
+        .flat_map(|hex| [0, 2, 4].map(|i| hex.neighbor(EdgeDirection::ALL_DIRECTIONS[i])))
+        .filter(|n| grid.contains(n))
+        .count();
 
-    for &hex in grid {
-        for edge_index in [0usize, 2, 4] {
-            let dir = EdgeDirection::ALL_DIRECTIONS[edge_index];
-            let neighbor = hex.neighbor(dir);
-            if grid.contains(&neighbor) {
-                quads += 1;
-            }
-        }
-
-        for vertex_index in [0usize, 1] {
-            let dir = VertexDirection::ALL_DIRECTIONS[vertex_index];
-            let gv = GridVertex {
-                origin: hex,
-                direction: dir,
-            };
-            let coords = gv.coordinates();
-            if coords[0] != hex {
-                continue;
-            }
-            if coords.iter().all(|c| grid.contains(c)) {
-                tris += 1;
-            }
-        }
-    }
+    let tris = grid
+        .iter()
+        .flat_map(|&hex| {
+            [0usize, 1].into_iter().filter_map(move |vi| {
+                let gv = GridVertex {
+                    origin: hex,
+                    direction: VertexDirection::ALL_DIRECTIONS[vi],
+                };
+                let coords = gv.coordinates();
+                (coords[0] == hex && coords.iter().all(|c| grid.contains(c))).then_some(())
+            })
+        })
+        .count();
 
     (quads, tris)
 }

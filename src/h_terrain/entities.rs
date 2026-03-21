@@ -40,8 +40,8 @@ pub(crate) mod gap_marks {
 
     /// Gap mesh entity accessor, implemented by both owner and emitter markers.
     pub(crate) trait Mark {
-        /// The gap mesh entity this marker references (not a child of this corner's parent).
-        fn not_owned_by_parent(&self) -> Entity;
+        /// The gap mesh entity this marker references.
+        fn gap_entity(&self) -> Entity;
     }
     /// Implemented by emitter markers that reference a non-owned gap mesh.
     pub(crate) trait EmitterMark {
@@ -99,65 +99,44 @@ pub(crate) mod gap_marks {
     #[derive(Component, Reflect)]
     pub struct TriPos2Emitter(pub Entity);
 
-    impl EmitterMark for QuadPos1Emitter {
-        fn vertex_index(&self) -> u8 {
-            1
-        }
+    macro_rules! impl_mark {
+        ($ty:ty, field: $field:ident) => {
+            impl Mark for $ty {
+                fn gap_entity(&self) -> Entity {
+                    self.$field
+                }
+            }
+        };
+        ($ty:ty, tuple) => {
+            impl Mark for $ty {
+                fn gap_entity(&self) -> Entity {
+                    self.0
+                }
+            }
+        };
     }
 
-    impl EmitterMark for QuadPos2Emitter {
-        fn vertex_index(&self) -> u8 {
-            2
-        }
+    macro_rules! impl_emitter {
+        ($ty:ty, $idx:expr) => {
+            impl EmitterMark for $ty {
+                fn vertex_index(&self) -> u8 {
+                    $idx
+                }
+            }
+        };
     }
 
-    impl EmitterMark for TriPos1Emitter {
-        fn vertex_index(&self) -> u8 {
-            1
-        }
-    }
+    impl_mark!(QuadOwner, field: gap);
+    impl_mark!(TriOwner, field: gap);
+    impl_mark!(QuadPos1Emitter, tuple);
+    impl_mark!(QuadPos2Emitter, tuple);
+    impl_mark!(TriPos1Emitter, tuple);
+    impl_mark!(TriPos2Emitter, tuple);
 
-    impl EmitterMark for TriPos2Emitter {
-        fn vertex_index(&self) -> u8 {
-            2
-        }
-    }
-
-    impl Mark for QuadOwner {
-        fn not_owned_by_parent(&self) -> Entity {
-            self.gap
-        }
-    }
-
-    impl Mark for TriOwner {
-        fn not_owned_by_parent(&self) -> Entity {
-            self.gap
-        }
-    }
-
-    impl Mark for QuadPos1Emitter {
-        fn not_owned_by_parent(&self) -> Entity {
-            self.0
-        }
-    }
-
-    impl Mark for QuadPos2Emitter {
-        fn not_owned_by_parent(&self) -> Entity {
-            self.0
-        }
-    }
-
-    impl Mark for TriPos1Emitter {
-        fn not_owned_by_parent(&self) -> Entity {
-            self.0
-        }
-    }
-
-    impl Mark for TriPos2Emitter {
-        fn not_owned_by_parent(&self) -> Entity {
-            self.0
-        }
-    }
+    impl_emitter!(QuadPos1Emitter, 1);
+    impl_emitter!(QuadPos2Emitter, 2);
+    impl_emitter!(TriPos1Emitter, 1);
+    impl_emitter!(TriPos2Emitter, 2);
 }
 pub(crate) use gap_marks::*;
 
