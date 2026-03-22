@@ -39,6 +39,7 @@ src/
                                # gap_filler, idw_interpolate_height, edge_cuboid_transform,
                                # quad_corner_indices, build_gap_mesh
     h_terrain/materials        # OrigPalette, FovPalette, TerrainMaterials resource,
+                               # radial_gradient (procedural stepped-band texture),
                                # FovChanges/SightParams SystemParam bundles,
                                # start_fov_transitions, animate_fov_transitions, track_in_sight
     h_terrain/entities         # HGrid, HCell, HexFace, Corner, Quad, QuadEdge, Tri,
@@ -50,7 +51,7 @@ src/
     h_terrain/tests            # ECS integration tests (cfg(test))
   drone.rs             # DroneConfig, DronePlugin
     drone/entities     # Player, Elbow, LaserPipe, LaserRay, ArmingComplete,
-                       # IntroComplete, CursorRecentered, DroneInput
+                       # IntroComplete, CursorRecentered, LaserFx, DroneInput
     drone/materials    # DroneMaterials resource (pipe, laser_ray)
     drone/systems      # create_drone_materials, spawn_drone, link_elbow_animation,
                        # start_arming, fly, aim_pipe, draw_crosshair, fire_laser,
@@ -69,6 +70,7 @@ Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ...
 
 ### SystemParam Bundles
 - `DroneInput` — bundles all `fly()` inputs (time, keys, mouse, scroll, recentered, config, ground, player, moved)
+- `LaserFx` — bundles aim-star and hex-face material queries + TerrainMaterials for `fire_laser` visual effects
 - `FovChanges` — bundles InFov change-detection queries and cell→HexFace/gap navigation
 - `SightParams` — bundles camera raycast, hex face queries, and InSight state for `track_in_sight`
 
@@ -78,15 +80,23 @@ Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ...
 - `GroundLevel` — `Option<f32>`: `None` until terrain seeded, then `Some(terrain_height)` under the player
 - `GameState` — States enum: `Intro`, `Arming`, `Running`, `Inspecting`
 - `DebugFlag` — CLI `--debug` flag; enables FPS overlay and `verify_gap_counts`
-- `TerrainMaterials` — material handles for hex faces, gaps, edges, aim highlight (7 handles)
+- `TerrainMaterials` — material handles for hex faces, gaps, edges, aim/fire effects (9 handles + 1 mesh)
 - `DroneMaterials` — material handles for laser pipe and ray
 - `HGrid` — Component, single entity parenting all HCells; wraps `HGridLayout`
 - `HGridLayout` — encapsulates `HexLayout` + per-hex heights/radii; `vertex()`, `interpolate_height()`
 
 ### Color Palettes
-- `OrigPalette` — base terrain colors: Hex (olive), Gap (near-black), Edge (azure), Debug (hot pink), ClearColor (navy)
+- `OrigPalette` — base terrain colors: Hex (olive), Gap (near-black), Edge (azure), Debug (hot pink), ClearColor (twilight blue)
 - `FovPalette` — FoV highlight colors: Hex/Edge (bright green), Gap (muted lime), Aim (purple)
 - Both implement `From<T> for Color` (base_color) and `From<T> for LinearRgba` (emissive)
+
+### Lighting
+- **DirectionalLight** — key light (illuminance 5000, shadows enabled), spawned in `generate_h_grid`
+- **AmbientLight** — fill light (brightness 200, white), spawned in `generate_h_grid`
+- **Bloom** — additive, intensity 0.3 (`Bloom::NATURAL` base), on Camera3d. Only catches emissive materials.
+- **Tonemapping** — `TonyMcMapface`
+- **Emissive strategy** — only FoV `edge_highlight` and aim-star materials use emissive (bloom glow). Hex/gap faces are PBR-lit by scene lights, no emissive. Non-FoV edges use muted unlit cyan, no emissive.
+- **ClearColor** — deep twilight blue `rgb(0.02, 0.03, 0.08)`
 
 ### Entity Hierarchy
 ```
@@ -141,6 +151,8 @@ These differ from earlier Bevy tutorials/docs:
 - Single queries: `Single<&T, With<Marker>>` system param (not `query.single()`)
 - MeshRayCast backface culling: culls backfaces by default (Möller–Trumbore). Add `RayCastBackfaces` marker component per-entity to disable. Import: `bevy::picking::mesh_picking::ray_cast::RayCastBackfaces`. Independent of material `cull_mode`.
 - MeshRayCast MAIN_WORLD: meshes need `RenderAssetUsages::MAIN_WORLD` to retain CPU vertex data for raycasting; without it `MeshRayCast` silently returns no hits
+- MeshRayCast filtering: use `MeshRayCastSettings::default().with_filter(&closure)` to limit raycast to specific entities. Import: `bevy::picking::mesh_picking::ray_cast::MeshRayCastSettings`
+- AmbientLight: spawned as a component on an entity (not `insert_resource`), has `affects_lightmapped_meshes` field
 
 ## Key Default Values
 

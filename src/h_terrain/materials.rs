@@ -31,7 +31,7 @@ impl From<OrigPalette> for Color {
             OrigPalette::Gap => Color::srgb(0.1, 0.1, 0.04), // near-black brown
             OrigPalette::Edge => Color::srgb(0.0, 0.5, 1.0), // azure blue
             OrigPalette::Debug => Color::srgb(1.0, 0.2, 0.8), // hot pink
-            OrigPalette::ClearColor => Color::srgb(0.01, 0.01, 0.02), // near-black navy
+            OrigPalette::ClearColor => Color::srgb(0.02, 0.03, 0.08), // deep twilight blue
         }
     }
 }
@@ -116,24 +116,20 @@ impl TerrainMaterials {
             }),
             hex_highlight: materials.add(StandardMaterial {
                 base_color: FovPalette::Hex.into(),
-                emissive: FovPalette::Hex.into(),
                 ..default()
             }),
             gap_original: materials.add(StandardMaterial {
                 base_color: OrigPalette::Gap.into(),
-                emissive: OrigPalette::Gap.into(),
                 cull_mode: None,
                 ..default()
             }),
             gap_highlight: materials.add(StandardMaterial {
                 base_color: FovPalette::Gap.into(),
-                emissive: FovPalette::Gap.into(),
                 cull_mode: None,
                 ..default()
             }),
             hex_in_aim: materials.add(StandardMaterial {
                 base_color: FovPalette::Hex.into(),
-                emissive: LinearRgba::rgb(0.06, 0.27, 0.09),
                 ..default()
             }),
             aim_star: materials.add(StandardMaterial {
@@ -155,13 +151,11 @@ impl TerrainMaterials {
                     [0.1, 0.5, 0.15, 1.0],
                     3,
                 ))),
-                emissive: LinearRgba::rgb(0.08, 0.25, 0.04),
                 ..default()
             }),
             aim_star_mesh: meshes.add(Cuboid::new(1.6, 0.03, 0.03)),
             edge: materials.add(StandardMaterial {
-                base_color: OrigPalette::Edge.into(),
-                emissive: OrigPalette::Edge.into(),
+                base_color: Color::srgb(0.1, 0.25, 0.3),
                 unlit: true,
                 ..default()
             }),

@@ -1,5 +1,13 @@
 # Updates
 
+## v0.0.5
+
+- Scene lighting overhaul — DirectionalLight + AmbientLight replace pure-emissive model, hex/gap faces now PBR-shaded
+- Selective edge bloom — only FoV edges glow via emissive, non-FoV edges show muted cyan outlines
+- Laser fire swaps aim-stars to yellow glow and hex face to stepped radial gradient texture
+- Deep twilight blue sky replaces near-black background
+- MeshRayCast entity filtering narrows aim targeting to hex faces and aim-stars only
+
 ## v0.0.4
 
 - Ore extraction lowers hex faces and realigns gap geometry on both owner and neighbor sides
