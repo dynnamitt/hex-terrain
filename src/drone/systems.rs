@@ -1,6 +1,7 @@
 use bevy::animation::{AnimatedBy, AnimationTargetId, animated_field, prelude::*};
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::input::mouse::MouseScrollUnit;
+use bevy::light::NotShadowCaster;
 use bevy::math::curve::{Interval, adaptors::ConstantCurve, easing::EasingCurve};
 use bevy::post_process::bloom::{Bloom, BloomCompositeMode};
 use bevy::prelude::*;
@@ -201,6 +202,7 @@ pub fn spawn_drone(
         MeshMaterial3d(drone_mats.laser_ray.clone()),
         Transform::default(),
         Visibility::Hidden,
+        NotShadowCaster,
     ));
 }
 
