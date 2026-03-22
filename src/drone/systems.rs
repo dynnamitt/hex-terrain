@@ -15,7 +15,7 @@ use super::DroneConfig;
 #[cfg(not(target_arch = "wasm32"))]
 use super::entities::CursorRecentered;
 use super::entities::{
-    ArmingComplete, DroneInput, Elbow, IntroComplete, LaserPipe, LaserRay, Player,
+    ArmingComplete, DroneInput, Elbow, IntroComplete, LaserFx, LaserPipe, LaserRay, Player,
 };
 use super::materials::DroneMaterials;
 use crate::h_terrain::{InSight, edge_cuboid_transform};
@@ -431,10 +431,11 @@ pub fn aim_pipe(
 }
 
 /// Shows a red laser ray from the pipe tip to the aimed hex face on Space or Left Click.
+/// Swaps aim-star materials to yellow glow while firing.
 pub fn fire_laser(
     pipe_q: Single<&GlobalTransform, With<LaserPipe>>,
     mut ray_q: Single<(&mut Transform, &mut Visibility), With<LaserRay>>,
-    sight_target: Query<&GlobalTransform, With<InSight>>,
+    mut fx: LaserFx,
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     cfg: Res<DroneConfig>,
@@ -443,14 +444,25 @@ pub fn fire_laser(
     let (ray_tf, ray_vis) = &mut *ray_q;
 
     if !firing {
+        for mut mat in &mut fx.stars {
+            mat.0 = fx.mats.aim_star.clone();
+        }
+        if let Ok((_, mut mat)) = fx.hex.single_mut() {
+            mat.0 = fx.mats.hex_in_aim.clone();
+        }
         *ray_vis.as_mut() = Visibility::Hidden;
         return;
     }
 
-    let Ok(target_gt) = sight_target.single() else {
+    let Ok((target_gt, mut hex_mat)) = fx.hex.single_mut() else {
         *ray_vis.as_mut() = Visibility::Hidden;
         return;
     };
+
+    for mut mat in &mut fx.stars {
+        mat.0 = fx.mats.aim_star_firing.clone();
+    }
+    hex_mat.0 = fx.mats.hex_during_fire.clone();
 
     let tip = pipe_q.transform_point(Vec3::NEG_Y * (cfg.pipe_length / 4.0));
     let target = target_gt.translation();

@@ -6,10 +6,7 @@
       "Bash(cargo build*)",
       "Bash(cargo fmt*)",
       "Bash(cargo check*)",
-      "Bash(make *)",
-      "Bash(git log*)",
-      "Bash(git diff*)",
-      "Bash(git status*)"
+      "Bash(make *)"
     ]
   },
   "hooks": {

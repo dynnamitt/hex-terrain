@@ -12,6 +12,7 @@ use super::DroneConfig;
 use super::entities::{CursorRecentered, Elbow, LaserPipe, LaserRay, Player};
 use super::systems;
 use crate::h_terrain::InSight;
+use crate::h_terrain::materials::TerrainMaterials;
 use crate::intro::IntroConfig;
 use crate::{GameState, GroundLevel, PlayerMoved, PlayerPos};
 
@@ -28,6 +29,7 @@ fn test_app() -> App {
         .add_plugins(AnimationPlugin)
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
+        .init_asset::<Image>()
         .insert_resource(DroneConfig::default())
         .insert_resource(IntroConfig {
             // Short durations so we can tick through quickly
@@ -49,6 +51,15 @@ fn test_app() -> App {
         )))
         .init_state::<GameState>();
 
+    app.add_systems(
+        Startup,
+        |mut cmd: Commands,
+         mut mats: ResMut<Assets<StandardMaterial>>,
+         mut meshes: ResMut<Assets<Mesh>>,
+         mut images: ResMut<Assets<Image>>| {
+            cmd.insert_resource(TerrainMaterials::new(&mut mats, &mut meshes, &mut images));
+        },
+    );
     app.add_systems(Startup, systems::create_drone_materials);
     app.add_systems(
         Startup,
@@ -209,9 +220,13 @@ fn laser_tip_at_pipe_front() {
     let half_h = cfg.pipe_length / 4.0;
 
     // Spawn InSight target; aim_pipe will rotate elbow toward it.
+    // fire_laser's LaserFx queries InSight with MeshMaterial3d, so attach a dummy handle.
     let target_pos = Vec3::new(5.0, 0.0, 5.0);
-    app.world_mut()
-        .spawn((InSight, Transform::from_translation(target_pos)));
+    app.world_mut().spawn((
+        InSight,
+        Transform::from_translation(target_pos),
+        MeshMaterial3d(Handle::<StandardMaterial>::default()),
+    ));
     app.update();
 
     // Read pipe GlobalTransform AFTER aim_pipe has rotated elbow.
@@ -270,6 +285,7 @@ fn intro_animation_tilts_camera() {
         .add_plugins(AnimationPlugin)
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
+        .init_asset::<Image>()
         .insert_resource(DroneConfig::default())
         .insert_resource(IntroConfig {
             tilt_up_duration: 0.3,

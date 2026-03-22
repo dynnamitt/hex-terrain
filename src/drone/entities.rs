@@ -4,6 +4,8 @@ use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 
 use super::DroneConfig;
+use crate::h_terrain::materials::TerrainMaterials;
+use crate::h_terrain::{AimStar, InSight};
 use crate::{GroundLevel, PlayerMoved, PlayerPos};
 
 /// Marker component for the player-controlled drone entity.
@@ -34,6 +36,28 @@ pub struct IntroComplete;
 /// so [`super::systems::fly`] can discard any synthetic mouse-motion delta.
 #[derive(Resource, Default)]
 pub struct CursorRecentered(pub bool);
+
+/// Bundled system parameters for laser-firing visual effects.
+#[derive(SystemParam)]
+#[allow(clippy::type_complexity)]
+pub struct LaserFx<'w, 's> {
+    pub stars: Query<
+        'w,
+        's,
+        &'static mut MeshMaterial3d<StandardMaterial>,
+        (With<AimStar>, Without<InSight>),
+    >,
+    pub hex: Query<
+        'w,
+        's,
+        (
+            &'static GlobalTransform,
+            &'static mut MeshMaterial3d<StandardMaterial>,
+        ),
+        (With<InSight>, Without<AimStar>),
+    >,
+    pub mats: Res<'w, TerrainMaterials>,
+}
 
 /// Bundled system parameters for the drone flight system.
 #[derive(SystemParam)]

@@ -15,7 +15,7 @@ use bevy::prelude::*;
 
 use crate::{DebugFlag, GameState};
 
-pub use entities::InSight;
+pub use entities::{AimStar, InSight};
 pub use materials::OrigPalette;
 pub use math::edge_cuboid_transform;
 

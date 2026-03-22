@@ -21,6 +21,7 @@ pub fn generate_h_grid(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
     cfg: Res<HTerrainConfig>,
     debug: Res<DebugFlag>,
 ) {
@@ -28,7 +29,7 @@ pub fn generate_h_grid(
     let terrain = HGridLayout::from_settings(g);
 
     let edge_thickness = 0.02;
-    let fov = TerrainMaterials::new(&mut materials, &mut meshes);
+    let fov = TerrainMaterials::new(&mut materials, &mut meshes, &mut images);
     let debug_assets = debug.0.then(|| {
         let sphere_mesh = meshes.add(Sphere::new(0.08));
         let material = TerrainMaterials::debug_material(&mut materials);

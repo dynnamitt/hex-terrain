@@ -3,7 +3,10 @@
 use bevy::color::Mix;
 use bevy::ecs::relationship::Relationship;
 use bevy::ecs::system::SystemParam;
+use bevy::image::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor};
+use bevy::picking::mesh_picking::ray_cast::MeshRayCastSettings;
 use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use super::HTerrainConfig;
 use super::entities::{
@@ -88,6 +91,10 @@ pub struct TerrainMaterials {
     pub hex_in_aim: Handle<StandardMaterial>,
     /// Aim-star line material (azure glow, slightly more intense than edges).
     pub aim_star: Handle<StandardMaterial>,
+    /// Aim-star material while laser is firing (warm yellow glow).
+    pub aim_star_firing: Handle<StandardMaterial>,
+    /// Hex face material while laser is firing (radial green gradient, no bloom).
+    pub hex_during_fire: Handle<StandardMaterial>,
     /// Pre-built aim-star cuboid mesh handle.
     pub aim_star_mesh: Handle<Mesh>,
     /// Bright emissive edge-line material for quad edges.
@@ -97,7 +104,11 @@ pub struct TerrainMaterials {
 }
 
 impl TerrainMaterials {
-    pub fn new(materials: &mut Assets<StandardMaterial>, meshes: &mut Assets<Mesh>) -> Self {
+    pub fn new(
+        materials: &mut Assets<StandardMaterial>,
+        meshes: &mut Assets<Mesh>,
+        images: &mut Assets<Image>,
+    ) -> Self {
         Self {
             hex_original: materials.add(StandardMaterial {
                 base_color: OrigPalette::Hex.into(),
@@ -131,6 +142,22 @@ impl TerrainMaterials {
                 unlit: true,
                 ..default()
             }),
+            aim_star_firing: materials.add(StandardMaterial {
+                base_color: Color::srgb(1.0, 0.85, 0.0),
+                emissive: LinearRgba::new(6.0, 5.0, 0.0, 1.0),
+                unlit: true,
+                ..default()
+            }),
+            hex_during_fire: materials.add(StandardMaterial {
+                base_color_texture: Some(images.add(radial_gradient(
+                    64,
+                    [0.4, 1.0, 0.3, 1.0],
+                    [0.1, 0.5, 0.15, 1.0],
+                    3,
+                ))),
+                emissive: LinearRgba::rgb(0.08, 0.25, 0.04),
+                ..default()
+            }),
             aim_star_mesh: meshes.add(Cuboid::new(1.6, 0.03, 0.03)),
             edge: materials.add(StandardMaterial {
                 base_color: OrigPalette::Edge.into(),
@@ -155,6 +182,42 @@ impl TerrainMaterials {
             ..default()
         })
     }
+}
+
+/// Generates a stepped radial gradient [`Image`] (RGBA, `size`×`size` pixels).
+/// `center` color at center, `edge` color at corners, quantized into `steps` concentric bands.
+fn radial_gradient(size: u32, center: [f32; 4], edge: [f32; 4], steps: u32) -> Image {
+    let half = size as f32 / 2.0;
+    let n = (size * size * 4) as usize;
+    let mut data = Vec::with_capacity(n);
+    for y in 0..size {
+        for x in 0..size {
+            let dx = (x as f32 + 0.5 - half) / half;
+            let dy = (y as f32 + 0.5 - half) / half;
+            let t = (dx * dx + dy * dy).sqrt().min(1.0);
+            let t = ((t * steps as f32).floor() / (steps - 1) as f32).min(1.0);
+            for i in 0..4 {
+                data.push(((center[i] + (edge[i] - center[i]) * t) * 255.0) as u8);
+            }
+        }
+    }
+    let mut img = Image::new(
+        Extent3d {
+            width: size,
+            height: size,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8UnormSrgb,
+        default(),
+    );
+    img.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        min_filter: ImageFilterMode::Linear,
+        mag_filter: ImageFilterMode::Linear,
+        ..default()
+    });
+    img
 }
 
 /// Bundles InFov change-detection queries and cell→HexFace navigation.
@@ -397,7 +460,9 @@ fn find_aimed_hex_face(sight: &mut SightParams) -> Option<Entity> {
     let center = Vec2::new(sight.windows.width() / 2.0, sight.windows.height() / 2.0);
     let (camera, cam_gt) = *sight.camera;
     let ray = camera.viewport_to_world(cam_gt, center).ok()?;
-    let hits = sight.raycast.cast_ray(ray, &default());
+    let filter = |e| sight.hex_faces.contains(e) || sight.aim_stars.contains(e);
+    let settings = MeshRayCastSettings::default().with_filter(&filter);
+    let hits = sight.raycast.cast_ray(ray, &settings);
     for &(entity, _) in hits {
         // Resolve AimStar hits to their parent HexFace.
         let face = if sight.hex_faces.contains(entity) {

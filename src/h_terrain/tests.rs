@@ -44,6 +44,7 @@ fn test_app_with_config(cfg: HTerrainConfig) -> App {
         .add_plugins(StatesPlugin)
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
+        .init_asset::<Image>()
         .insert_resource(cfg.clone())
         .insert_resource(DebugFlag(false))
         .init_resource::<PlayerPos>()

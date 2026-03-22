@@ -65,7 +65,7 @@ impl Default for DroneConfig {
             height_lerp: 0.1,
             lowest_offset: 2.0,
             pipe_offset: Vec3::new(-0.5, -0.5, -1.0),
-            pipe_length: 3.0,
+            pipe_length: 2.0,
             pipe_radius: 0.07,
             laser_thickness: 0.015,
             aim_speed: 12.0,
