@@ -1,1070 +1,1165 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 500" width="680" height="500">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 680 500" width="680" height="500">
   <defs>
-    <!-- Procedural smooth-stone texture: gray range [0.42–0.57] -->
-    <filter id="f-smooth-stone" primitiveUnits="userSpaceOnUse"
-            x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="4" seed="1"/>
-      <feColorMatrix type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncR type="linear" slope="0.15" intercept="0.425"/>
-        <feFuncG type="linear" slope="0.15" intercept="0.425"/>
-        <feFuncB type="linear" slope="0.15" intercept="0.425"/>
-      </feComponentTransfer>
-    </filter>
-    <!-- Procedural cobblestone texture: gray range [0.30–0.60] -->
-    <filter id="f-cobblestone" primitiveUnits="userSpaceOnUse"
-            x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.15" numOctaves="3" seed="2"/>
-      <feColorMatrix type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncR type="linear" slope="0.3" intercept="0.3"/>
-        <feFuncG type="linear" slope="0.3" intercept="0.3"/>
-        <feFuncB type="linear" slope="0.3" intercept="0.3"/>
-      </feComponentTransfer>
-    </filter>
-    <!-- Procedural gravel texture: gray range [0.55–0.75] -->
-    <filter id="f-gravel" primitiveUnits="userSpaceOnUse"
-            x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.1" numOctaves="3" seed="4"/>
-      <feColorMatrix type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncR type="linear" slope="0.2" intercept="0.55"/>
-        <feFuncG type="linear" slope="0.2" intercept="0.55"/>
-        <feFuncB type="linear" slope="0.2" intercept="0.55"/>
-      </feComponentTransfer>
-    </filter>
-    <!-- Procedural andesite texture: gray range [0.46–0.64] -->
-    <filter id="f-andesite" primitiveUnits="userSpaceOnUse"
-            x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="4" seed="5"/>
-      <feColorMatrix type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncR type="linear" slope="0.18" intercept="0.46"/>
-        <feFuncG type="linear" slope="0.18" intercept="0.46"/>
-        <feFuncB type="linear" slope="0.18" intercept="0.46"/>
-      </feComponentTransfer>
-    </filter>
-    <!-- Procedural diorite texture: gray range [0.62–0.78] -->
-    <filter id="f-diorite" primitiveUnits="userSpaceOnUse"
-            x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="6"/>
-      <feColorMatrix type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncR type="linear" slope="0.15" intercept="0.625"/>
-        <feFuncG type="linear" slope="0.15" intercept="0.625"/>
-        <feFuncB type="linear" slope="0.15" intercept="0.625"/>
-      </feComponentTransfer>
-    </filter>
-    <!-- Procedural dark-stone texture: gray range [0.20–0.40] -->
-    <filter id="f-dark-stone" primitiveUnits="userSpaceOnUse"
-            x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.14" numOctaves="4" seed="7"/>
-      <feColorMatrix type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncR type="linear" slope="0.2" intercept="0.2"/>
-        <feFuncG type="linear" slope="0.2" intercept="0.2"/>
-        <feFuncB type="linear" slope="0.2" intercept="0.2"/>
-      </feComponentTransfer>
-    </filter>
-    <!-- Procedural cracked-stone texture: gray range [0.30–0.50] -->
-    <filter id="f-cracked-stone" primitiveUnits="userSpaceOnUse"
-            x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="5" seed="8"/>
-      <feColorMatrix type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncR type="linear" slope="0.2" intercept="0.3"/>
-        <feFuncG type="linear" slope="0.2" intercept="0.3"/>
-        <feFuncB type="linear" slope="0.2" intercept="0.3"/>
-      </feComponentTransfer>
-    </filter>
+    <!-- Atlas tile patterns: 48px tiles (3x upscale from 16px originals) -->
+    <!-- stone: atlas(1,0) rep=#808080 -->
+    <pattern id="p-stone" width="48" height="48" patternUnits="userSpaceOnUse">
+      <image href="atlas.png" width="768" height="768" x="-48" y="0"
+             image-rendering="pixelated"/>
+    </pattern>
+    <!-- cobblestone: atlas(0,1) rep=#7a7a7a -->
+    <pattern id="p-cobblestone" width="48" height="48" patternUnits="userSpaceOnUse">
+      <image href="atlas.png" width="768" height="768" x="0" y="-48"
+             image-rendering="pixelated"/>
+    </pattern>
+    <!-- gravel: atlas(3,1) rep=#8a8a8a -->
+    <pattern id="p-gravel" width="48" height="48" patternUnits="userSpaceOnUse">
+      <image href="atlas.png" width="768" height="768" x="-144" y="-48"
+             image-rendering="pixelated"/>
+    </pattern>
+    <!-- iron-block: atlas(6,1) rep=#c8c8c8 -->
+    <pattern id="p-iron-block" width="48" height="48" patternUnits="userSpaceOnUse">
+      <image href="atlas.png" width="768" height="768" x="-288" y="-48"
+             image-rendering="pixelated"/>
+    </pattern>
+    <!-- coal-ore: atlas(2,2) rep=#707070 -->
+    <pattern id="p-coal-ore" width="48" height="48" patternUnits="userSpaceOnUse">
+      <image href="atlas.png" width="768" height="768" x="-96" y="-96"
+             image-rendering="pixelated"/>
+    </pattern>
+    <!-- mossy-cobble: atlas(4,2) rep=#6b7b6b -->
+    <pattern id="p-mossy-cobble" width="48" height="48" patternUnits="userSpaceOnUse">
+      <image href="atlas.png" width="768" height="768" x="-192" y="-96"
+             image-rendering="pixelated"/>
+    </pattern>
+    <!-- obsidian: atlas(5,2) rep=#1a1a2a -->
+    <pattern id="p-obsidian" width="48" height="48" patternUnits="userSpaceOnUse">
+      <image href="atlas.png" width="768" height="768" x="-240" y="-96"
+             image-rendering="pixelated"/>
+    </pattern>
 
-    <linearGradient id="gQ-e0-q-2r0" gradientUnits="userSpaceOnUse"
+    <!-- Quad blend masks: 42.5% solid A | 15% blend | 42.5% solid B -->
+    <linearGradient id="mg-e0-q-2r0" gradientUnits="userSpaceOnUse"
         x1="199.8" y1="169.0" x2="246.2" y2="195.9">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#4c4c4c"/>
-      <stop offset="100%"  stop-color="#4c4c4c"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q-2r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q-2r1" gradientUnits="userSpaceOnUse"
         x1="199.8" y1="259.1" x2="246.2" y2="285.9">
-      <stop offset="0%"    stop-color="#b2b2b2"/>
-      <stop offset="42.5%" stop-color="#b2b2b2"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q-2r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q-2r1" gradientUnits="userSpaceOnUse"
         x1="184.0" y1="231.8" x2="184.0" y2="178.1">
-      <stop offset="0%"    stop-color="#b2b2b2"/>
-      <stop offset="42.5%" stop-color="#b2b2b2"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q-2r2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q-2r2" gradientUnits="userSpaceOnUse"
         x1="199.8" y1="349.2" x2="246.2" y2="376.0">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q-2r2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q-2r2" gradientUnits="userSpaceOnUse"
         x1="184.0" y1="321.9" x2="184.0" y2="268.2">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#b2b2b2"/>
-      <stop offset="100%"  stop-color="#b2b2b2"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q-1r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q-1r-1" gradientUnits="userSpaceOnUse"
         x1="277.8" y1="124.0" x2="324.2" y2="150.8">
-      <stop offset="0%"    stop-color="#a5a5a5"/>
-      <stop offset="42.5%" stop-color="#a5a5a5"/>
-      <stop offset="57.5%" stop-color="#7f7f7f"/>
-      <stop offset="100%"  stop-color="#7f7f7f"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q-1r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q-1r-1" gradientUnits="userSpaceOnUse"
         x1="246.2" y1="124.0" x2="199.8" y2="150.8">
-      <stop offset="0%"    stop-color="#a5a5a5"/>
-      <stop offset="42.5%" stop-color="#a5a5a5"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q-1r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q-1r0" gradientUnits="userSpaceOnUse"
         x1="277.8" y1="214.1" x2="324.2" y2="240.9">
-      <stop offset="0%"    stop-color="#4c4c4c"/>
-      <stop offset="42.5%" stop-color="#4c4c4c"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q-1r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q-1r0" gradientUnits="userSpaceOnUse"
         x1="246.2" y1="214.1" x2="199.8" y2="240.9">
-      <stop offset="0%"    stop-color="#4c4c4c"/>
-      <stop offset="42.5%" stop-color="#4c4c4c"/>
-      <stop offset="57.5%" stop-color="#b2b2b2"/>
-      <stop offset="100%"  stop-color="#b2b2b2"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q-1r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q-1r0" gradientUnits="userSpaceOnUse"
         x1="262.0" y1="186.8" x2="262.0" y2="133.1">
-      <stop offset="0%"    stop-color="#4c4c4c"/>
-      <stop offset="42.5%" stop-color="#4c4c4c"/>
-      <stop offset="57.5%" stop-color="#a5a5a5"/>
-      <stop offset="100%"  stop-color="#a5a5a5"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q-1r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q-1r1" gradientUnits="userSpaceOnUse"
         x1="277.8" y1="304.1" x2="324.2" y2="331.0">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q-1r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q-1r1" gradientUnits="userSpaceOnUse"
         x1="246.2" y1="304.1" x2="199.8" y2="331.0">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q-1r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q-1r1" gradientUnits="userSpaceOnUse"
         x1="262.0" y1="276.8" x2="262.0" y2="223.2">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#4c4c4c"/>
-      <stop offset="100%"  stop-color="#4c4c4c"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q-1r2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q-1r2" gradientUnits="userSpaceOnUse"
         x1="277.8" y1="394.2" x2="324.2" y2="421.0">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#8c8c8c"/>
-      <stop offset="100%"  stop-color="#8c8c8c"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q-1r2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q-1r2" gradientUnits="userSpaceOnUse"
         x1="262.0" y1="366.9" x2="262.0" y2="313.2">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q0r-2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q0r-2" gradientUnits="userSpaceOnUse"
         x1="355.8" y1="79.0" x2="402.2" y2="105.8">
-      <stop offset="0%"    stop-color="#a5a5a5"/>
-      <stop offset="42.5%" stop-color="#a5a5a5"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q0r-2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q0r-2" gradientUnits="userSpaceOnUse"
         x1="324.2" y1="79.0" x2="277.8" y2="105.8">
-      <stop offset="0%"    stop-color="#a5a5a5"/>
-      <stop offset="42.5%" stop-color="#a5a5a5"/>
-      <stop offset="57.5%" stop-color="#a5a5a5"/>
-      <stop offset="100%"  stop-color="#a5a5a5"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q0r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q0r-1" gradientUnits="userSpaceOnUse"
         x1="355.8" y1="169.0" x2="402.2" y2="195.9">
-      <stop offset="0%"    stop-color="#7f7f7f"/>
-      <stop offset="42.5%" stop-color="#7f7f7f"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q0r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q0r-1" gradientUnits="userSpaceOnUse"
         x1="324.2" y1="169.0" x2="277.8" y2="195.9">
-      <stop offset="0%"    stop-color="#7f7f7f"/>
-      <stop offset="42.5%" stop-color="#7f7f7f"/>
-      <stop offset="57.5%" stop-color="#4c4c4c"/>
-      <stop offset="100%"  stop-color="#4c4c4c"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q0r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q0r-1" gradientUnits="userSpaceOnUse"
         x1="340.0" y1="141.7" x2="340.0" y2="88.1">
-      <stop offset="0%"    stop-color="#7f7f7f"/>
-      <stop offset="42.5%" stop-color="#7f7f7f"/>
-      <stop offset="57.5%" stop-color="#a5a5a5"/>
-      <stop offset="100%"  stop-color="#a5a5a5"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q0r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q0r0" gradientUnits="userSpaceOnUse"
         x1="355.8" y1="259.1" x2="402.2" y2="285.9">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#7f7f7f"/>
-      <stop offset="100%"  stop-color="#7f7f7f"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q0r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q0r0" gradientUnits="userSpaceOnUse"
         x1="324.2" y1="259.1" x2="277.8" y2="285.9">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q0r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q0r0" gradientUnits="userSpaceOnUse"
         x1="340.0" y1="231.8" x2="340.0" y2="178.1">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#7f7f7f"/>
-      <stop offset="100%"  stop-color="#7f7f7f"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q0r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q0r1" gradientUnits="userSpaceOnUse"
         x1="355.8" y1="349.2" x2="402.2" y2="376.0">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q0r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q0r1" gradientUnits="userSpaceOnUse"
         x1="324.2" y1="349.2" x2="277.8" y2="376.0">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q0r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q0r1" gradientUnits="userSpaceOnUse"
         x1="340.0" y1="321.9" x2="340.0" y2="268.2">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q0r2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q0r2" gradientUnits="userSpaceOnUse"
         x1="340.0" y1="411.9" x2="340.0" y2="358.3">
-      <stop offset="0%"    stop-color="#8c8c8c"/>
-      <stop offset="42.5%" stop-color="#8c8c8c"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q1r-2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q1r-2" gradientUnits="userSpaceOnUse"
         x1="433.8" y1="124.0" x2="480.2" y2="150.8">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#b2b2b2"/>
-      <stop offset="100%"  stop-color="#b2b2b2"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q1r-2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q1r-2" gradientUnits="userSpaceOnUse"
         x1="402.2" y1="124.0" x2="355.8" y2="150.8">
-      <stop offset="0%"    stop-color="#727272"/>
-      <stop offset="42.5%" stop-color="#727272"/>
-      <stop offset="57.5%" stop-color="#7f7f7f"/>
-      <stop offset="100%"  stop-color="#7f7f7f"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q1r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q1r-1" gradientUnits="userSpaceOnUse"
         x1="433.8" y1="214.1" x2="480.2" y2="240.9">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#a5a5a5"/>
-      <stop offset="100%"  stop-color="#a5a5a5"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q1r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q1r-1" gradientUnits="userSpaceOnUse"
         x1="402.2" y1="214.1" x2="355.8" y2="240.9">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q1r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q1r-1" gradientUnits="userSpaceOnUse"
         x1="418.0" y1="186.8" x2="418.0" y2="133.1">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e0-q1r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e0-q1r0" gradientUnits="userSpaceOnUse"
         x1="433.8" y1="304.1" x2="480.2" y2="331.0">
-      <stop offset="0%"    stop-color="#7f7f7f"/>
-      <stop offset="42.5%" stop-color="#7f7f7f"/>
-      <stop offset="57.5%" stop-color="#4c4c4c"/>
-      <stop offset="100%"  stop-color="#4c4c4c"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q1r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q1r0" gradientUnits="userSpaceOnUse"
         x1="402.2" y1="304.1" x2="355.8" y2="331.0">
-      <stop offset="0%"    stop-color="#7f7f7f"/>
-      <stop offset="42.5%" stop-color="#7f7f7f"/>
-      <stop offset="57.5%" stop-color="#727272"/>
-      <stop offset="100%"  stop-color="#727272"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q1r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q1r0" gradientUnits="userSpaceOnUse"
         x1="418.0" y1="276.8" x2="418.0" y2="223.2">
-      <stop offset="0%"    stop-color="#7f7f7f"/>
-      <stop offset="42.5%" stop-color="#7f7f7f"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q1r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q1r1" gradientUnits="userSpaceOnUse"
         x1="402.2" y1="394.2" x2="355.8" y2="421.0">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#8c8c8c"/>
-      <stop offset="100%"  stop-color="#8c8c8c"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q1r1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q1r1" gradientUnits="userSpaceOnUse"
         x1="418.0" y1="366.9" x2="418.0" y2="313.2">
-      <stop offset="0%"    stop-color="#666666"/>
-      <stop offset="42.5%" stop-color="#666666"/>
-      <stop offset="57.5%" stop-color="#7f7f7f"/>
-      <stop offset="100%"  stop-color="#7f7f7f"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q2r-2" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q2r-2" gradientUnits="userSpaceOnUse"
         x1="480.2" y1="169.0" x2="433.8" y2="195.9">
-      <stop offset="0%"    stop-color="#b2b2b2"/>
-      <stop offset="42.5%" stop-color="#b2b2b2"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q2r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q2r-1" gradientUnits="userSpaceOnUse"
         x1="480.2" y1="259.1" x2="433.8" y2="285.9">
-      <stop offset="0%"    stop-color="#a5a5a5"/>
-      <stop offset="42.5%" stop-color="#a5a5a5"/>
-      <stop offset="57.5%" stop-color="#7f7f7f"/>
-      <stop offset="100%"  stop-color="#7f7f7f"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q2r-1" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q2r-1" gradientUnits="userSpaceOnUse"
         x1="496.0" y1="231.8" x2="496.0" y2="178.1">
-      <stop offset="0%"    stop-color="#a5a5a5"/>
-      <stop offset="42.5%" stop-color="#a5a5a5"/>
-      <stop offset="57.5%" stop-color="#b2b2b2"/>
-      <stop offset="100%"  stop-color="#b2b2b2"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e2-q2r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e2-q2r0" gradientUnits="userSpaceOnUse"
         x1="480.2" y1="349.2" x2="433.8" y2="376.0">
-      <stop offset="0%"    stop-color="#4c4c4c"/>
-      <stop offset="42.5%" stop-color="#4c4c4c"/>
-      <stop offset="57.5%" stop-color="#666666"/>
-      <stop offset="100%"  stop-color="#666666"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gQ-e4-q2r0" gradientUnits="userSpaceOnUse"
+    <linearGradient id="mg-e4-q2r0" gradientUnits="userSpaceOnUse"
         x1="496.0" y1="321.9" x2="496.0" y2="268.2">
-      <stop offset="0%"    stop-color="#4c4c4c"/>
-      <stop offset="42.5%" stop-color="#4c4c4c"/>
-      <stop offset="57.5%" stop-color="#a5a5a5"/>
-      <stop offset="100%"  stop-color="#a5a5a5"/>
+      <stop offset="0%"    stop-color="black"/>
+      <stop offset="42.5%" stop-color="black"/>
+      <stop offset="57.5%" stop-color="white"/>
+      <stop offset="100%"  stop-color="white"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q-2r0" gradientUnits="userSpaceOnUse"
+
+    <mask id="m-e0-q-2r0"><rect width="680" height="500" fill="url(#mg-e0-q-2r0)"/></mask>
+    <mask id="m-e0-q-2r1"><rect width="680" height="500" fill="url(#mg-e0-q-2r1)"/></mask>
+    <mask id="m-e4-q-2r1"><rect width="680" height="500" fill="url(#mg-e4-q-2r1)"/></mask>
+    <mask id="m-e0-q-2r2"><rect width="680" height="500" fill="url(#mg-e0-q-2r2)"/></mask>
+    <mask id="m-e4-q-2r2"><rect width="680" height="500" fill="url(#mg-e4-q-2r2)"/></mask>
+    <mask id="m-e0-q-1r-1"><rect width="680" height="500" fill="url(#mg-e0-q-1r-1)"/></mask>
+    <mask id="m-e2-q-1r-1"><rect width="680" height="500" fill="url(#mg-e2-q-1r-1)"/></mask>
+    <mask id="m-e0-q-1r0"><rect width="680" height="500" fill="url(#mg-e0-q-1r0)"/></mask>
+    <mask id="m-e2-q-1r0"><rect width="680" height="500" fill="url(#mg-e2-q-1r0)"/></mask>
+    <mask id="m-e4-q-1r0"><rect width="680" height="500" fill="url(#mg-e4-q-1r0)"/></mask>
+    <mask id="m-e0-q-1r1"><rect width="680" height="500" fill="url(#mg-e0-q-1r1)"/></mask>
+    <mask id="m-e2-q-1r1"><rect width="680" height="500" fill="url(#mg-e2-q-1r1)"/></mask>
+    <mask id="m-e4-q-1r1"><rect width="680" height="500" fill="url(#mg-e4-q-1r1)"/></mask>
+    <mask id="m-e0-q-1r2"><rect width="680" height="500" fill="url(#mg-e0-q-1r2)"/></mask>
+    <mask id="m-e4-q-1r2"><rect width="680" height="500" fill="url(#mg-e4-q-1r2)"/></mask>
+    <mask id="m-e0-q0r-2"><rect width="680" height="500" fill="url(#mg-e0-q0r-2)"/></mask>
+    <mask id="m-e2-q0r-2"><rect width="680" height="500" fill="url(#mg-e2-q0r-2)"/></mask>
+    <mask id="m-e0-q0r-1"><rect width="680" height="500" fill="url(#mg-e0-q0r-1)"/></mask>
+    <mask id="m-e2-q0r-1"><rect width="680" height="500" fill="url(#mg-e2-q0r-1)"/></mask>
+    <mask id="m-e4-q0r-1"><rect width="680" height="500" fill="url(#mg-e4-q0r-1)"/></mask>
+    <mask id="m-e0-q0r0"><rect width="680" height="500" fill="url(#mg-e0-q0r0)"/></mask>
+    <mask id="m-e2-q0r0"><rect width="680" height="500" fill="url(#mg-e2-q0r0)"/></mask>
+    <mask id="m-e4-q0r0"><rect width="680" height="500" fill="url(#mg-e4-q0r0)"/></mask>
+    <mask id="m-e0-q0r1"><rect width="680" height="500" fill="url(#mg-e0-q0r1)"/></mask>
+    <mask id="m-e2-q0r1"><rect width="680" height="500" fill="url(#mg-e2-q0r1)"/></mask>
+    <mask id="m-e4-q0r1"><rect width="680" height="500" fill="url(#mg-e4-q0r1)"/></mask>
+    <mask id="m-e4-q0r2"><rect width="680" height="500" fill="url(#mg-e4-q0r2)"/></mask>
+    <mask id="m-e0-q1r-2"><rect width="680" height="500" fill="url(#mg-e0-q1r-2)"/></mask>
+    <mask id="m-e2-q1r-2"><rect width="680" height="500" fill="url(#mg-e2-q1r-2)"/></mask>
+    <mask id="m-e0-q1r-1"><rect width="680" height="500" fill="url(#mg-e0-q1r-1)"/></mask>
+    <mask id="m-e2-q1r-1"><rect width="680" height="500" fill="url(#mg-e2-q1r-1)"/></mask>
+    <mask id="m-e4-q1r-1"><rect width="680" height="500" fill="url(#mg-e4-q1r-1)"/></mask>
+    <mask id="m-e0-q1r0"><rect width="680" height="500" fill="url(#mg-e0-q1r0)"/></mask>
+    <mask id="m-e2-q1r0"><rect width="680" height="500" fill="url(#mg-e2-q1r0)"/></mask>
+    <mask id="m-e4-q1r0"><rect width="680" height="500" fill="url(#mg-e4-q1r0)"/></mask>
+    <mask id="m-e2-q1r1"><rect width="680" height="500" fill="url(#mg-e2-q1r1)"/></mask>
+    <mask id="m-e4-q1r1"><rect width="680" height="500" fill="url(#mg-e4-q1r1)"/></mask>
+    <mask id="m-e2-q2r-2"><rect width="680" height="500" fill="url(#mg-e2-q2r-2)"/></mask>
+    <mask id="m-e2-q2r-1"><rect width="680" height="500" fill="url(#mg-e2-q2r-1)"/></mask>
+    <mask id="m-e4-q2r-1"><rect width="680" height="500" fill="url(#mg-e4-q2r-1)"/></mask>
+    <mask id="m-e2-q2r0"><rect width="680" height="500" fill="url(#mg-e2-q2r0)"/></mask>
+    <mask id="m-e4-q2r0"><rect width="680" height="500" fill="url(#mg-e4-q2r0)"/></mask>
+
+    <!-- Tri blend masks: corner-solid → opposite-edge-transparent -->
+    <linearGradient id="tmg0-v0-q-2r0" gradientUnits="userSpaceOnUse"
         x1="205.0" y1="159.9" x2="251.5" y2="159.9">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v0-q-2r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q-2r0"><rect width="680" height="500" fill="url(#tmg0-v0-q-2r0)"/></mask>
+    <linearGradient id="tmg2-v0-q-2r0" gradientUnits="userSpaceOnUse"
         x1="251.5" y1="133.1" x2="228.2" y2="173.4">
-      <stop offset="0%"    stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#a5a5a5" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#a5a5a5" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q-2r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v0-q-2r0"><rect width="680" height="500" fill="url(#tmg2-v0-q-2r0)"/></mask>
+    <linearGradient id="tmg0-v1-q-2r0" gradientUnits="userSpaceOnUse"
         x1="194.5" y1="178.1" x2="217.8" y2="218.4">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v1-q-2r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q-2r0"><rect width="680" height="500" fill="url(#tmg0-v1-q-2r0)"/></mask>
+    <linearGradient id="tmg2-v1-q-2r0" gradientUnits="userSpaceOnUse"
         x1="194.5" y1="231.8" x2="217.8" y2="191.5">
-      <stop offset="0%"    stop-color="#b2b2b2" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#b2b2b2" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#b2b2b2" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#b2b2b2" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q-2r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v1-q-2r0"><rect width="680" height="500" fill="url(#tmg2-v1-q-2r0)"/></mask>
+    <linearGradient id="tmg0-v0-q-2r1" gradientUnits="userSpaceOnUse"
         x1="205.0" y1="250.0" x2="251.5" y2="250.0">
-      <stop offset="0%"    stop-color="#b2b2b2" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#b2b2b2" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#b2b2b2" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#b2b2b2" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v0-q-2r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q-2r1"><rect width="680" height="500" fill="url(#tmg0-v0-q-2r1)"/></mask>
+    <linearGradient id="tmg2-v0-q-2r1" gradientUnits="userSpaceOnUse"
         x1="251.5" y1="223.2" x2="228.2" y2="263.4">
-      <stop offset="0%"    stop-color="#4c4c4c" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#4c4c4c" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#4c4c4c" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#4c4c4c" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q-2r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v0-q-2r1"><rect width="680" height="500" fill="url(#tmg2-v0-q-2r1)"/></mask>
+    <linearGradient id="tmg0-v1-q-2r1" gradientUnits="userSpaceOnUse"
         x1="194.5" y1="268.2" x2="217.8" y2="308.5">
-      <stop offset="0%"    stop-color="#b2b2b2" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#b2b2b2" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#b2b2b2" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#b2b2b2" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v1-q-2r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q-2r1"><rect width="680" height="500" fill="url(#tmg0-v1-q-2r1)"/></mask>
+    <linearGradient id="tmg2-v1-q-2r1" gradientUnits="userSpaceOnUse"
         x1="194.5" y1="321.9" x2="217.8" y2="281.6">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q-2r2" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v1-q-2r1"><rect width="680" height="500" fill="url(#tmg2-v1-q-2r1)"/></mask>
+    <linearGradient id="tmg0-v0-q-2r2" gradientUnits="userSpaceOnUse"
         x1="205.0" y1="340.1" x2="251.5" y2="340.1">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v0-q-2r2" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q-2r2"><rect width="680" height="500" fill="url(#tmg0-v0-q-2r2)"/></mask>
+    <linearGradient id="tmg1-v0-q-2r2" gradientUnits="userSpaceOnUse"
         x1="251.5" y1="366.9" x2="228.2" y2="326.6">
-      <stop offset="0%"    stop-color="#666666" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#666666" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#666666" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#666666" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q-1r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v0-q-2r2"><rect width="680" height="500" fill="url(#tmg1-v0-q-2r2)"/></mask>
+    <linearGradient id="tmg0-v0-q-1r-1" gradientUnits="userSpaceOnUse"
         x1="283.0" y1="114.9" x2="329.5" y2="114.9">
-      <stop offset="0%"    stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#a5a5a5" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#a5a5a5" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v0-q-1r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q-1r-1"><rect width="680" height="500" fill="url(#tmg0-v0-q-1r-1)"/></mask>
+    <linearGradient id="tmg1-v0-q-1r-1" gradientUnits="userSpaceOnUse"
         x1="329.5" y1="141.7" x2="306.2" y2="101.5">
-      <stop offset="0%"    stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#7f7f7f" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#7f7f7f" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q-1r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v0-q-1r-1"><rect width="680" height="500" fill="url(#tmg1-v0-q-1r-1)"/></mask>
+    <linearGradient id="tmg0-v1-q-1r-1" gradientUnits="userSpaceOnUse"
         x1="272.5" y1="133.1" x2="295.8" y2="173.4">
-      <stop offset="0%"    stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#a5a5a5" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#a5a5a5" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v1-q-1r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q-1r-1"><rect width="680" height="500" fill="url(#tmg0-v1-q-1r-1)"/></mask>
+    <linearGradient id="tmg1-v1-q-1r-1" gradientUnits="userSpaceOnUse"
         x1="319.0" y1="159.9" x2="272.5" y2="159.9">
-      <stop offset="0%"    stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#7f7f7f" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#7f7f7f" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v0-q-1r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v1-q-1r-1"><rect width="680" height="500" fill="url(#tmg1-v1-q-1r-1)"/></mask>
+    <linearGradient id="tmg1-v0-q-1r0" gradientUnits="userSpaceOnUse"
         x1="329.5" y1="231.8" x2="306.2" y2="191.5">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v0-q-1r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v0-q-1r0"><rect width="680" height="500" fill="url(#tmg1-v0-q-1r0)"/></mask>
+    <linearGradient id="tmg2-v0-q-1r0" gradientUnits="userSpaceOnUse"
         x1="329.5" y1="178.1" x2="306.2" y2="218.4">
-      <stop offset="0%"    stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#7f7f7f" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#7f7f7f" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q-1r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v0-q-1r0"><rect width="680" height="500" fill="url(#tmg2-v0-q-1r0)"/></mask>
+    <linearGradient id="tmg0-v1-q-1r0" gradientUnits="userSpaceOnUse"
         x1="272.5" y1="223.2" x2="295.8" y2="263.4">
-      <stop offset="0%"    stop-color="#4c4c4c" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#4c4c4c" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#4c4c4c" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#4c4c4c" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v1-q-1r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q-1r0"><rect width="680" height="500" fill="url(#tmg0-v1-q-1r0)"/></mask>
+    <linearGradient id="tmg1-v1-q-1r0" gradientUnits="userSpaceOnUse"
         x1="319.0" y1="250.0" x2="272.5" y2="250.0">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q-1r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v1-q-1r0"><rect width="680" height="500" fill="url(#tmg1-v1-q-1r0)"/></mask>
+    <linearGradient id="tmg0-v0-q-1r1" gradientUnits="userSpaceOnUse"
         x1="283.0" y1="295.0" x2="329.5" y2="295.0">
-      <stop offset="0%"    stop-color="#666666" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#666666" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#666666" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#666666" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v0-q-1r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q-1r1"><rect width="680" height="500" fill="url(#tmg0-v0-q-1r1)"/></mask>
+    <linearGradient id="tmg2-v0-q-1r1" gradientUnits="userSpaceOnUse"
         x1="329.5" y1="268.2" x2="306.2" y2="308.5">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v1-q-1r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v0-q-1r1"><rect width="680" height="500" fill="url(#tmg2-v0-q-1r1)"/></mask>
+    <linearGradient id="tmg1-v1-q-1r1" gradientUnits="userSpaceOnUse"
         x1="319.0" y1="340.1" x2="272.5" y2="340.1">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v1-q-1r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v1-q-1r1"><rect width="680" height="500" fill="url(#tmg1-v1-q-1r1)"/></mask>
+    <linearGradient id="tmg2-v1-q-1r1" gradientUnits="userSpaceOnUse"
         x1="272.5" y1="366.9" x2="295.8" y2="326.6">
-      <stop offset="0%"    stop-color="#666666" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#666666" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#666666" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#666666" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q-1r2" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v1-q-1r1"><rect width="680" height="500" fill="url(#tmg2-v1-q-1r1)"/></mask>
+    <linearGradient id="tmg0-v0-q-1r2" gradientUnits="userSpaceOnUse"
         x1="283.0" y1="385.1" x2="329.5" y2="385.1">
-      <stop offset="0%"    stop-color="#666666" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#666666" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#666666" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#666666" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v0-q-1r2" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q-1r2"><rect width="680" height="500" fill="url(#tmg0-v0-q-1r2)"/></mask>
+    <linearGradient id="tmg1-v0-q-1r2" gradientUnits="userSpaceOnUse"
         x1="329.5" y1="411.9" x2="306.2" y2="371.7">
-      <stop offset="0%"    stop-color="#8c8c8c" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#8c8c8c" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#8c8c8c" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#8c8c8c" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q0r-2" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v0-q-1r2"><rect width="680" height="500" fill="url(#tmg1-v0-q-1r2)"/></mask>
+    <linearGradient id="tmg0-v1-q0r-2" gradientUnits="userSpaceOnUse"
         x1="350.5" y1="88.1" x2="373.8" y2="128.3">
-      <stop offset="0%"    stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#a5a5a5" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#a5a5a5" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v1-q0r-2" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q0r-2"><rect width="680" height="500" fill="url(#tmg0-v1-q0r-2)"/></mask>
+    <linearGradient id="tmg1-v1-q0r-2" gradientUnits="userSpaceOnUse"
         x1="397.0" y1="114.9" x2="350.5" y2="114.9">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q0r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v1-q0r-2"><rect width="680" height="500" fill="url(#tmg1-v1-q0r-2)"/></mask>
+    <linearGradient id="tmg0-v0-q0r-1" gradientUnits="userSpaceOnUse"
         x1="361.0" y1="159.9" x2="407.5" y2="159.9">
-      <stop offset="0%"    stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#7f7f7f" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#7f7f7f" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v0-q0r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q0r-1"><rect width="680" height="500" fill="url(#tmg0-v0-q0r-1)"/></mask>
+    <linearGradient id="tmg2-v0-q0r-1" gradientUnits="userSpaceOnUse"
         x1="407.5" y1="133.1" x2="384.2" y2="173.4">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q0r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v0-q0r-1"><rect width="680" height="500" fill="url(#tmg2-v0-q0r-1)"/></mask>
+    <linearGradient id="tmg0-v1-q0r-1" gradientUnits="userSpaceOnUse"
         x1="350.5" y1="178.1" x2="373.8" y2="218.4">
-      <stop offset="0%"    stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#7f7f7f" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#7f7f7f" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v1-q0r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q0r-1"><rect width="680" height="500" fill="url(#tmg0-v1-q0r-1)"/></mask>
+    <linearGradient id="tmg2-v1-q0r-1" gradientUnits="userSpaceOnUse"
         x1="350.5" y1="231.8" x2="373.8" y2="191.5">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q0r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v1-q0r-1"><rect width="680" height="500" fill="url(#tmg2-v1-q0r-1)"/></mask>
+    <linearGradient id="tmg0-v0-q0r0" gradientUnits="userSpaceOnUse"
         x1="361.0" y1="250.0" x2="407.5" y2="250.0">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v0-q0r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q0r0"><rect width="680" height="500" fill="url(#tmg0-v0-q0r0)"/></mask>
+    <linearGradient id="tmg2-v0-q0r0" gradientUnits="userSpaceOnUse"
         x1="407.5" y1="223.2" x2="384.2" y2="263.4">
-      <stop offset="0%"    stop-color="#666666" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#666666" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#666666" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#666666" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v1-q0r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v0-q0r0"><rect width="680" height="500" fill="url(#tmg2-v0-q0r0)"/></mask>
+    <linearGradient id="tmg1-v1-q0r0" gradientUnits="userSpaceOnUse"
         x1="397.0" y1="295.0" x2="350.5" y2="295.0">
-      <stop offset="0%"    stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#7f7f7f" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#7f7f7f" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v1-q0r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v1-q0r0"><rect width="680" height="500" fill="url(#tmg1-v1-q0r0)"/></mask>
+    <linearGradient id="tmg2-v1-q0r0" gradientUnits="userSpaceOnUse"
         x1="350.5" y1="321.9" x2="373.8" y2="281.6">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q0r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v1-q0r0"><rect width="680" height="500" fill="url(#tmg2-v1-q0r0)"/></mask>
+    <linearGradient id="tmg0-v0-q0r1" gradientUnits="userSpaceOnUse"
         x1="361.0" y1="340.1" x2="407.5" y2="340.1">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v0-q0r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q0r1"><rect width="680" height="500" fill="url(#tmg0-v0-q0r1)"/></mask>
+    <linearGradient id="tmg1-v0-q0r1" gradientUnits="userSpaceOnUse"
         x1="407.5" y1="366.9" x2="384.2" y2="326.6">
-      <stop offset="0%"    stop-color="#666666" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#666666" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#666666" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#666666" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q0r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v0-q0r1"><rect width="680" height="500" fill="url(#tmg1-v0-q0r1)"/></mask>
+    <linearGradient id="tmg0-v1-q0r1" gradientUnits="userSpaceOnUse"
         x1="350.5" y1="358.3" x2="373.8" y2="398.5">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v1-q0r1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q0r1"><rect width="680" height="500" fill="url(#tmg0-v1-q0r1)"/></mask>
+    <linearGradient id="tmg1-v1-q0r1" gradientUnits="userSpaceOnUse"
         x1="397.0" y1="385.1" x2="350.5" y2="385.1">
-      <stop offset="0%"    stop-color="#666666" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#666666" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#666666" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#666666" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q1r-2" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v1-q0r1"><rect width="680" height="500" fill="url(#tmg1-v1-q0r1)"/></mask>
+    <linearGradient id="tmg0-v1-q1r-2" gradientUnits="userSpaceOnUse"
         x1="428.5" y1="133.1" x2="451.8" y2="173.4">
-      <stop offset="0%"    stop-color="#727272" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#727272" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#727272" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#727272" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v1-q1r-2" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q1r-2"><rect width="680" height="500" fill="url(#tmg0-v1-q1r-2)"/></mask>
+    <linearGradient id="tmg1-v1-q1r-2" gradientUnits="userSpaceOnUse"
         x1="475.0" y1="159.9" x2="428.5" y2="159.9">
-      <stop offset="0%"    stop-color="#b2b2b2" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#b2b2b2" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#b2b2b2" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#b2b2b2" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v0-q1r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v1-q1r-2"><rect width="680" height="500" fill="url(#tmg1-v1-q1r-2)"/></mask>
+    <linearGradient id="tmg0-v0-q1r-1" gradientUnits="userSpaceOnUse"
         x1="439.0" y1="205.0" x2="485.5" y2="205.0">
-      <stop offset="0%"    stop-color="#666666" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#666666" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#666666" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#666666" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v0-q1r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v0-q1r-1"><rect width="680" height="500" fill="url(#tmg0-v0-q1r-1)"/></mask>
+    <linearGradient id="tmg1-v0-q1r-1" gradientUnits="userSpaceOnUse"
         x1="485.5" y1="231.8" x2="462.2" y2="191.5">
-      <stop offset="0%"    stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#a5a5a5" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#a5a5a5" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q1r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v0-q1r-1"><rect width="680" height="500" fill="url(#tmg1-v0-q1r-1)"/></mask>
+    <linearGradient id="tmg0-v1-q1r-1" gradientUnits="userSpaceOnUse"
         x1="428.5" y1="223.2" x2="451.8" y2="263.4">
-      <stop offset="0%"    stop-color="#666666" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#666666" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#666666" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#666666" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v1-q1r-1" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q1r-1"><rect width="680" height="500" fill="url(#tmg0-v1-q1r-1)"/></mask>
+    <linearGradient id="tmg2-v1-q1r-1" gradientUnits="userSpaceOnUse"
         x1="428.5" y1="276.8" x2="451.8" y2="236.6">
-      <stop offset="0%"    stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#7f7f7f" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#7f7f7f" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v0-q1r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v1-q1r-1"><rect width="680" height="500" fill="url(#tmg2-v1-q1r-1)"/></mask>
+    <linearGradient id="tmg1-v0-q1r0" gradientUnits="userSpaceOnUse"
         x1="485.5" y1="321.9" x2="462.2" y2="281.6">
-      <stop offset="0%"    stop-color="#4c4c4c" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#4c4c4c" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#4c4c4c" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#4c4c4c" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT2-v0-q1r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm1-v0-q1r0"><rect width="680" height="500" fill="url(#tmg1-v0-q1r0)"/></mask>
+    <linearGradient id="tmg2-v0-q1r0" gradientUnits="userSpaceOnUse"
         x1="485.5" y1="268.2" x2="462.2" y2="308.5">
-      <stop offset="0%"    stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#a5a5a5" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#a5a5a5" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#a5a5a5" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT0-v1-q1r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm2-v0-q1r0"><rect width="680" height="500" fill="url(#tmg2-v0-q1r0)"/></mask>
+    <linearGradient id="tmg0-v1-q1r0" gradientUnits="userSpaceOnUse"
         x1="428.5" y1="313.2" x2="451.8" y2="353.5">
-      <stop offset="0%"    stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#7f7f7f" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#7f7f7f" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#7f7f7f" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
-    <linearGradient id="gT1-v1-q1r0" gradientUnits="userSpaceOnUse"
+    <mask id="tm0-v1-q1r0"><rect width="680" height="500" fill="url(#tmg0-v1-q1r0)"/></mask>
+    <linearGradient id="tmg1-v1-q1r0" gradientUnits="userSpaceOnUse"
         x1="475.0" y1="340.1" x2="428.5" y2="340.1">
-      <stop offset="0%"    stop-color="#4c4c4c" stop-opacity="1"/>
-      <stop offset="42.5%" stop-color="#4c4c4c" stop-opacity="1"/>
-      <stop offset="57.5%" stop-color="#4c4c4c" stop-opacity="0"/>
-      <stop offset="100%"  stop-color="#4c4c4c" stop-opacity="0"/>
+      <stop offset="0%"    stop-color="white"/>
+      <stop offset="42.5%" stop-color="white"/>
+      <stop offset="57.5%" stop-color="black"/>
+      <stop offset="100%"  stop-color="black"/>
     </linearGradient>
+    <mask id="tm1-v1-q1r0"><rect width="680" height="500" fill="url(#tmg1-v1-q1r0)"/></mask>
   </defs>
 
   <rect width="680" height="500" rx="8" fill="#050810"/>
 
-  <!-- HGrid: shapes::hexagon(Hex::ZERO, 2) → 3-4-5-4-3 = 19 HCells -->
-  <!-- HGridLayout: point_spacing=52, visual hex_radius=21 -->
-  <!-- HexFace fill: feTurbulence stone textures (grayscale atlas approximation) -->
-  <!-- Quad/Tri fill: representative gray gradient blending (42.5/15/42.5) -->
+  <!-- HGrid: shapes::hexagon(Hex::ZERO, 2) → 19 HCells -->
+  <!-- Atlas tiles: 16x16 originals scaled 3x → 48px patterns -->
+  <!-- Quad/Tri blending: SVG <mask> with luminance gradient crossfade -->
 
-  <!-- ====== 42 Quad entities (even edges [0,2,4]) ====== -->
-  <!-- QuadOwner=HCell(-2,0) edge0 → HCell(-1,0) -->
-  <polygon id="quad-e0-q-2r0" points="205.0,159.9 251.5,186.8 241.0,205.0 194.5,178.1"
-           fill="url(#gQ-e0-q-2r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-2,1) edge0 → HCell(-1,1) -->
-  <polygon id="quad-e0-q-2r1" points="205.0,250.0 251.5,276.8 241.0,295.0 194.5,268.2"
-           fill="url(#gQ-e0-q-2r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-2,1) edge4 → HCell(-2,0) -->
-  <polygon id="quad-e4-q-2r1" points="173.5,231.8 173.5,178.1 194.5,178.1 194.5,231.8"
-           fill="url(#gQ-e4-q-2r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-2,2) edge0 → HCell(-1,2) -->
-  <polygon id="quad-e0-q-2r2" points="205.0,340.1 251.5,366.9 241.0,385.1 194.5,358.3"
-           fill="url(#gQ-e0-q-2r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-2,2) edge4 → HCell(-2,1) -->
-  <polygon id="quad-e4-q-2r2" points="173.5,321.9 173.5,268.2 194.5,268.2 194.5,321.9"
-           fill="url(#gQ-e4-q-2r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,-1) edge0 → HCell(0,-1) -->
-  <polygon id="quad-e0-q-1r-1" points="283.0,114.9 329.5,141.7 319.0,159.9 272.5,133.1"
-           fill="url(#gQ-e0-q-1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,-1) edge2 → HCell(-2,0) -->
-  <polygon id="quad-e2-q-1r-1" points="251.5,133.1 205.0,159.9 194.5,141.7 241.0,114.9"
-           fill="url(#gQ-e2-q-1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,0) edge0 → HCell(0,0) -->
-  <polygon id="quad-e0-q-1r0" points="283.0,205.0 329.5,231.8 319.0,250.0 272.5,223.2"
-           fill="url(#gQ-e0-q-1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,0) edge2 → HCell(-2,1) -->
-  <polygon id="quad-e2-q-1r0" points="251.5,223.2 205.0,250.0 194.5,231.8 241.0,205.0"
-           fill="url(#gQ-e2-q-1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,0) edge4 → HCell(-1,-1) -->
-  <polygon id="quad-e4-q-1r0" points="251.5,186.8 251.5,133.1 272.5,133.1 272.5,186.8"
-           fill="url(#gQ-e4-q-1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,1) edge0 → HCell(0,1) -->
-  <polygon id="quad-e0-q-1r1" points="283.0,295.0 329.5,321.9 319.0,340.1 272.5,313.2"
-           fill="url(#gQ-e0-q-1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,1) edge2 → HCell(-2,2) -->
-  <polygon id="quad-e2-q-1r1" points="251.5,313.2 205.0,340.1 194.5,321.9 241.0,295.0"
-           fill="url(#gQ-e2-q-1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,1) edge4 → HCell(-1,0) -->
-  <polygon id="quad-e4-q-1r1" points="251.5,276.8 251.5,223.2 272.5,223.2 272.5,276.8"
-           fill="url(#gQ-e4-q-1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,2) edge0 → HCell(0,2) -->
-  <polygon id="quad-e0-q-1r2" points="283.0,385.1 329.5,411.9 319.0,430.1 272.5,403.3"
-           fill="url(#gQ-e0-q-1r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(-1,2) edge4 → HCell(-1,1) -->
-  <polygon id="quad-e4-q-1r2" points="251.5,366.9 251.5,313.2 272.5,313.2 272.5,366.9"
-           fill="url(#gQ-e4-q-1r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,-2) edge0 → HCell(1,-2) -->
-  <polygon id="quad-e0-q0r-2" points="361.0,69.9 407.5,96.7 397.0,114.9 350.5,88.1"
-           fill="url(#gQ-e0-q0r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,-2) edge2 → HCell(-1,-1) -->
-  <polygon id="quad-e2-q0r-2" points="329.5,88.1 283.0,114.9 272.5,96.7 319.0,69.9"
-           fill="url(#gQ-e2-q0r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,-1) edge0 → HCell(1,-1) -->
-  <polygon id="quad-e0-q0r-1" points="361.0,159.9 407.5,186.8 397.0,205.0 350.5,178.1"
-           fill="url(#gQ-e0-q0r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,-1) edge2 → HCell(-1,0) -->
-  <polygon id="quad-e2-q0r-1" points="329.5,178.1 283.0,205.0 272.5,186.8 319.0,159.9"
-           fill="url(#gQ-e2-q0r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,-1) edge4 → HCell(0,-2) -->
-  <polygon id="quad-e4-q0r-1" points="329.5,141.7 329.5,88.1 350.5,88.1 350.5,141.7"
-           fill="url(#gQ-e4-q0r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,0) edge0 → HCell(1,0) -->
-  <polygon id="quad-e0-q0r0" points="361.0,250.0 407.5,276.8 397.0,295.0 350.5,268.2"
-           fill="url(#gQ-e0-q0r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,0) edge2 → HCell(-1,1) -->
-  <polygon id="quad-e2-q0r0" points="329.5,268.2 283.0,295.0 272.5,276.8 319.0,250.0"
-           fill="url(#gQ-e2-q0r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,0) edge4 → HCell(0,-1) -->
-  <polygon id="quad-e4-q0r0" points="329.5,231.8 329.5,178.1 350.5,178.1 350.5,231.8"
-           fill="url(#gQ-e4-q0r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,1) edge0 → HCell(1,1) -->
-  <polygon id="quad-e0-q0r1" points="361.0,340.1 407.5,366.9 397.0,385.1 350.5,358.3"
-           fill="url(#gQ-e0-q0r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,1) edge2 → HCell(-1,2) -->
-  <polygon id="quad-e2-q0r1" points="329.5,358.3 283.0,385.1 272.5,366.9 319.0,340.1"
-           fill="url(#gQ-e2-q0r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,1) edge4 → HCell(0,0) -->
-  <polygon id="quad-e4-q0r1" points="329.5,321.9 329.5,268.2 350.5,268.2 350.5,321.9"
-           fill="url(#gQ-e4-q0r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(0,2) edge4 → HCell(0,1) -->
-  <polygon id="quad-e4-q0r2" points="329.5,411.9 329.5,358.3 350.5,358.3 350.5,411.9"
-           fill="url(#gQ-e4-q0r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,-2) edge0 → HCell(2,-2) -->
-  <polygon id="quad-e0-q1r-2" points="439.0,114.9 485.5,141.7 475.0,159.9 428.5,133.1"
-           fill="url(#gQ-e0-q1r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,-2) edge2 → HCell(0,-1) -->
-  <polygon id="quad-e2-q1r-2" points="407.5,133.1 361.0,159.9 350.5,141.7 397.0,114.9"
-           fill="url(#gQ-e2-q1r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,-1) edge0 → HCell(2,-1) -->
-  <polygon id="quad-e0-q1r-1" points="439.0,205.0 485.5,231.8 475.0,250.0 428.5,223.2"
-           fill="url(#gQ-e0-q1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,-1) edge2 → HCell(0,0) -->
-  <polygon id="quad-e2-q1r-1" points="407.5,223.2 361.0,250.0 350.5,231.8 397.0,205.0"
-           fill="url(#gQ-e2-q1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,-1) edge4 → HCell(1,-2) -->
-  <polygon id="quad-e4-q1r-1" points="407.5,186.8 407.5,133.1 428.5,133.1 428.5,186.8"
-           fill="url(#gQ-e4-q1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,0) edge0 → HCell(2,0) -->
-  <polygon id="quad-e0-q1r0" points="439.0,295.0 485.5,321.9 475.0,340.1 428.5,313.2"
-           fill="url(#gQ-e0-q1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,0) edge2 → HCell(0,1) -->
-  <polygon id="quad-e2-q1r0" points="407.5,313.2 361.0,340.1 350.5,321.9 397.0,295.0"
-           fill="url(#gQ-e2-q1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,0) edge4 → HCell(1,-1) -->
-  <polygon id="quad-e4-q1r0" points="407.5,276.8 407.5,223.2 428.5,223.2 428.5,276.8"
-           fill="url(#gQ-e4-q1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,1) edge2 → HCell(0,2) -->
-  <polygon id="quad-e2-q1r1" points="407.5,403.3 361.0,430.1 350.5,411.9 397.0,385.1"
-           fill="url(#gQ-e2-q1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(1,1) edge4 → HCell(1,0) -->
-  <polygon id="quad-e4-q1r1" points="407.5,366.9 407.5,313.2 428.5,313.2 428.5,366.9"
-           fill="url(#gQ-e4-q1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(2,-2) edge2 → HCell(1,-1) -->
-  <polygon id="quad-e2-q2r-2" points="485.5,178.1 439.0,205.0 428.5,186.8 475.0,159.9"
-           fill="url(#gQ-e2-q2r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(2,-1) edge2 → HCell(1,0) -->
-  <polygon id="quad-e2-q2r-1" points="485.5,268.2 439.0,295.0 428.5,276.8 475.0,250.0"
-           fill="url(#gQ-e2-q2r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(2,-1) edge4 → HCell(2,-2) -->
-  <polygon id="quad-e4-q2r-1" points="485.5,231.8 485.5,178.1 506.5,178.1 506.5,231.8"
-           fill="url(#gQ-e4-q2r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(2,0) edge2 → HCell(1,1) -->
-  <polygon id="quad-e2-q2r0" points="485.5,358.3 439.0,385.1 428.5,366.9 475.0,340.1"
-           fill="url(#gQ-e2-q2r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- QuadOwner=HCell(2,0) edge4 → HCell(2,-1) -->
-  <polygon id="quad-e4-q2r0" points="485.5,321.9 485.5,268.2 506.5,268.2 506.5,321.9"
-           fill="url(#gQ-e4-q2r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- ====== 42 Quad entities: dual-texture with mask crossfade ====== -->
+  <!-- QuadOwner=HCell(-2,0) cobblestone → HCell(-1,0) mossy-cobble -->
+  <polygon id="quad-e0-q-2r0" points="205.0,159.9 251.5,186.8 241.0,205.0 194.5,178.1" fill="url(#p-cobblestone)"/>
+  <polygon points="205.0,159.9 251.5,186.8 241.0,205.0 194.5,178.1" fill="url(#p-mossy-cobble)" mask="url(#m-e0-q-2r0)"/>
+  <polygon points="205.0,159.9 251.5,186.8 241.0,205.0 194.5,178.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-2,1) coal-ore → HCell(-1,1) obsidian -->
+  <polygon id="quad-e0-q-2r1" points="205.0,250.0 251.5,276.8 241.0,295.0 194.5,268.2" fill="url(#p-coal-ore)"/>
+  <polygon points="205.0,250.0 251.5,276.8 241.0,295.0 194.5,268.2" fill="url(#p-obsidian)" mask="url(#m-e0-q-2r1)"/>
+  <polygon points="205.0,250.0 251.5,276.8 241.0,295.0 194.5,268.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-2,1) coal-ore → HCell(-2,0) cobblestone -->
+  <polygon id="quad-e4-q-2r1" points="173.5,231.8 173.5,178.1 194.5,178.1 194.5,231.8" fill="url(#p-coal-ore)"/>
+  <polygon points="173.5,231.8 173.5,178.1 194.5,178.1 194.5,231.8" fill="url(#p-cobblestone)" mask="url(#m-e4-q-2r1)"/>
+  <polygon points="173.5,231.8 173.5,178.1 194.5,178.1 194.5,231.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-2,2) cobblestone → HCell(-1,2) obsidian -->
+  <polygon id="quad-e0-q-2r2" points="205.0,340.1 251.5,366.9 241.0,385.1 194.5,358.3" fill="url(#p-cobblestone)"/>
+  <polygon points="205.0,340.1 251.5,366.9 241.0,385.1 194.5,358.3" fill="url(#p-obsidian)" mask="url(#m-e0-q-2r2)"/>
+  <polygon points="205.0,340.1 251.5,366.9 241.0,385.1 194.5,358.3" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-2,2) cobblestone → HCell(-2,1) coal-ore -->
+  <polygon id="quad-e4-q-2r2" points="173.5,321.9 173.5,268.2 194.5,268.2 194.5,321.9" fill="url(#p-cobblestone)"/>
+  <polygon points="173.5,321.9 173.5,268.2 194.5,268.2 194.5,321.9" fill="url(#p-coal-ore)" mask="url(#m-e4-q-2r2)"/>
+  <polygon points="173.5,321.9 173.5,268.2 194.5,268.2 194.5,321.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,-1) gravel → HCell(0,-1) stone -->
+  <polygon id="quad-e0-q-1r-1" points="283.0,114.9 329.5,141.7 319.0,159.9 272.5,133.1" fill="url(#p-gravel)"/>
+  <polygon points="283.0,114.9 329.5,141.7 319.0,159.9 272.5,133.1" fill="url(#p-stone)" mask="url(#m-e0-q-1r-1)"/>
+  <polygon points="283.0,114.9 329.5,141.7 319.0,159.9 272.5,133.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,-1) gravel → HCell(-2,0) cobblestone -->
+  <polygon id="quad-e2-q-1r-1" points="251.5,133.1 205.0,159.9 194.5,141.7 241.0,114.9" fill="url(#p-gravel)"/>
+  <polygon points="251.5,133.1 205.0,159.9 194.5,141.7 241.0,114.9" fill="url(#p-cobblestone)" mask="url(#m-e2-q-1r-1)"/>
+  <polygon points="251.5,133.1 205.0,159.9 194.5,141.7 241.0,114.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,0) mossy-cobble → HCell(0,0) cobblestone -->
+  <polygon id="quad-e0-q-1r0" points="283.0,205.0 329.5,231.8 319.0,250.0 272.5,223.2" fill="url(#p-mossy-cobble)"/>
+  <polygon points="283.0,205.0 329.5,231.8 319.0,250.0 272.5,223.2" fill="url(#p-cobblestone)" mask="url(#m-e0-q-1r0)"/>
+  <polygon points="283.0,205.0 329.5,231.8 319.0,250.0 272.5,223.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,0) mossy-cobble → HCell(-2,1) coal-ore -->
+  <polygon id="quad-e2-q-1r0" points="251.5,223.2 205.0,250.0 194.5,231.8 241.0,205.0" fill="url(#p-mossy-cobble)"/>
+  <polygon points="251.5,223.2 205.0,250.0 194.5,231.8 241.0,205.0" fill="url(#p-coal-ore)" mask="url(#m-e2-q-1r0)"/>
+  <polygon points="251.5,223.2 205.0,250.0 194.5,231.8 241.0,205.0" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,0) mossy-cobble → HCell(-1,-1) gravel -->
+  <polygon id="quad-e4-q-1r0" points="251.5,186.8 251.5,133.1 272.5,133.1 272.5,186.8" fill="url(#p-mossy-cobble)"/>
+  <polygon points="251.5,186.8 251.5,133.1 272.5,133.1 272.5,186.8" fill="url(#p-gravel)" mask="url(#m-e4-q-1r0)"/>
+  <polygon points="251.5,186.8 251.5,133.1 272.5,133.1 272.5,186.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,1) obsidian → HCell(0,1) cobblestone -->
+  <polygon id="quad-e0-q-1r1" points="283.0,295.0 329.5,321.9 319.0,340.1 272.5,313.2" fill="url(#p-obsidian)"/>
+  <polygon points="283.0,295.0 329.5,321.9 319.0,340.1 272.5,313.2" fill="url(#p-cobblestone)" mask="url(#m-e0-q-1r1)"/>
+  <polygon points="283.0,295.0 329.5,321.9 319.0,340.1 272.5,313.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,1) obsidian → HCell(-2,2) cobblestone -->
+  <polygon id="quad-e2-q-1r1" points="251.5,313.2 205.0,340.1 194.5,321.9 241.0,295.0" fill="url(#p-obsidian)"/>
+  <polygon points="251.5,313.2 205.0,340.1 194.5,321.9 241.0,295.0" fill="url(#p-cobblestone)" mask="url(#m-e2-q-1r1)"/>
+  <polygon points="251.5,313.2 205.0,340.1 194.5,321.9 241.0,295.0" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,1) obsidian → HCell(-1,0) mossy-cobble -->
+  <polygon id="quad-e4-q-1r1" points="251.5,276.8 251.5,223.2 272.5,223.2 272.5,276.8" fill="url(#p-obsidian)"/>
+  <polygon points="251.5,276.8 251.5,223.2 272.5,223.2 272.5,276.8" fill="url(#p-mossy-cobble)" mask="url(#m-e4-q-1r1)"/>
+  <polygon points="251.5,276.8 251.5,223.2 272.5,223.2 272.5,276.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,2) obsidian → HCell(0,2) iron-block -->
+  <polygon id="quad-e0-q-1r2" points="283.0,385.1 329.5,411.9 319.0,430.1 272.5,403.3" fill="url(#p-obsidian)"/>
+  <polygon points="283.0,385.1 329.5,411.9 319.0,430.1 272.5,403.3" fill="url(#p-iron-block)" mask="url(#m-e0-q-1r2)"/>
+  <polygon points="283.0,385.1 329.5,411.9 319.0,430.1 272.5,403.3" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(-1,2) obsidian → HCell(-1,1) obsidian -->
+  <polygon id="quad-e4-q-1r2" points="251.5,366.9 251.5,313.2 272.5,313.2 272.5,366.9" fill="url(#p-obsidian)"/>
+  <polygon points="251.5,366.9 251.5,313.2 272.5,313.2 272.5,366.9" fill="url(#p-obsidian)" mask="url(#m-e4-q-1r2)"/>
+  <polygon points="251.5,366.9 251.5,313.2 272.5,313.2 272.5,366.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,-2) gravel → HCell(1,-2) cobblestone -->
+  <polygon id="quad-e0-q0r-2" points="361.0,69.9 407.5,96.7 397.0,114.9 350.5,88.1" fill="url(#p-gravel)"/>
+  <polygon points="361.0,69.9 407.5,96.7 397.0,114.9 350.5,88.1" fill="url(#p-cobblestone)" mask="url(#m-e0-q0r-2)"/>
+  <polygon points="361.0,69.9 407.5,96.7 397.0,114.9 350.5,88.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,-2) gravel → HCell(-1,-1) gravel -->
+  <polygon id="quad-e2-q0r-2" points="329.5,88.1 283.0,114.9 272.5,96.7 319.0,69.9" fill="url(#p-gravel)"/>
+  <polygon points="329.5,88.1 283.0,114.9 272.5,96.7 319.0,69.9" fill="url(#p-gravel)" mask="url(#m-e2-q0r-2)"/>
+  <polygon points="329.5,88.1 283.0,114.9 272.5,96.7 319.0,69.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,-1) stone → HCell(1,-1) obsidian -->
+  <polygon id="quad-e0-q0r-1" points="361.0,159.9 407.5,186.8 397.0,205.0 350.5,178.1" fill="url(#p-stone)"/>
+  <polygon points="361.0,159.9 407.5,186.8 397.0,205.0 350.5,178.1" fill="url(#p-obsidian)" mask="url(#m-e0-q0r-1)"/>
+  <polygon points="361.0,159.9 407.5,186.8 397.0,205.0 350.5,178.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,-1) stone → HCell(-1,0) mossy-cobble -->
+  <polygon id="quad-e2-q0r-1" points="329.5,178.1 283.0,205.0 272.5,186.8 319.0,159.9" fill="url(#p-stone)"/>
+  <polygon points="329.5,178.1 283.0,205.0 272.5,186.8 319.0,159.9" fill="url(#p-mossy-cobble)" mask="url(#m-e2-q0r-1)"/>
+  <polygon points="329.5,178.1 283.0,205.0 272.5,186.8 319.0,159.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,-1) stone → HCell(0,-2) gravel -->
+  <polygon id="quad-e4-q0r-1" points="329.5,141.7 329.5,88.1 350.5,88.1 350.5,141.7" fill="url(#p-stone)"/>
+  <polygon points="329.5,141.7 329.5,88.1 350.5,88.1 350.5,141.7" fill="url(#p-gravel)" mask="url(#m-e4-q0r-1)"/>
+  <polygon points="329.5,141.7 329.5,88.1 350.5,88.1 350.5,141.7" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,0) cobblestone → HCell(1,0) stone -->
+  <polygon id="quad-e0-q0r0" points="361.0,250.0 407.5,276.8 397.0,295.0 350.5,268.2" fill="url(#p-cobblestone)"/>
+  <polygon points="361.0,250.0 407.5,276.8 397.0,295.0 350.5,268.2" fill="url(#p-stone)" mask="url(#m-e0-q0r0)"/>
+  <polygon points="361.0,250.0 407.5,276.8 397.0,295.0 350.5,268.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,0) cobblestone → HCell(-1,1) obsidian -->
+  <polygon id="quad-e2-q0r0" points="329.5,268.2 283.0,295.0 272.5,276.8 319.0,250.0" fill="url(#p-cobblestone)"/>
+  <polygon points="329.5,268.2 283.0,295.0 272.5,276.8 319.0,250.0" fill="url(#p-obsidian)" mask="url(#m-e2-q0r0)"/>
+  <polygon points="329.5,268.2 283.0,295.0 272.5,276.8 319.0,250.0" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,0) cobblestone → HCell(0,-1) stone -->
+  <polygon id="quad-e4-q0r0" points="329.5,231.8 329.5,178.1 350.5,178.1 350.5,231.8" fill="url(#p-cobblestone)"/>
+  <polygon points="329.5,231.8 329.5,178.1 350.5,178.1 350.5,231.8" fill="url(#p-stone)" mask="url(#m-e4-q0r0)"/>
+  <polygon points="329.5,231.8 329.5,178.1 350.5,178.1 350.5,231.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,1) cobblestone → HCell(1,1) obsidian -->
+  <polygon id="quad-e0-q0r1" points="361.0,340.1 407.5,366.9 397.0,385.1 350.5,358.3" fill="url(#p-cobblestone)"/>
+  <polygon points="361.0,340.1 407.5,366.9 397.0,385.1 350.5,358.3" fill="url(#p-obsidian)" mask="url(#m-e0-q0r1)"/>
+  <polygon points="361.0,340.1 407.5,366.9 397.0,385.1 350.5,358.3" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,1) cobblestone → HCell(-1,2) obsidian -->
+  <polygon id="quad-e2-q0r1" points="329.5,358.3 283.0,385.1 272.5,366.9 319.0,340.1" fill="url(#p-cobblestone)"/>
+  <polygon points="329.5,358.3 283.0,385.1 272.5,366.9 319.0,340.1" fill="url(#p-obsidian)" mask="url(#m-e2-q0r1)"/>
+  <polygon points="329.5,358.3 283.0,385.1 272.5,366.9 319.0,340.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,1) cobblestone → HCell(0,0) cobblestone -->
+  <polygon id="quad-e4-q0r1" points="329.5,321.9 329.5,268.2 350.5,268.2 350.5,321.9" fill="url(#p-cobblestone)"/>
+  <polygon points="329.5,321.9 329.5,268.2 350.5,268.2 350.5,321.9" fill="url(#p-cobblestone)" mask="url(#m-e4-q0r1)"/>
+  <polygon points="329.5,321.9 329.5,268.2 350.5,268.2 350.5,321.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(0,2) iron-block → HCell(0,1) cobblestone -->
+  <polygon id="quad-e4-q0r2" points="329.5,411.9 329.5,358.3 350.5,358.3 350.5,411.9" fill="url(#p-iron-block)"/>
+  <polygon points="329.5,411.9 329.5,358.3 350.5,358.3 350.5,411.9" fill="url(#p-cobblestone)" mask="url(#m-e4-q0r2)"/>
+  <polygon points="329.5,411.9 329.5,358.3 350.5,358.3 350.5,411.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,-2) cobblestone → HCell(2,-2) coal-ore -->
+  <polygon id="quad-e0-q1r-2" points="439.0,114.9 485.5,141.7 475.0,159.9 428.5,133.1" fill="url(#p-cobblestone)"/>
+  <polygon points="439.0,114.9 485.5,141.7 475.0,159.9 428.5,133.1" fill="url(#p-coal-ore)" mask="url(#m-e0-q1r-2)"/>
+  <polygon points="439.0,114.9 485.5,141.7 475.0,159.9 428.5,133.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,-2) cobblestone → HCell(0,-1) stone -->
+  <polygon id="quad-e2-q1r-2" points="407.5,133.1 361.0,159.9 350.5,141.7 397.0,114.9" fill="url(#p-cobblestone)"/>
+  <polygon points="407.5,133.1 361.0,159.9 350.5,141.7 397.0,114.9" fill="url(#p-stone)" mask="url(#m-e2-q1r-2)"/>
+  <polygon points="407.5,133.1 361.0,159.9 350.5,141.7 397.0,114.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,-1) obsidian → HCell(2,-1) gravel -->
+  <polygon id="quad-e0-q1r-1" points="439.0,205.0 485.5,231.8 475.0,250.0 428.5,223.2" fill="url(#p-obsidian)"/>
+  <polygon points="439.0,205.0 485.5,231.8 475.0,250.0 428.5,223.2" fill="url(#p-gravel)" mask="url(#m-e0-q1r-1)"/>
+  <polygon points="439.0,205.0 485.5,231.8 475.0,250.0 428.5,223.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,-1) obsidian → HCell(0,0) cobblestone -->
+  <polygon id="quad-e2-q1r-1" points="407.5,223.2 361.0,250.0 350.5,231.8 397.0,205.0" fill="url(#p-obsidian)"/>
+  <polygon points="407.5,223.2 361.0,250.0 350.5,231.8 397.0,205.0" fill="url(#p-cobblestone)" mask="url(#m-e2-q1r-1)"/>
+  <polygon points="407.5,223.2 361.0,250.0 350.5,231.8 397.0,205.0" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,-1) obsidian → HCell(1,-2) cobblestone -->
+  <polygon id="quad-e4-q1r-1" points="407.5,186.8 407.5,133.1 428.5,133.1 428.5,186.8" fill="url(#p-obsidian)"/>
+  <polygon points="407.5,186.8 407.5,133.1 428.5,133.1 428.5,186.8" fill="url(#p-cobblestone)" mask="url(#m-e4-q1r-1)"/>
+  <polygon points="407.5,186.8 407.5,133.1 428.5,133.1 428.5,186.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,0) stone → HCell(2,0) mossy-cobble -->
+  <polygon id="quad-e0-q1r0" points="439.0,295.0 485.5,321.9 475.0,340.1 428.5,313.2" fill="url(#p-stone)"/>
+  <polygon points="439.0,295.0 485.5,321.9 475.0,340.1 428.5,313.2" fill="url(#p-mossy-cobble)" mask="url(#m-e0-q1r0)"/>
+  <polygon points="439.0,295.0 485.5,321.9 475.0,340.1 428.5,313.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,0) stone → HCell(0,1) cobblestone -->
+  <polygon id="quad-e2-q1r0" points="407.5,313.2 361.0,340.1 350.5,321.9 397.0,295.0" fill="url(#p-stone)"/>
+  <polygon points="407.5,313.2 361.0,340.1 350.5,321.9 397.0,295.0" fill="url(#p-cobblestone)" mask="url(#m-e2-q1r0)"/>
+  <polygon points="407.5,313.2 361.0,340.1 350.5,321.9 397.0,295.0" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,0) stone → HCell(1,-1) obsidian -->
+  <polygon id="quad-e4-q1r0" points="407.5,276.8 407.5,223.2 428.5,223.2 428.5,276.8" fill="url(#p-stone)"/>
+  <polygon points="407.5,276.8 407.5,223.2 428.5,223.2 428.5,276.8" fill="url(#p-obsidian)" mask="url(#m-e4-q1r0)"/>
+  <polygon points="407.5,276.8 407.5,223.2 428.5,223.2 428.5,276.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,1) obsidian → HCell(0,2) iron-block -->
+  <polygon id="quad-e2-q1r1" points="407.5,403.3 361.0,430.1 350.5,411.9 397.0,385.1" fill="url(#p-obsidian)"/>
+  <polygon points="407.5,403.3 361.0,430.1 350.5,411.9 397.0,385.1" fill="url(#p-iron-block)" mask="url(#m-e2-q1r1)"/>
+  <polygon points="407.5,403.3 361.0,430.1 350.5,411.9 397.0,385.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(1,1) obsidian → HCell(1,0) stone -->
+  <polygon id="quad-e4-q1r1" points="407.5,366.9 407.5,313.2 428.5,313.2 428.5,366.9" fill="url(#p-obsidian)"/>
+  <polygon points="407.5,366.9 407.5,313.2 428.5,313.2 428.5,366.9" fill="url(#p-stone)" mask="url(#m-e4-q1r1)"/>
+  <polygon points="407.5,366.9 407.5,313.2 428.5,313.2 428.5,366.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(2,-2) coal-ore → HCell(1,-1) obsidian -->
+  <polygon id="quad-e2-q2r-2" points="485.5,178.1 439.0,205.0 428.5,186.8 475.0,159.9" fill="url(#p-coal-ore)"/>
+  <polygon points="485.5,178.1 439.0,205.0 428.5,186.8 475.0,159.9" fill="url(#p-obsidian)" mask="url(#m-e2-q2r-2)"/>
+  <polygon points="485.5,178.1 439.0,205.0 428.5,186.8 475.0,159.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(2,-1) gravel → HCell(1,0) stone -->
+  <polygon id="quad-e2-q2r-1" points="485.5,268.2 439.0,295.0 428.5,276.8 475.0,250.0" fill="url(#p-gravel)"/>
+  <polygon points="485.5,268.2 439.0,295.0 428.5,276.8 475.0,250.0" fill="url(#p-stone)" mask="url(#m-e2-q2r-1)"/>
+  <polygon points="485.5,268.2 439.0,295.0 428.5,276.8 475.0,250.0" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(2,-1) gravel → HCell(2,-2) coal-ore -->
+  <polygon id="quad-e4-q2r-1" points="485.5,231.8 485.5,178.1 506.5,178.1 506.5,231.8" fill="url(#p-gravel)"/>
+  <polygon points="485.5,231.8 485.5,178.1 506.5,178.1 506.5,231.8" fill="url(#p-coal-ore)" mask="url(#m-e4-q2r-1)"/>
+  <polygon points="485.5,231.8 485.5,178.1 506.5,178.1 506.5,231.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(2,0) mossy-cobble → HCell(1,1) obsidian -->
+  <polygon id="quad-e2-q2r0" points="485.5,358.3 439.0,385.1 428.5,366.9 475.0,340.1" fill="url(#p-mossy-cobble)"/>
+  <polygon points="485.5,358.3 439.0,385.1 428.5,366.9 475.0,340.1" fill="url(#p-obsidian)" mask="url(#m-e2-q2r0)"/>
+  <polygon points="485.5,358.3 439.0,385.1 428.5,366.9 475.0,340.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- QuadOwner=HCell(2,0) mossy-cobble → HCell(2,-1) gravel -->
+  <polygon id="quad-e4-q2r0" points="485.5,321.9 485.5,268.2 506.5,268.2 506.5,321.9" fill="url(#p-mossy-cobble)"/>
+  <polygon points="485.5,321.9 485.5,268.2 506.5,268.2 506.5,321.9" fill="url(#p-gravel)" mask="url(#m-e4-q2r0)"/>
+  <polygon points="485.5,321.9 485.5,268.2 506.5,268.2 506.5,321.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
 
-  <!-- ====== 24 Tri entities (triple-junction vertices 0,1) ====== -->
-  <!-- TriOwner=HCell(-2,0) v0 → HCell(-1,0),HCell(-1,-1) base=corner1 -->
-  <polygon id="tri-v0-q-2r0" points="205.0,159.9 251.5,186.8 251.5,133.1" fill="#4c4c4c"/>
-  <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="url(#gT0-v0-q-2r0)" opacity="0.9"/>
-  <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="url(#gT2-v0-q-2r0)" opacity="0.9"/>
-  <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-2,0) v1 → HCell(-1,0),HCell(-2,1) base=corner1 -->
-  <polygon id="tri-v1-q-2r0" points="194.5,178.1 241.0,205.0 194.5,231.8" fill="#4c4c4c"/>
-  <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="url(#gT0-v1-q-2r0)" opacity="0.9"/>
-  <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="url(#gT2-v1-q-2r0)" opacity="0.9"/>
-  <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-2,1) v0 → HCell(-1,1),HCell(-1,0) base=corner1 -->
-  <polygon id="tri-v0-q-2r1" points="205.0,250.0 251.5,276.8 251.5,223.2" fill="#666666"/>
-  <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="url(#gT0-v0-q-2r1)" opacity="0.9"/>
-  <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="url(#gT2-v0-q-2r1)" opacity="0.9"/>
-  <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-2,1) v1 → HCell(-1,1),HCell(-2,2) base=corner1 -->
-  <polygon id="tri-v1-q-2r1" points="194.5,268.2 241.0,295.0 194.5,321.9" fill="#666666"/>
-  <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="url(#gT0-v1-q-2r1)" opacity="0.9"/>
-  <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="url(#gT2-v1-q-2r1)" opacity="0.9"/>
-  <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-2,2) v0 → HCell(-1,2),HCell(-1,1) base=corner2 -->
-  <polygon id="tri-v0-q-2r2" points="205.0,340.1 251.5,366.9 251.5,313.2" fill="#666666"/>
-  <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="url(#gT0-v0-q-2r2)" opacity="0.9"/>
-  <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="url(#gT1-v0-q-2r2)" opacity="0.9"/>
-  <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-1,-1) v0 → HCell(0,-1),HCell(0,-2) base=corner2 -->
-  <polygon id="tri-v0-q-1r-1" points="283.0,114.9 329.5,141.7 329.5,88.1" fill="#a5a5a5"/>
-  <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="url(#gT0-v0-q-1r-1)" opacity="0.9"/>
-  <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="url(#gT1-v0-q-1r-1)" opacity="0.9"/>
-  <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-1,-1) v1 → HCell(0,-1),HCell(-1,0) base=corner2 -->
-  <polygon id="tri-v1-q-1r-1" points="272.5,133.1 319.0,159.9 272.5,186.8" fill="#4c4c4c"/>
-  <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="url(#gT0-v1-q-1r-1)" opacity="0.9"/>
-  <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="url(#gT1-v1-q-1r-1)" opacity="0.9"/>
-  <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-1,0) v0 → HCell(0,0),HCell(0,-1) base=corner0 -->
-  <polygon id="tri-v0-q-1r0" points="283.0,205.0 329.5,231.8 329.5,178.1" fill="#4c4c4c"/>
-  <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="url(#gT1-v0-q-1r0)" opacity="0.9"/>
-  <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="url(#gT2-v0-q-1r0)" opacity="0.9"/>
-  <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-1,0) v1 → HCell(0,0),HCell(-1,1) base=corner2 -->
-  <polygon id="tri-v1-q-1r0" points="272.5,223.2 319.0,250.0 272.5,276.8" fill="#666666"/>
-  <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="url(#gT0-v1-q-1r0)" opacity="0.9"/>
-  <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="url(#gT1-v1-q-1r0)" opacity="0.9"/>
-  <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-1,1) v0 → HCell(0,1),HCell(0,0) base=corner1 -->
-  <polygon id="tri-v0-q-1r1" points="283.0,295.0 329.5,321.9 329.5,268.2" fill="#727272"/>
-  <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="url(#gT0-v0-q-1r1)" opacity="0.9"/>
-  <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="url(#gT2-v0-q-1r1)" opacity="0.9"/>
-  <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-1,1) v1 → HCell(0,1),HCell(-1,2) base=corner0 -->
-  <polygon id="tri-v1-q-1r1" points="272.5,313.2 319.0,340.1 272.5,366.9" fill="#666666"/>
-  <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="url(#gT1-v1-q-1r1)" opacity="0.9"/>
-  <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="url(#gT2-v1-q-1r1)" opacity="0.9"/>
-  <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(-1,2) v0 → HCell(0,2),HCell(0,1) base=corner2 -->
-  <polygon id="tri-v0-q-1r2" points="283.0,385.1 329.5,411.9 329.5,358.3" fill="#727272"/>
-  <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="url(#gT0-v0-q-1r2)" opacity="0.9"/>
-  <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="url(#gT1-v0-q-1r2)" opacity="0.9"/>
-  <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(0,-2) v1 → HCell(1,-2),HCell(0,-1) base=corner2 -->
-  <polygon id="tri-v1-q0r-2" points="350.5,88.1 397.0,114.9 350.5,141.7" fill="#7f7f7f"/>
-  <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="url(#gT0-v1-q0r-2)" opacity="0.9"/>
-  <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="url(#gT1-v1-q0r-2)" opacity="0.9"/>
-  <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(0,-1) v0 → HCell(1,-1),HCell(1,-2) base=corner1 -->
-  <polygon id="tri-v0-q0r-1" points="361.0,159.9 407.5,186.8 407.5,133.1" fill="#666666"/>
-  <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="url(#gT0-v0-q0r-1)" opacity="0.9"/>
-  <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="url(#gT2-v0-q0r-1)" opacity="0.9"/>
-  <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(0,-1) v1 → HCell(1,-1),HCell(0,0) base=corner1 -->
-  <polygon id="tri-v1-q0r-1" points="350.5,178.1 397.0,205.0 350.5,231.8" fill="#666666"/>
-  <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="url(#gT0-v1-q0r-1)" opacity="0.9"/>
-  <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="url(#gT2-v1-q0r-1)" opacity="0.9"/>
-  <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(0,0) v0 → HCell(1,0),HCell(1,-1) base=corner1 -->
-  <polygon id="tri-v0-q0r0" points="361.0,250.0 407.5,276.8 407.5,223.2" fill="#7f7f7f"/>
-  <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="url(#gT0-v0-q0r0)" opacity="0.9"/>
-  <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="url(#gT2-v0-q0r0)" opacity="0.9"/>
-  <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(0,0) v1 → HCell(1,0),HCell(0,1) base=corner0 -->
-  <polygon id="tri-v1-q0r0" points="350.5,268.2 397.0,295.0 350.5,321.9" fill="#727272"/>
-  <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="url(#gT1-v1-q0r0)" opacity="0.9"/>
-  <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="url(#gT2-v1-q0r0)" opacity="0.9"/>
-  <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(0,1) v0 → HCell(1,1),HCell(1,0) base=corner2 -->
-  <polygon id="tri-v0-q0r1" points="361.0,340.1 407.5,366.9 407.5,313.2" fill="#7f7f7f"/>
-  <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="url(#gT0-v0-q0r1)" opacity="0.9"/>
-  <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="url(#gT1-v0-q0r1)" opacity="0.9"/>
-  <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(0,1) v1 → HCell(1,1),HCell(0,2) base=corner2 -->
-  <polygon id="tri-v1-q0r1" points="350.5,358.3 397.0,385.1 350.5,411.9" fill="#8c8c8c"/>
-  <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="url(#gT0-v1-q0r1)" opacity="0.9"/>
-  <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="url(#gT1-v1-q0r1)" opacity="0.9"/>
-  <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(1,-2) v1 → HCell(2,-2),HCell(1,-1) base=corner2 -->
-  <polygon id="tri-v1-q1r-2" points="428.5,133.1 475.0,159.9 428.5,186.8" fill="#666666"/>
-  <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="url(#gT0-v1-q1r-2)" opacity="0.9"/>
-  <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="url(#gT1-v1-q1r-2)" opacity="0.9"/>
-  <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(1,-1) v0 → HCell(2,-1),HCell(2,-2) base=corner2 -->
-  <polygon id="tri-v0-q1r-1" points="439.0,205.0 485.5,231.8 485.5,178.1" fill="#b2b2b2"/>
-  <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="url(#gT0-v0-q1r-1)" opacity="0.9"/>
-  <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="url(#gT1-v0-q1r-1)" opacity="0.9"/>
-  <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(1,-1) v1 → HCell(2,-1),HCell(1,0) base=corner1 -->
-  <polygon id="tri-v1-q1r-1" points="428.5,223.2 475.0,250.0 428.5,276.8" fill="#a5a5a5"/>
-  <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="url(#gT0-v1-q1r-1)" opacity="0.9"/>
-  <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="url(#gT2-v1-q1r-1)" opacity="0.9"/>
-  <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(1,0) v0 → HCell(2,0),HCell(2,-1) base=corner0 -->
-  <polygon id="tri-v0-q1r0" points="439.0,295.0 485.5,321.9 485.5,268.2" fill="#7f7f7f"/>
-  <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="url(#gT1-v0-q1r0)" opacity="0.9"/>
-  <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="url(#gT2-v0-q1r0)" opacity="0.9"/>
-  <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
-  <!-- TriOwner=HCell(1,0) v1 → HCell(2,0),HCell(1,1) base=corner2 -->
-  <polygon id="tri-v1-q1r0" points="428.5,313.2 475.0,340.1 428.5,366.9" fill="#666666"/>
-  <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="url(#gT0-v1-q1r0)" opacity="0.9"/>
-  <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="url(#gT1-v1-q1r0)" opacity="0.9"/>
-  <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- ====== 24 Tri entities: base texture + 2 masked overlays ====== -->
+  <!-- TriOwner=HCell(-2,0) v0 base=mossy-cobble -->
+  <polygon id="tri-v0-q-2r0" points="205.0,159.9 251.5,186.8 251.5,133.1" fill="url(#p-mossy-cobble)"/>
+  <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="url(#p-cobblestone)" mask="url(#tm0-v0-q-2r0)"/>
+  <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="url(#p-gravel)" mask="url(#tm2-v0-q-2r0)"/>
+  <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-2,0) v1 base=mossy-cobble -->
+  <polygon id="tri-v1-q-2r0" points="194.5,178.1 241.0,205.0 194.5,231.8" fill="url(#p-mossy-cobble)"/>
+  <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="url(#p-cobblestone)" mask="url(#tm0-v1-q-2r0)"/>
+  <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="url(#p-coal-ore)" mask="url(#tm2-v1-q-2r0)"/>
+  <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-2,1) v0 base=obsidian -->
+  <polygon id="tri-v0-q-2r1" points="205.0,250.0 251.5,276.8 251.5,223.2" fill="url(#p-obsidian)"/>
+  <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="url(#p-coal-ore)" mask="url(#tm0-v0-q-2r1)"/>
+  <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="url(#p-mossy-cobble)" mask="url(#tm2-v0-q-2r1)"/>
+  <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-2,1) v1 base=obsidian -->
+  <polygon id="tri-v1-q-2r1" points="194.5,268.2 241.0,295.0 194.5,321.9" fill="url(#p-obsidian)"/>
+  <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="url(#p-coal-ore)" mask="url(#tm0-v1-q-2r1)"/>
+  <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="url(#p-cobblestone)" mask="url(#tm2-v1-q-2r1)"/>
+  <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-2,2) v0 base=obsidian -->
+  <polygon id="tri-v0-q-2r2" points="205.0,340.1 251.5,366.9 251.5,313.2" fill="url(#p-obsidian)"/>
+  <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="url(#p-cobblestone)" mask="url(#tm0-v0-q-2r2)"/>
+  <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="url(#p-obsidian)" mask="url(#tm1-v0-q-2r2)"/>
+  <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-1,-1) v0 base=gravel -->
+  <polygon id="tri-v0-q-1r-1" points="283.0,114.9 329.5,141.7 329.5,88.1" fill="url(#p-gravel)"/>
+  <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="url(#p-gravel)" mask="url(#tm0-v0-q-1r-1)"/>
+  <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="url(#p-stone)" mask="url(#tm1-v0-q-1r-1)"/>
+  <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-1,-1) v1 base=mossy-cobble -->
+  <polygon id="tri-v1-q-1r-1" points="272.5,133.1 319.0,159.9 272.5,186.8" fill="url(#p-mossy-cobble)"/>
+  <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="url(#p-gravel)" mask="url(#tm0-v1-q-1r-1)"/>
+  <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="url(#p-stone)" mask="url(#tm1-v1-q-1r-1)"/>
+  <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-1,0) v0 base=mossy-cobble -->
+  <polygon id="tri-v0-q-1r0" points="283.0,205.0 329.5,231.8 329.5,178.1" fill="url(#p-mossy-cobble)"/>
+  <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="url(#p-cobblestone)" mask="url(#tm1-v0-q-1r0)"/>
+  <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="url(#p-stone)" mask="url(#tm2-v0-q-1r0)"/>
+  <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-1,0) v1 base=obsidian -->
+  <polygon id="tri-v1-q-1r0" points="272.5,223.2 319.0,250.0 272.5,276.8" fill="url(#p-obsidian)"/>
+  <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="url(#p-mossy-cobble)" mask="url(#tm0-v1-q-1r0)"/>
+  <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="url(#p-cobblestone)" mask="url(#tm1-v1-q-1r0)"/>
+  <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-1,1) v0 base=cobblestone -->
+  <polygon id="tri-v0-q-1r1" points="283.0,295.0 329.5,321.9 329.5,268.2" fill="url(#p-cobblestone)"/>
+  <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="url(#p-obsidian)" mask="url(#tm0-v0-q-1r1)"/>
+  <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="url(#p-cobblestone)" mask="url(#tm2-v0-q-1r1)"/>
+  <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-1,1) v1 base=obsidian -->
+  <polygon id="tri-v1-q-1r1" points="272.5,313.2 319.0,340.1 272.5,366.9" fill="url(#p-obsidian)"/>
+  <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="url(#p-cobblestone)" mask="url(#tm1-v1-q-1r1)"/>
+  <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="url(#p-obsidian)" mask="url(#tm2-v1-q-1r1)"/>
+  <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(-1,2) v0 base=cobblestone -->
+  <polygon id="tri-v0-q-1r2" points="283.0,385.1 329.5,411.9 329.5,358.3" fill="url(#p-cobblestone)"/>
+  <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="url(#p-obsidian)" mask="url(#tm0-v0-q-1r2)"/>
+  <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="url(#p-iron-block)" mask="url(#tm1-v0-q-1r2)"/>
+  <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(0,-2) v1 base=stone -->
+  <polygon id="tri-v1-q0r-2" points="350.5,88.1 397.0,114.9 350.5,141.7" fill="url(#p-stone)"/>
+  <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="url(#p-gravel)" mask="url(#tm0-v1-q0r-2)"/>
+  <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="url(#p-cobblestone)" mask="url(#tm1-v1-q0r-2)"/>
+  <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(0,-1) v0 base=obsidian -->
+  <polygon id="tri-v0-q0r-1" points="361.0,159.9 407.5,186.8 407.5,133.1" fill="url(#p-obsidian)"/>
+  <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="url(#p-stone)" mask="url(#tm0-v0-q0r-1)"/>
+  <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="url(#p-cobblestone)" mask="url(#tm2-v0-q0r-1)"/>
+  <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(0,-1) v1 base=obsidian -->
+  <polygon id="tri-v1-q0r-1" points="350.5,178.1 397.0,205.0 350.5,231.8" fill="url(#p-obsidian)"/>
+  <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="url(#p-stone)" mask="url(#tm0-v1-q0r-1)"/>
+  <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="url(#p-cobblestone)" mask="url(#tm2-v1-q0r-1)"/>
+  <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(0,0) v0 base=stone -->
+  <polygon id="tri-v0-q0r0" points="361.0,250.0 407.5,276.8 407.5,223.2" fill="url(#p-stone)"/>
+  <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="url(#p-cobblestone)" mask="url(#tm0-v0-q0r0)"/>
+  <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="url(#p-obsidian)" mask="url(#tm2-v0-q0r0)"/>
+  <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(0,0) v1 base=cobblestone -->
+  <polygon id="tri-v1-q0r0" points="350.5,268.2 397.0,295.0 350.5,321.9" fill="url(#p-cobblestone)"/>
+  <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="url(#p-stone)" mask="url(#tm1-v1-q0r0)"/>
+  <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="url(#p-cobblestone)" mask="url(#tm2-v1-q0r0)"/>
+  <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(0,1) v0 base=stone -->
+  <polygon id="tri-v0-q0r1" points="361.0,340.1 407.5,366.9 407.5,313.2" fill="url(#p-stone)"/>
+  <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="url(#p-cobblestone)" mask="url(#tm0-v0-q0r1)"/>
+  <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="url(#p-obsidian)" mask="url(#tm1-v0-q0r1)"/>
+  <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(0,1) v1 base=iron-block -->
+  <polygon id="tri-v1-q0r1" points="350.5,358.3 397.0,385.1 350.5,411.9" fill="url(#p-iron-block)"/>
+  <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="url(#p-cobblestone)" mask="url(#tm0-v1-q0r1)"/>
+  <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="url(#p-obsidian)" mask="url(#tm1-v1-q0r1)"/>
+  <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(1,-2) v1 base=obsidian -->
+  <polygon id="tri-v1-q1r-2" points="428.5,133.1 475.0,159.9 428.5,186.8" fill="url(#p-obsidian)"/>
+  <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="url(#p-cobblestone)" mask="url(#tm0-v1-q1r-2)"/>
+  <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="url(#p-coal-ore)" mask="url(#tm1-v1-q1r-2)"/>
+  <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(1,-1) v0 base=coal-ore -->
+  <polygon id="tri-v0-q1r-1" points="439.0,205.0 485.5,231.8 485.5,178.1" fill="url(#p-coal-ore)"/>
+  <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="url(#p-obsidian)" mask="url(#tm0-v0-q1r-1)"/>
+  <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="url(#p-gravel)" mask="url(#tm1-v0-q1r-1)"/>
+  <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(1,-1) v1 base=gravel -->
+  <polygon id="tri-v1-q1r-1" points="428.5,223.2 475.0,250.0 428.5,276.8" fill="url(#p-gravel)"/>
+  <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="url(#p-obsidian)" mask="url(#tm0-v1-q1r-1)"/>
+  <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="url(#p-stone)" mask="url(#tm2-v1-q1r-1)"/>
+  <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(1,0) v0 base=stone -->
+  <polygon id="tri-v0-q1r0" points="439.0,295.0 485.5,321.9 485.5,268.2" fill="url(#p-stone)"/>
+  <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="url(#p-mossy-cobble)" mask="url(#tm1-v0-q1r0)"/>
+  <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="url(#p-gravel)" mask="url(#tm2-v0-q1r0)"/>
+  <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- TriOwner=HCell(1,0) v1 base=obsidian -->
+  <polygon id="tri-v1-q1r0" points="428.5,313.2 475.0,340.1 428.5,366.9" fill="url(#p-obsidian)"/>
+  <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="url(#p-stone)" mask="url(#tm0-v1-q1r0)"/>
+  <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="url(#p-mossy-cobble)" mask="url(#tm1-v1-q1r0)"/>
+  <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
 
-  <!-- ====== 19 HCell + HexFace entities (stone texture fills) ====== -->
-  <!-- HCell(-2,0) center=(184,160) stone=cobblestone rep=#727272 -->
+  <!-- ====== 19 HCell + HexFace entities (atlas tile fills) ====== -->
+  <!-- HCell(-2,0) stone=cobblestone -->
   <g id="hcell-q-2r0">
-    <polygon points="205.0,159.9 194.5,178.1 173.5,178.1 163.0,159.9 173.5,141.7 194.5,141.7" fill="#727272" filter="url(#f-cobblestone)"/>
-    <polygon points="205.0,159.9 194.5,178.1 173.5,178.1 163.0,159.9 173.5,141.7 194.5,141.7" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="205.0,159.9 194.5,178.1 173.5,178.1 163.0,159.9 173.5,141.7 194.5,141.7" fill="url(#p-cobblestone)"/>
+    <polygon points="205.0,159.9 194.5,178.1 173.5,178.1 163.0,159.9 173.5,141.7 194.5,141.7" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(-2,1) center=(184,250) stone=diorite rep=#b2b2b2 -->
+  <!-- HCell(-2,1) stone=coal-ore -->
   <g id="hcell-q-2r1">
-    <polygon points="205.0,250.0 194.5,268.2 173.5,268.2 163.0,250.0 173.5,231.8 194.5,231.8" fill="#b2b2b2" filter="url(#f-diorite)"/>
-    <polygon points="205.0,250.0 194.5,268.2 173.5,268.2 163.0,250.0 173.5,231.8 194.5,231.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="205.0,250.0 194.5,268.2 173.5,268.2 163.0,250.0 173.5,231.8 194.5,231.8" fill="url(#p-coal-ore)"/>
+    <polygon points="205.0,250.0 194.5,268.2 173.5,268.2 163.0,250.0 173.5,231.8 194.5,231.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(-2,2) center=(184,340) stone=cobblestone rep=#727272 -->
+  <!-- HCell(-2,2) stone=cobblestone -->
   <g id="hcell-q-2r2">
-    <polygon points="205.0,340.1 194.5,358.3 173.5,358.3 163.0,340.1 173.5,321.9 194.5,321.9" fill="#727272" filter="url(#f-cobblestone)"/>
-    <polygon points="205.0,340.1 194.5,358.3 173.5,358.3 163.0,340.1 173.5,321.9 194.5,321.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="205.0,340.1 194.5,358.3 173.5,358.3 163.0,340.1 173.5,321.9 194.5,321.9" fill="url(#p-cobblestone)"/>
+    <polygon points="205.0,340.1 194.5,358.3 173.5,358.3 163.0,340.1 173.5,321.9 194.5,321.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(-1,-1) center=(262,115) stone=gravel rep=#a5a5a5 -->
+  <!-- HCell(-1,-1) stone=gravel -->
   <g id="hcell-q-1r-1">
-    <polygon points="283.0,114.9 272.5,133.1 251.5,133.1 241.0,114.9 251.5,96.7 272.5,96.7" fill="#a5a5a5" filter="url(#f-gravel)"/>
-    <polygon points="283.0,114.9 272.5,133.1 251.5,133.1 241.0,114.9 251.5,96.7 272.5,96.7" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="283.0,114.9 272.5,133.1 251.5,133.1 241.0,114.9 251.5,96.7 272.5,96.7" fill="url(#p-gravel)"/>
+    <polygon points="283.0,114.9 272.5,133.1 251.5,133.1 241.0,114.9 251.5,96.7 272.5,96.7" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(-1,0) center=(262,205) stone=dark-stone rep=#4c4c4c -->
+  <!-- HCell(-1,0) stone=mossy-cobble -->
   <g id="hcell-q-1r0">
-    <polygon points="283.0,205.0 272.5,223.2 251.5,223.2 241.0,205.0 251.5,186.8 272.5,186.8" fill="#4c4c4c" filter="url(#f-dark-stone)"/>
-    <polygon points="283.0,205.0 272.5,223.2 251.5,223.2 241.0,205.0 251.5,186.8 272.5,186.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="283.0,205.0 272.5,223.2 251.5,223.2 241.0,205.0 251.5,186.8 272.5,186.8" fill="url(#p-mossy-cobble)"/>
+    <polygon points="283.0,205.0 272.5,223.2 251.5,223.2 241.0,205.0 251.5,186.8 272.5,186.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(-1,1) center=(262,295) stone=cracked-stone rep=#666666 -->
+  <!-- HCell(-1,1) stone=obsidian -->
   <g id="hcell-q-1r1">
-    <polygon points="283.0,295.0 272.5,313.2 251.5,313.2 241.0,295.0 251.5,276.8 272.5,276.8" fill="#666666" filter="url(#f-cracked-stone)"/>
-    <polygon points="283.0,295.0 272.5,313.2 251.5,313.2 241.0,295.0 251.5,276.8 272.5,276.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="283.0,295.0 272.5,313.2 251.5,313.2 241.0,295.0 251.5,276.8 272.5,276.8" fill="url(#p-obsidian)"/>
+    <polygon points="283.0,295.0 272.5,313.2 251.5,313.2 241.0,295.0 251.5,276.8 272.5,276.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(-1,2) center=(262,385) stone=cracked-stone rep=#666666 -->
+  <!-- HCell(-1,2) stone=obsidian -->
   <g id="hcell-q-1r2">
-    <polygon points="283.0,385.1 272.5,403.3 251.5,403.3 241.0,385.1 251.5,366.9 272.5,366.9" fill="#666666" filter="url(#f-cracked-stone)"/>
-    <polygon points="283.0,385.1 272.5,403.3 251.5,403.3 241.0,385.1 251.5,366.9 272.5,366.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="283.0,385.1 272.5,403.3 251.5,403.3 241.0,385.1 251.5,366.9 272.5,366.9" fill="url(#p-obsidian)"/>
+    <polygon points="283.0,385.1 272.5,403.3 251.5,403.3 241.0,385.1 251.5,366.9 272.5,366.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(0,-2) center=(340,70) stone=gravel rep=#a5a5a5 -->
+  <!-- HCell(0,-2) stone=gravel -->
   <g id="hcell-q0r-2">
-    <polygon points="361.0,69.9 350.5,88.1 329.5,88.1 319.0,69.9 329.5,51.7 350.5,51.7" fill="#a5a5a5" filter="url(#f-gravel)"/>
-    <polygon points="361.0,69.9 350.5,88.1 329.5,88.1 319.0,69.9 329.5,51.7 350.5,51.7" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="361.0,69.9 350.5,88.1 329.5,88.1 319.0,69.9 329.5,51.7 350.5,51.7" fill="url(#p-gravel)"/>
+    <polygon points="361.0,69.9 350.5,88.1 329.5,88.1 319.0,69.9 329.5,51.7 350.5,51.7" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(0,-1) center=(340,160) stone=smooth-stone rep=#7f7f7f -->
+  <!-- HCell(0,-1) stone=stone -->
   <g id="hcell-q0r-1">
-    <polygon points="361.0,159.9 350.5,178.1 329.5,178.1 319.0,159.9 329.5,141.7 350.5,141.7" fill="#7f7f7f" filter="url(#f-smooth-stone)"/>
-    <polygon points="361.0,159.9 350.5,178.1 329.5,178.1 319.0,159.9 329.5,141.7 350.5,141.7" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="361.0,159.9 350.5,178.1 329.5,178.1 319.0,159.9 329.5,141.7 350.5,141.7" fill="url(#p-stone)"/>
+    <polygon points="361.0,159.9 350.5,178.1 329.5,178.1 319.0,159.9 329.5,141.7 350.5,141.7" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(0,0) center=(340,250) stone=cobblestone rep=#727272 -->
+  <!-- HCell(0,0) stone=cobblestone -->
   <g id="hcell-q0r0">
-    <polygon points="361.0,250.0 350.5,268.2 329.5,268.2 319.0,250.0 329.5,231.8 350.5,231.8" fill="#727272" filter="url(#f-cobblestone)"/>
-    <polygon points="361.0,250.0 350.5,268.2 329.5,268.2 319.0,250.0 329.5,231.8 350.5,231.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="361.0,250.0 350.5,268.2 329.5,268.2 319.0,250.0 329.5,231.8 350.5,231.8" fill="url(#p-cobblestone)"/>
+    <polygon points="361.0,250.0 350.5,268.2 329.5,268.2 319.0,250.0 329.5,231.8 350.5,231.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(0,1) center=(340,340) stone=cobblestone rep=#727272 -->
+  <!-- HCell(0,1) stone=cobblestone -->
   <g id="hcell-q0r1">
-    <polygon points="361.0,340.1 350.5,358.3 329.5,358.3 319.0,340.1 329.5,321.9 350.5,321.9" fill="#727272" filter="url(#f-cobblestone)"/>
-    <polygon points="361.0,340.1 350.5,358.3 329.5,358.3 319.0,340.1 329.5,321.9 350.5,321.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="361.0,340.1 350.5,358.3 329.5,358.3 319.0,340.1 329.5,321.9 350.5,321.9" fill="url(#p-cobblestone)"/>
+    <polygon points="361.0,340.1 350.5,358.3 329.5,358.3 319.0,340.1 329.5,321.9 350.5,321.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(0,2) center=(340,430) stone=andesite rep=#8c8c8c -->
+  <!-- HCell(0,2) stone=iron-block -->
   <g id="hcell-q0r2">
-    <polygon points="361.0,430.1 350.5,448.3 329.5,448.3 319.0,430.1 329.5,411.9 350.5,411.9" fill="#8c8c8c" filter="url(#f-andesite)"/>
-    <polygon points="361.0,430.1 350.5,448.3 329.5,448.3 319.0,430.1 329.5,411.9 350.5,411.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="361.0,430.1 350.5,448.3 329.5,448.3 319.0,430.1 329.5,411.9 350.5,411.9" fill="url(#p-iron-block)"/>
+    <polygon points="361.0,430.1 350.5,448.3 329.5,448.3 319.0,430.1 329.5,411.9 350.5,411.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(1,-2) center=(418,115) stone=cobblestone rep=#727272 -->
+  <!-- HCell(1,-2) stone=cobblestone -->
   <g id="hcell-q1r-2">
-    <polygon points="439.0,114.9 428.5,133.1 407.5,133.1 397.0,114.9 407.5,96.7 428.5,96.7" fill="#727272" filter="url(#f-cobblestone)"/>
-    <polygon points="439.0,114.9 428.5,133.1 407.5,133.1 397.0,114.9 407.5,96.7 428.5,96.7" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="439.0,114.9 428.5,133.1 407.5,133.1 397.0,114.9 407.5,96.7 428.5,96.7" fill="url(#p-cobblestone)"/>
+    <polygon points="439.0,114.9 428.5,133.1 407.5,133.1 397.0,114.9 407.5,96.7 428.5,96.7" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(1,-1) center=(418,205) stone=cracked-stone rep=#666666 -->
+  <!-- HCell(1,-1) stone=obsidian -->
   <g id="hcell-q1r-1">
-    <polygon points="439.0,205.0 428.5,223.2 407.5,223.2 397.0,205.0 407.5,186.8 428.5,186.8" fill="#666666" filter="url(#f-cracked-stone)"/>
-    <polygon points="439.0,205.0 428.5,223.2 407.5,223.2 397.0,205.0 407.5,186.8 428.5,186.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="439.0,205.0 428.5,223.2 407.5,223.2 397.0,205.0 407.5,186.8 428.5,186.8" fill="url(#p-obsidian)"/>
+    <polygon points="439.0,205.0 428.5,223.2 407.5,223.2 397.0,205.0 407.5,186.8 428.5,186.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(1,0) center=(418,295) stone=smooth-stone rep=#7f7f7f -->
+  <!-- HCell(1,0) stone=stone -->
   <g id="hcell-q1r0">
-    <polygon points="439.0,295.0 428.5,313.2 407.5,313.2 397.0,295.0 407.5,276.8 428.5,276.8" fill="#7f7f7f" filter="url(#f-smooth-stone)"/>
-    <polygon points="439.0,295.0 428.5,313.2 407.5,313.2 397.0,295.0 407.5,276.8 428.5,276.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="439.0,295.0 428.5,313.2 407.5,313.2 397.0,295.0 407.5,276.8 428.5,276.8" fill="url(#p-stone)"/>
+    <polygon points="439.0,295.0 428.5,313.2 407.5,313.2 397.0,295.0 407.5,276.8 428.5,276.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(1,1) center=(418,385) stone=cracked-stone rep=#666666 -->
+  <!-- HCell(1,1) stone=obsidian -->
   <g id="hcell-q1r1">
-    <polygon points="439.0,385.1 428.5,403.3 407.5,403.3 397.0,385.1 407.5,366.9 428.5,366.9" fill="#666666" filter="url(#f-cracked-stone)"/>
-    <polygon points="439.0,385.1 428.5,403.3 407.5,403.3 397.0,385.1 407.5,366.9 428.5,366.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="439.0,385.1 428.5,403.3 407.5,403.3 397.0,385.1 407.5,366.9 428.5,366.9" fill="url(#p-obsidian)"/>
+    <polygon points="439.0,385.1 428.5,403.3 407.5,403.3 397.0,385.1 407.5,366.9 428.5,366.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(2,-2) center=(496,160) stone=diorite rep=#b2b2b2 -->
+  <!-- HCell(2,-2) stone=coal-ore -->
   <g id="hcell-q2r-2">
-    <polygon points="517.0,159.9 506.5,178.1 485.5,178.1 475.0,159.9 485.5,141.7 506.5,141.7" fill="#b2b2b2" filter="url(#f-diorite)"/>
-    <polygon points="517.0,159.9 506.5,178.1 485.5,178.1 475.0,159.9 485.5,141.7 506.5,141.7" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="517.0,159.9 506.5,178.1 485.5,178.1 475.0,159.9 485.5,141.7 506.5,141.7" fill="url(#p-coal-ore)"/>
+    <polygon points="517.0,159.9 506.5,178.1 485.5,178.1 475.0,159.9 485.5,141.7 506.5,141.7" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(2,-1) center=(496,250) stone=gravel rep=#a5a5a5 -->
+  <!-- HCell(2,-1) stone=gravel -->
   <g id="hcell-q2r-1">
-    <polygon points="517.0,250.0 506.5,268.2 485.5,268.2 475.0,250.0 485.5,231.8 506.5,231.8" fill="#a5a5a5" filter="url(#f-gravel)"/>
-    <polygon points="517.0,250.0 506.5,268.2 485.5,268.2 475.0,250.0 485.5,231.8 506.5,231.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="517.0,250.0 506.5,268.2 485.5,268.2 475.0,250.0 485.5,231.8 506.5,231.8" fill="url(#p-gravel)"/>
+    <polygon points="517.0,250.0 506.5,268.2 485.5,268.2 475.0,250.0 485.5,231.8 506.5,231.8" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
-  <!-- HCell(2,0) center=(496,340) stone=dark-stone rep=#4c4c4c -->
+  <!-- HCell(2,0) stone=mossy-cobble -->
   <g id="hcell-q2r0">
-    <polygon points="517.0,340.1 506.5,358.3 485.5,358.3 475.0,340.1 485.5,321.9 506.5,321.9" fill="#4c4c4c" filter="url(#f-dark-stone)"/>
-    <polygon points="517.0,340.1 506.5,358.3 485.5,358.3 475.0,340.1 485.5,321.9 506.5,321.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="517.0,340.1 506.5,358.3 485.5,358.3 475.0,340.1 485.5,321.9 506.5,321.9" fill="url(#p-mossy-cobble)"/>
+    <polygon points="517.0,340.1 506.5,358.3 485.5,358.3 475.0,340.1 485.5,321.9 506.5,321.9" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   </g>
 
-  <!-- Corner entities at triple-junction GridVertex positions -->
+  <!-- Corner entities at triple-junction positions -->
   <g fill="#fff" opacity="0.3">
     <circle cx="205.0" cy="159.9" r="1.2"/>
     <circle cx="251.5" cy="186.8" r="1.2"/>
