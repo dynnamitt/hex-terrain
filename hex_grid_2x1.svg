@@ -6,36 +6,45 @@
       .vidx { font-size: 9px; fill: #999; }
       .gap-label { font-size: 11px; fill: #ffcc00; font-weight: bold; }
     </style>
-    <!-- Quad gradients: blend between adjacent hex colors -->
+    <!-- Quad gradients: 33% solid A → 33% blend → 33% solid B -->
     <linearGradient id="gRedGreen" gradientUnits="userSpaceOnUse"
         x1="267" y1="234" x2="333" y2="273">
       <stop offset="0%"   stop-color="#cc2233"/>
+      <stop offset="33%"  stop-color="#cc2233"/>
+      <stop offset="67%"  stop-color="#22aa44"/>
       <stop offset="100%" stop-color="#22aa44"/>
     </linearGradient>
     <linearGradient id="gBlueRed" gradientUnits="userSpaceOnUse"
         x1="333" y1="148" x2="267" y2="186">
       <stop offset="0%"   stop-color="#2255cc"/>
+      <stop offset="33%"  stop-color="#2255cc"/>
+      <stop offset="67%"  stop-color="#cc2233"/>
       <stop offset="100%" stop-color="#cc2233"/>
     </linearGradient>
     <linearGradient id="gGreenBlue" gradientUnits="userSpaceOnUse"
         x1="375" y1="249" x2="375" y2="172">
       <stop offset="0%"   stop-color="#22aa44"/>
+      <stop offset="33%"  stop-color="#22aa44"/>
+      <stop offset="67%"  stop-color="#2255cc"/>
       <stop offset="100%" stop-color="#2255cc"/>
     </linearGradient>
-    <!-- Tri: 3 vertex-to-opposite-edge gradients layered -->
+    <!-- Tri: 3 vertex-to-opposite-edge gradients, solid at corners -->
     <linearGradient id="gTriR" gradientUnits="userSpaceOnUse"
         x1="281" y1="210" x2="347" y2="210">
       <stop offset="0%"   stop-color="#cc2233" stop-opacity="1"/>
+      <stop offset="45%"  stop-color="#cc2233" stop-opacity="0.7"/>
       <stop offset="100%" stop-color="#cc2233" stop-opacity="0"/>
     </linearGradient>
     <linearGradient id="gTriB" gradientUnits="userSpaceOnUse"
         x1="347" y1="172" x2="314" y2="229">
       <stop offset="0%"   stop-color="#2255cc" stop-opacity="1"/>
+      <stop offset="45%"  stop-color="#2255cc" stop-opacity="0.7"/>
       <stop offset="100%" stop-color="#2255cc" stop-opacity="0"/>
     </linearGradient>
     <linearGradient id="gTriG" gradientUnits="userSpaceOnUse"
         x1="347" y1="249" x2="314" y2="191">
       <stop offset="0%"   stop-color="#22aa44" stop-opacity="1"/>
+      <stop offset="45%"  stop-color="#22aa44" stop-opacity="0.7"/>
       <stop offset="100%" stop-color="#22aa44" stop-opacity="0"/>
     </linearGradient>
   </defs>
@@ -71,9 +80,9 @@
   <!-- ============ TRI GAP-FILLER (triple-junction vertex) ============ -->
   <!-- Tri: [A.v0, C.v4, B.v2]  — 3 layered gradients for 3-color blend -->
   <polygon points="281,210 347,249 347,172" fill="#0a0a14"/>
-  <polygon points="281,210 347,249 347,172" fill="url(#gTriR)" opacity="0.7"/>
-  <polygon points="281,210 347,249 347,172" fill="url(#gTriB)" opacity="0.55"/>
-  <polygon points="281,210 347,249 347,172" fill="url(#gTriG)" opacity="0.45"/>
+  <polygon points="281,210 347,249 347,172" fill="url(#gTriR)" opacity="0.85"/>
+  <polygon points="281,210 347,249 347,172" fill="url(#gTriB)" opacity="0.75"/>
+  <polygon points="281,210 347,249 347,172" fill="url(#gTriG)" opacity="0.65"/>
   <polygon points="281,210 347,249 347,172" fill="none" stroke="#1a1a2a" stroke-width="3" stroke-linejoin="round"/>
 
   <!-- ============ HEX FACES ============ -->
@@ -137,44 +146,37 @@
   <!-- Triple-junction highlight circle -->
   <circle cx="325" cy="210" r="7" fill="none" stroke="#ffcc00" stroke-width="1.5" opacity="0.8"/>
 
-  <!-- ============ VERTEX INDEX LABELS ============ -->
-  <!-- Red A -->
-  <text x="293" y="208" class="vidx">v0</text>
-  <text x="248" y="273" class="vidx">v1</text>
-  <text x="188" y="273" class="vidx">v2</text>
-  <text x="157" y="208" class="vidx">v3</text>
-  <text x="188" y="155" class="vidx">v4</text>
-  <text x="248" y="155" class="vidx">v5</text>
-  <!-- Blue B -->
-  <text x="443" y="120" class="vidx">v0</text>
-  <text x="413" y="182" class="vidx">v1</text>
-  <text x="337" y="168" class="vidx">v2</text>
-  <text x="307" y="120" class="vidx">v3</text>
-  <text x="337" y="70"  class="vidx">v4</text>
-  <text x="413" y="70"  class="vidx">v5</text>
-  <!-- Green C -->
-  <text x="443" y="300" class="vidx">v0</text>
-  <text x="413" y="356" class="vidx">v1</text>
-  <text x="337" y="356" class="vidx">v2</text>
-  <text x="307" y="300" class="vidx">v3</text>
-  <text x="337" y="244" class="vidx">v4</text>
-  <text x="413" y="255" class="vidx">v5</text>
-
-  <!-- ============ HEX LABELS ============ -->
-  <text x="225" y="207" style="font-size:14px; fill:#ff6677; font-weight:bold;">RED</text>
-  <text x="225" y="221" class="label">(0, 0)</text>
-
-  <text x="375" y="120" style="font-size:14px; fill:#6699ff; font-weight:bold;">BLUE</text>
-  <text x="375" y="134" class="label">(1, -1)</text>
-
-  <text x="375" y="294" style="font-size:14px; fill:#55dd77; font-weight:bold;">GREEN</text>
-  <text x="375" y="308" class="label">(1, 0)</text>
-
-  <!-- ============ GAP LABELS ============ -->
-  <text x="290" y="250" class="gap-label" transform="rotate(-40,290,250)">QUAD</text>
-  <text x="290" y="170" class="gap-label" transform="rotate(40,290,170)">QUAD</text>
-  <text x="390" y="214" class="gap-label" transform="rotate(90,390,214)">QUAD</text>
-  <text x="332" y="214" class="gap-label" style="font-size:10px;">TRI</text>
+  <!-- ============ LABELS (outside geometry only) ============ -->
+  <!-- Red A - vertex indices outside hex -->
+  <text x="293" y="205" class="vidx">v0</text>
+  <text x="245" y="276" class="vidx">v1</text>
+  <text x="184" y="276" class="vidx">v2</text>
+  <text x="153" y="208" class="vidx">v3</text>
+  <text x="184" y="150" class="vidx">v4</text>
+  <text x="245" y="150" class="vidx">v5</text>
+  <!-- Blue B - vertex indices outside hex -->
+  <text x="445" y="118" class="vidx">v0</text>
+  <text x="415" y="184" class="vidx">v1</text>
+  <text x="335" y="184" class="vidx">v2</text>
+  <text x="305" y="118" class="vidx">v3</text>
+  <text x="335" y="67"  class="vidx">v4</text>
+  <text x="415" y="67"  class="vidx">v5</text>
+  <!-- Green C - vertex indices outside hex -->
+  <text x="445" y="302" class="vidx">v0</text>
+  <text x="415" y="360" class="vidx">v1</text>
+  <text x="335" y="360" class="vidx">v2</text>
+  <text x="305" y="302" class="vidx">v3</text>
+  <text x="335" y="242" class="vidx">v4</text>
+  <text x="415" y="258" class="vidx">v5</text>
+  <!-- Hex names outside geometry -->
+  <text x="183" y="214" style="font-size:13px; fill:#ff6677; font-weight:bold;" text-anchor="end">RED (0,0)</text>
+  <text x="470" y="100" style="font-size:13px; fill:#6699ff; font-weight:bold;" text-anchor="start">BLUE (1,-1)</text>
+  <text x="470" y="320" style="font-size:13px; fill:#55dd77; font-weight:bold;" text-anchor="start">GREEN (1,0)</text>
+  <!-- Gap type callouts outside geometry -->
+  <text x="220" y="290" class="gap-label" text-anchor="end">QUAD</text>
+  <text x="220" y="147" class="gap-label" text-anchor="end">QUAD</text>
+  <text x="440" y="214" class="gap-label" text-anchor="start">QUAD</text>
+  <text x="310" y="214" class="gap-label" style="font-size:10px;" text-anchor="end">TRI</text>
 
   <!-- ============ LEGEND ============ -->
   <text x="300" y="400" style="font-size:13px; fill:#00e5ff;">
