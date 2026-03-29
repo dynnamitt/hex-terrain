@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300" width="520" height="300">
+  <defs>
+    <style>
+      text { font-family: monospace; font-size: 13px; fill: #fff; text-anchor: middle; }
+      .label { font-size: 11px; fill: #ccc; }
+      .coord { font-size: 10px; fill: #aaa; }
+      .edge-line { stroke: #00e5ff; stroke-width: 2; fill: none; opacity: 0.8; }
+      .vertex-dot { fill: #fff; }
+    </style>
+  </defs>
+
+  <rect width="520" height="300" rx="8" fill="#050810"/>
+
+  <title>hex-terrain: 2x1 flat-top hex grid (axial coords)</title>
+
+  <!-- Hex 0: RED at axial (0,0) -->
+  <polygon points="140,80 185,54 230,80 230,132 185,158 140,132"
+           fill="#cc2233" fill-opacity="0.7" stroke="#ff4455" stroke-width="2.5"/>
+  <!-- vertex indices -->
+  <circle cx="140" cy="80"  r="3" class="vertex-dot"/>
+  <circle cx="185" cy="54"  r="3" class="vertex-dot"/>
+  <circle cx="230" cy="80"  r="3" class="vertex-dot"/>
+  <circle cx="230" cy="132" r="3" class="vertex-dot"/>
+  <circle cx="185" cy="158" r="3" class="vertex-dot"/>
+  <circle cx="140" cy="132" r="3" class="vertex-dot"/>
+  <text x="125" y="77"  class="coord">0</text>
+  <text x="185" y="48"  class="coord">1</text>
+  <text x="245" y="77"  class="coord">2</text>
+  <text x="245" y="140" class="coord">3</text>
+  <text x="185" y="172" class="coord">4</text>
+  <text x="125" y="140" class="coord">5</text>
+  <text x="185" y="112">RED</text>
+  <text x="185" y="126" class="label">(0, 0)</text>
+
+  <!-- Hex 1: BLUE at axial (1,0) -->
+  <polygon points="230,132 275,106 320,132 320,184 275,210 230,184"
+           fill="#2244cc" fill-opacity="0.7" stroke="#4488ff" stroke-width="2.5"/>
+  <circle cx="230" cy="132" r="3" class="vertex-dot"/>
+  <circle cx="275" cy="106" r="3" class="vertex-dot"/>
+  <circle cx="320" cy="132" r="3" class="vertex-dot"/>
+  <circle cx="320" cy="184" r="3" class="vertex-dot"/>
+  <circle cx="275" cy="210" r="3" class="vertex-dot"/>
+  <circle cx="230" cy="184" r="3" class="vertex-dot"/>
+  <text x="215" y="129" class="coord">0</text>
+  <text x="275" y="100" class="coord">1</text>
+  <text x="335" y="129" class="coord">2</text>
+  <text x="335" y="192" class="coord">3</text>
+  <text x="275" y="224" class="coord">4</text>
+  <text x="215" y="192" class="coord">5</text>
+  <text x="275" y="164">BLUE</text>
+  <text x="275" y="178" class="label">(1, 0)</text>
+
+  <!-- Hex 2: GREEN at axial (0,1) — neighbor of both -->
+  <polygon points="230,80 275,54 320,80 320,132 275,158 230,132"
+           fill="#22aa44" fill-opacity="0.7" stroke="#44ff88" stroke-width="2.5"/>
+  <circle cx="230" cy="80"  r="3" class="vertex-dot"/>
+  <circle cx="275" cy="54"  r="3" class="vertex-dot"/>
+  <circle cx="320" cy="80"  r="3" class="vertex-dot"/>
+  <circle cx="320" cy="132" r="3" class="vertex-dot"/>
+  <circle cx="275" cy="158" r="3" class="vertex-dot"/>
+  <circle cx="230" cy="132" r="3" class="vertex-dot"/>
+  <text x="215" y="77"  class="coord">0</text>
+  <text x="275" y="48"  class="coord">1</text>
+  <text x="335" y="77"  class="coord">2</text>
+  <text x="335" y="140" class="coord">3</text>
+  <text x="275" y="172" class="coord">4</text>
+  <text x="215" y="140" class="coord">5</text>
+  <text x="275" y="112">GREEN</text>
+  <text x="275" y="126" class="label">(0, 1)</text>
+
+  <!-- Gap quad between RED and GREEN (shared edge: RED v2-v3 / GREEN v5-v0) -->
+  <!-- These share vertices at (230,80) and (230,132) — no gap on this edge -->
+
+  <!-- Gap triangle where all 3 hexes meet at vertex (230,132) -->
+  <circle cx="230" cy="132" r="5" fill="#ffee00" fill-opacity="0.6"/>
+
+  <!-- Title -->
+  <text x="260" y="258" style="font-size:14px; fill:#00e5ff;">hex-terrain: flat-top, axial coords</text>
+  <text x="260" y="276" class="label">vertex indices 0-5 CCW | shared vertex highlighted</text>
+</svg>
