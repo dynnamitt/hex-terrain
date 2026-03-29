@@ -642,130 +642,130 @@
   <!-- Mesh: [QuadOwner.v, QuadPos2Emitter.v, QuadPos3Emitter.v, QuadTail.v] -->
   <!-- QuadOwner=HCell(-2,0) edge0 → HCell(-1,0) -->
   <polygon id="quad-e0-q-2r0" points="205.0,159.9 251.5,186.8 241.0,205.0 194.5,178.1"
-           fill="url(#gQ-e0-q-2r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q-2r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-2,1) edge0 → HCell(-1,1) -->
   <polygon id="quad-e0-q-2r1" points="205.0,250.0 251.5,276.8 241.0,295.0 194.5,268.2"
-           fill="url(#gQ-e0-q-2r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q-2r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-2,1) edge4 → HCell(-2,0) -->
   <polygon id="quad-e4-q-2r1" points="173.5,231.8 173.5,178.1 194.5,178.1 194.5,231.8"
-           fill="url(#gQ-e4-q-2r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q-2r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-2,2) edge0 → HCell(-1,2) -->
   <polygon id="quad-e0-q-2r2" points="205.0,340.1 251.5,366.9 241.0,385.1 194.5,358.3"
-           fill="url(#gQ-e0-q-2r2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q-2r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-2,2) edge4 → HCell(-2,1) -->
   <polygon id="quad-e4-q-2r2" points="173.5,321.9 173.5,268.2 194.5,268.2 194.5,321.9"
-           fill="url(#gQ-e4-q-2r2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q-2r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,-1) edge0 → HCell(0,-1) -->
   <polygon id="quad-e0-q-1r-1" points="283.0,114.9 329.5,141.7 319.0,159.9 272.5,133.1"
-           fill="url(#gQ-e0-q-1r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q-1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,-1) edge2 → HCell(-2,0) -->
   <polygon id="quad-e2-q-1r-1" points="251.5,133.1 205.0,159.9 194.5,141.7 241.0,114.9"
-           fill="url(#gQ-e2-q-1r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q-1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,0) edge0 → HCell(0,0) -->
   <polygon id="quad-e0-q-1r0" points="283.0,205.0 329.5,231.8 319.0,250.0 272.5,223.2"
-           fill="url(#gQ-e0-q-1r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q-1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,0) edge2 → HCell(-2,1) -->
   <polygon id="quad-e2-q-1r0" points="251.5,223.2 205.0,250.0 194.5,231.8 241.0,205.0"
-           fill="url(#gQ-e2-q-1r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q-1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,0) edge4 → HCell(-1,-1) -->
   <polygon id="quad-e4-q-1r0" points="251.5,186.8 251.5,133.1 272.5,133.1 272.5,186.8"
-           fill="url(#gQ-e4-q-1r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q-1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,1) edge0 → HCell(0,1) -->
   <polygon id="quad-e0-q-1r1" points="283.0,295.0 329.5,321.9 319.0,340.1 272.5,313.2"
-           fill="url(#gQ-e0-q-1r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q-1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,1) edge2 → HCell(-2,2) -->
   <polygon id="quad-e2-q-1r1" points="251.5,313.2 205.0,340.1 194.5,321.9 241.0,295.0"
-           fill="url(#gQ-e2-q-1r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q-1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,1) edge4 → HCell(-1,0) -->
   <polygon id="quad-e4-q-1r1" points="251.5,276.8 251.5,223.2 272.5,223.2 272.5,276.8"
-           fill="url(#gQ-e4-q-1r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q-1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,2) edge0 → HCell(0,2) -->
   <polygon id="quad-e0-q-1r2" points="283.0,385.1 329.5,411.9 319.0,430.1 272.5,403.3"
-           fill="url(#gQ-e0-q-1r2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q-1r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(-1,2) edge4 → HCell(-1,1) -->
   <polygon id="quad-e4-q-1r2" points="251.5,366.9 251.5,313.2 272.5,313.2 272.5,366.9"
-           fill="url(#gQ-e4-q-1r2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q-1r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,-2) edge0 → HCell(1,-2) -->
   <polygon id="quad-e0-q0r-2" points="361.0,69.9 407.5,96.7 397.0,114.9 350.5,88.1"
-           fill="url(#gQ-e0-q0r-2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q0r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,-2) edge2 → HCell(-1,-1) -->
   <polygon id="quad-e2-q0r-2" points="329.5,88.1 283.0,114.9 272.5,96.7 319.0,69.9"
-           fill="url(#gQ-e2-q0r-2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q0r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,-1) edge0 → HCell(1,-1) -->
   <polygon id="quad-e0-q0r-1" points="361.0,159.9 407.5,186.8 397.0,205.0 350.5,178.1"
-           fill="url(#gQ-e0-q0r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q0r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,-1) edge2 → HCell(-1,0) -->
   <polygon id="quad-e2-q0r-1" points="329.5,178.1 283.0,205.0 272.5,186.8 319.0,159.9"
-           fill="url(#gQ-e2-q0r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q0r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,-1) edge4 → HCell(0,-2) -->
   <polygon id="quad-e4-q0r-1" points="329.5,141.7 329.5,88.1 350.5,88.1 350.5,141.7"
-           fill="url(#gQ-e4-q0r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q0r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,0) edge0 → HCell(1,0) -->
   <polygon id="quad-e0-q0r0" points="361.0,250.0 407.5,276.8 397.0,295.0 350.5,268.2"
-           fill="url(#gQ-e0-q0r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q0r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,0) edge2 → HCell(-1,1) -->
   <polygon id="quad-e2-q0r0" points="329.5,268.2 283.0,295.0 272.5,276.8 319.0,250.0"
-           fill="url(#gQ-e2-q0r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q0r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,0) edge4 → HCell(0,-1) -->
   <polygon id="quad-e4-q0r0" points="329.5,231.8 329.5,178.1 350.5,178.1 350.5,231.8"
-           fill="url(#gQ-e4-q0r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q0r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,1) edge0 → HCell(1,1) -->
   <polygon id="quad-e0-q0r1" points="361.0,340.1 407.5,366.9 397.0,385.1 350.5,358.3"
-           fill="url(#gQ-e0-q0r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q0r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,1) edge2 → HCell(-1,2) -->
   <polygon id="quad-e2-q0r1" points="329.5,358.3 283.0,385.1 272.5,366.9 319.0,340.1"
-           fill="url(#gQ-e2-q0r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q0r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,1) edge4 → HCell(0,0) -->
   <polygon id="quad-e4-q0r1" points="329.5,321.9 329.5,268.2 350.5,268.2 350.5,321.9"
-           fill="url(#gQ-e4-q0r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q0r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(0,2) edge4 → HCell(0,1) -->
   <polygon id="quad-e4-q0r2" points="329.5,411.9 329.5,358.3 350.5,358.3 350.5,411.9"
-           fill="url(#gQ-e4-q0r2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q0r2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,-2) edge0 → HCell(2,-2) -->
   <polygon id="quad-e0-q1r-2" points="439.0,114.9 485.5,141.7 475.0,159.9 428.5,133.1"
-           fill="url(#gQ-e0-q1r-2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q1r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,-2) edge2 → HCell(0,-1) -->
   <polygon id="quad-e2-q1r-2" points="407.5,133.1 361.0,159.9 350.5,141.7 397.0,114.9"
-           fill="url(#gQ-e2-q1r-2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q1r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,-1) edge0 → HCell(2,-1) -->
   <polygon id="quad-e0-q1r-1" points="439.0,205.0 485.5,231.8 475.0,250.0 428.5,223.2"
-           fill="url(#gQ-e0-q1r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,-1) edge2 → HCell(0,0) -->
   <polygon id="quad-e2-q1r-1" points="407.5,223.2 361.0,250.0 350.5,231.8 397.0,205.0"
-           fill="url(#gQ-e2-q1r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,-1) edge4 → HCell(1,-2) -->
   <polygon id="quad-e4-q1r-1" points="407.5,186.8 407.5,133.1 428.5,133.1 428.5,186.8"
-           fill="url(#gQ-e4-q1r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q1r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,0) edge0 → HCell(2,0) -->
   <polygon id="quad-e0-q1r0" points="439.0,295.0 485.5,321.9 475.0,340.1 428.5,313.2"
-           fill="url(#gQ-e0-q1r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e0-q1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,0) edge2 → HCell(0,1) -->
   <polygon id="quad-e2-q1r0" points="407.5,313.2 361.0,340.1 350.5,321.9 397.0,295.0"
-           fill="url(#gQ-e2-q1r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,0) edge4 → HCell(1,-1) -->
   <polygon id="quad-e4-q1r0" points="407.5,276.8 407.5,223.2 428.5,223.2 428.5,276.8"
-           fill="url(#gQ-e4-q1r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q1r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,1) edge2 → HCell(0,2) -->
   <polygon id="quad-e2-q1r1" points="407.5,403.3 361.0,430.1 350.5,411.9 397.0,385.1"
-           fill="url(#gQ-e2-q1r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(1,1) edge4 → HCell(1,0) -->
   <polygon id="quad-e4-q1r1" points="407.5,366.9 407.5,313.2 428.5,313.2 428.5,366.9"
-           fill="url(#gQ-e4-q1r1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q1r1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(2,-2) edge2 → HCell(1,-1) -->
   <polygon id="quad-e2-q2r-2" points="485.5,178.1 439.0,205.0 428.5,186.8 475.0,159.9"
-           fill="url(#gQ-e2-q2r-2)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q2r-2)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(2,-1) edge2 → HCell(1,0) -->
   <polygon id="quad-e2-q2r-1" points="485.5,268.2 439.0,295.0 428.5,276.8 475.0,250.0"
-           fill="url(#gQ-e2-q2r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q2r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(2,-1) edge4 → HCell(2,-2) -->
   <polygon id="quad-e4-q2r-1" points="485.5,231.8 485.5,178.1 506.5,178.1 506.5,231.8"
-           fill="url(#gQ-e4-q2r-1)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q2r-1)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(2,0) edge2 → HCell(1,1) -->
   <polygon id="quad-e2-q2r0" points="485.5,358.3 439.0,385.1 428.5,366.9 475.0,340.1"
-           fill="url(#gQ-e2-q2r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e2-q2r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- QuadOwner=HCell(2,0) edge4 → HCell(2,-1) -->
   <polygon id="quad-e4-q2r0" points="485.5,321.9 485.5,268.2 506.5,268.2 506.5,321.9"
-           fill="url(#gQ-e4-q2r0)" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+           fill="url(#gQ-e4-q2r0)" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
 
   <!-- ====== 24 Tri entities (triple-junction vertices 0,1) ====== -->
   <!-- Mesh: [TriOwner.v, TriPos1Emitter.v, TriPos2Emitter.v] -->
@@ -774,182 +774,182 @@
   <polygon id="tri-v0-q-2r0" points="205.0,159.9 251.5,186.8 251.5,133.1" fill="#b9912e"/>
   <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="url(#gT1-v0-q-2r0)" opacity="0.9"/>
   <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="url(#gT2-v0-q-2r0)" opacity="0.9"/>
-  <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="205.0,159.9 251.5,186.8 251.5,133.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-2,0) v1 → HCell(-1,0),HCell(-2,1) base=corner0 -->
   <polygon id="tri-v1-q-2r0" points="194.5,178.1 241.0,205.0 194.5,231.8" fill="#b9912e"/>
   <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="url(#gT1-v1-q-2r0)" opacity="0.9"/>
   <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="url(#gT2-v1-q-2r0)" opacity="0.9"/>
-  <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="194.5,178.1 241.0,205.0 194.5,231.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-2,1) v0 → HCell(-1,1),HCell(-1,0) base=corner2 -->
   <polygon id="tri-v0-q-2r1" points="205.0,250.0 251.5,276.8 251.5,223.2" fill="#6827a8"/>
   <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="url(#gT0-v0-q-2r1)" opacity="0.9"/>
   <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="url(#gT1-v0-q-2r1)" opacity="0.9"/>
-  <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="205.0,250.0 251.5,276.8 251.5,223.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-2,1) v1 → HCell(-1,1),HCell(-2,2) base=corner2 -->
   <polygon id="tri-v1-q-2r1" points="194.5,268.2 241.0,295.0 194.5,321.9" fill="#306dca"/>
   <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="url(#gT0-v1-q-2r1)" opacity="0.9"/>
   <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="url(#gT1-v1-q-2r1)" opacity="0.9"/>
-  <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="194.5,268.2 241.0,295.0 194.5,321.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-2,2) v0 → HCell(-1,2),HCell(-1,1) base=corner2 -->
   <polygon id="tri-v0-q-2r2" points="205.0,340.1 251.5,366.9 251.5,313.2" fill="#436ecd"/>
   <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="url(#gT0-v0-q-2r2)" opacity="0.9"/>
   <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="url(#gT1-v0-q-2r2)" opacity="0.9"/>
-  <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="205.0,340.1 251.5,366.9 251.5,313.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-1,-1) v0 → HCell(0,-1),HCell(0,-2) base=corner0 -->
   <polygon id="tri-v0-q-1r-1" points="283.0,114.9 329.5,141.7 329.5,88.1" fill="#299bc9"/>
   <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="url(#gT1-v0-q-1r-1)" opacity="0.9"/>
   <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="url(#gT2-v0-q-1r-1)" opacity="0.9"/>
-  <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="283.0,114.9 329.5,141.7 329.5,88.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-1,-1) v1 → HCell(0,-1),HCell(-1,0) base=corner2 -->
   <polygon id="tri-v1-q-1r-1" points="272.5,133.1 319.0,159.9 272.5,186.8" fill="#6827a8"/>
   <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="url(#gT0-v1-q-1r-1)" opacity="0.9"/>
   <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="url(#gT1-v1-q-1r-1)" opacity="0.9"/>
-  <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="272.5,133.1 319.0,159.9 272.5,186.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-1,0) v0 → HCell(0,0),HCell(0,-1) base=corner2 -->
   <polygon id="tri-v0-q-1r0" points="283.0,205.0 329.5,231.8 329.5,178.1" fill="#cc2136"/>
   <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="url(#gT0-v0-q-1r0)" opacity="0.9"/>
   <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="url(#gT1-v0-q-1r0)" opacity="0.9"/>
-  <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="283.0,205.0 329.5,231.8 329.5,178.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-1,0) v1 → HCell(0,0),HCell(-1,1) base=corner1 -->
   <polygon id="tri-v1-q-1r0" points="272.5,223.2 319.0,250.0 272.5,276.8" fill="#9d2727"/>
   <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="url(#gT0-v1-q-1r0)" opacity="0.9"/>
   <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="url(#gT2-v1-q-1r0)" opacity="0.9"/>
-  <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="272.5,223.2 319.0,250.0 272.5,276.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-1,1) v0 → HCell(0,1),HCell(0,0) base=corner1 -->
   <polygon id="tri-v0-q-1r1" points="283.0,295.0 329.5,321.9 329.5,268.2" fill="#28ab2e"/>
   <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="url(#gT0-v0-q-1r1)" opacity="0.9"/>
   <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="url(#gT2-v0-q-1r1)" opacity="0.9"/>
-  <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="283.0,295.0 329.5,321.9 329.5,268.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-1,1) v1 → HCell(0,1),HCell(-1,2) base=corner0 -->
   <polygon id="tri-v1-q-1r1" points="272.5,313.2 319.0,340.1 272.5,366.9" fill="#436ecd"/>
   <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="url(#gT1-v1-q-1r1)" opacity="0.9"/>
   <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="url(#gT2-v1-q-1r1)" opacity="0.9"/>
-  <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="272.5,313.2 319.0,340.1 272.5,366.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(-1,2) v0 → HCell(0,2),HCell(0,1) base=corner1 -->
   <polygon id="tri-v0-q-1r2" points="283.0,385.1 329.5,411.9 329.5,358.3" fill="#22c59c"/>
   <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="url(#gT0-v0-q-1r2)" opacity="0.9"/>
   <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="url(#gT2-v0-q-1r2)" opacity="0.9"/>
-  <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="283.0,385.1 329.5,411.9 329.5,358.3" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(0,-2) v1 → HCell(1,-2),HCell(0,-1) base=corner0 -->
   <polygon id="tri-v1-q0r-2" points="350.5,88.1 397.0,114.9 350.5,141.7" fill="#3c34a9"/>
   <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="url(#gT1-v1-q0r-2)" opacity="0.9"/>
   <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="url(#gT2-v1-q0r-2)" opacity="0.9"/>
-  <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="350.5,88.1 397.0,114.9 350.5,141.7" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(0,-1) v0 → HCell(1,-1),HCell(1,-2) base=corner0 -->
   <polygon id="tri-v0-q0r-1" points="361.0,159.9 407.5,186.8 407.5,133.1" fill="#cc2136"/>
   <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="url(#gT1-v0-q0r-1)" opacity="0.9"/>
   <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="url(#gT2-v0-q0r-1)" opacity="0.9"/>
-  <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="361.0,159.9 407.5,186.8 407.5,133.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(0,-1) v1 → HCell(1,-1),HCell(0,0) base=corner2 -->
   <polygon id="tri-v1-q0r-1" points="350.5,178.1 397.0,205.0 350.5,231.8" fill="#9d2727"/>
   <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="url(#gT0-v1-q0r-1)" opacity="0.9"/>
   <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="url(#gT1-v1-q0r-1)" opacity="0.9"/>
-  <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="350.5,178.1 397.0,205.0 350.5,231.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(0,0) v0 → HCell(1,0),HCell(1,-1) base=corner2 -->
   <polygon id="tri-v0-q0r0" points="361.0,250.0 407.5,276.8 407.5,223.2" fill="#2fb247"/>
   <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="url(#gT0-v0-q0r0)" opacity="0.9"/>
   <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="url(#gT1-v0-q0r0)" opacity="0.9"/>
-  <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="361.0,250.0 407.5,276.8 407.5,223.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(0,0) v1 → HCell(1,0),HCell(0,1) base=corner1 -->
   <polygon id="tri-v1-q0r0" points="350.5,268.2 397.0,295.0 350.5,321.9" fill="#2862a0"/>
   <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="url(#gT0-v1-q0r0)" opacity="0.9"/>
   <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="url(#gT2-v1-q0r0)" opacity="0.9"/>
-  <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="350.5,268.2 397.0,295.0 350.5,321.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(0,1) v0 → HCell(1,1),HCell(1,0) base=corner2 -->
   <polygon id="tri-v0-q0r1" points="361.0,340.1 407.5,366.9 407.5,313.2" fill="#2862a0"/>
   <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="url(#gT0-v0-q0r1)" opacity="0.9"/>
   <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="url(#gT1-v0-q0r1)" opacity="0.9"/>
-  <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="361.0,340.1 407.5,366.9 407.5,313.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(0,1) v1 → HCell(1,1),HCell(0,2) base=corner1 -->
   <polygon id="tri-v1-q0r1" points="350.5,358.3 397.0,385.1 350.5,411.9" fill="#26b9bf"/>
   <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="url(#gT0-v1-q0r1)" opacity="0.9"/>
   <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="url(#gT2-v1-q0r1)" opacity="0.9"/>
-  <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="350.5,358.3 397.0,385.1 350.5,411.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(1,-2) v1 → HCell(2,-2),HCell(1,-1) base=corner2 -->
   <polygon id="tri-v1-q1r-2" points="428.5,133.1 475.0,159.9 428.5,186.8" fill="#2fb247"/>
   <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="url(#gT0-v1-q1r-2)" opacity="0.9"/>
   <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="url(#gT1-v1-q1r-2)" opacity="0.9"/>
-  <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="428.5,133.1 475.0,159.9 428.5,186.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(1,-1) v0 → HCell(2,-1),HCell(2,-2) base=corner2 -->
   <polygon id="tri-v0-q1r-1" points="439.0,205.0 485.5,231.8 485.5,178.1" fill="#1ca9a1"/>
   <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="url(#gT0-v0-q1r-1)" opacity="0.9"/>
   <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="url(#gT1-v0-q1r-1)" opacity="0.9"/>
-  <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="439.0,205.0 485.5,231.8 485.5,178.1" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(1,-1) v1 → HCell(2,-1),HCell(1,0) base=corner1 -->
   <polygon id="tri-v1-q1r-1" points="428.5,223.2 475.0,250.0 428.5,276.8" fill="#1eb76d"/>
   <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="url(#gT0-v1-q1r-1)" opacity="0.9"/>
   <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="url(#gT2-v1-q1r-1)" opacity="0.9"/>
-  <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="428.5,223.2 475.0,250.0 428.5,276.8" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(1,0) v0 → HCell(2,0),HCell(2,-1) base=corner2 -->
   <polygon id="tri-v0-q1r0" points="439.0,295.0 485.5,321.9 485.5,268.2" fill="#1eb76d"/>
   <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="url(#gT0-v0-q1r0)" opacity="0.9"/>
   <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="url(#gT1-v0-q1r0)" opacity="0.9"/>
-  <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="439.0,295.0 485.5,321.9 485.5,268.2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- TriOwner=HCell(1,0) v1 → HCell(2,0),HCell(1,1) base=corner1 -->
   <polygon id="tri-v1-q1r0" points="428.5,313.2 475.0,340.1 428.5,366.9" fill="#399ba7"/>
   <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="url(#gT0-v1-q1r0)" opacity="0.9"/>
   <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="url(#gT2-v1-q1r0)" opacity="0.9"/>
-  <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="none" stroke="#111118" stroke-width="1.5" stroke-linejoin="round"/>
+  <polygon points="428.5,313.2 475.0,340.1 428.5,366.9" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
 
   <!-- ====== 19 HCell + HexFace entities ====== -->
   <!-- Each HCell has 6 Corner children at vertex offsets -->
   <!-- HCell(-2,0) center=(184,160) -->
   <polygon id="hcell-q-2r0" points="205.0,159.9 194.5,178.1 173.5,178.1 163.0,159.9 173.5,141.7 194.5,141.7"
-           fill="#b9912e" fill-opacity="0.85" stroke="#f5cd6a" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#b9912e" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(-2,1) center=(184,250) -->
   <polygon id="hcell-q-2r1" points="205.0,250.0 194.5,268.2 173.5,268.2 163.0,250.0 173.5,231.8 194.5,231.8"
-           fill="#a73795" fill-opacity="0.85" stroke="#e373d1" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#a73795" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(-2,2) center=(184,340) -->
   <polygon id="hcell-q-2r2" points="205.0,340.1 194.5,358.3 173.5,358.3 163.0,340.1 173.5,321.9 194.5,321.9"
-           fill="#306dca" fill-opacity="0.85" stroke="#6ca9ff" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#306dca" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(-1,-1) center=(262,115) -->
   <polygon id="hcell-q-1r-1" points="283.0,114.9 272.5,133.1 251.5,133.1 241.0,114.9 251.5,96.7 272.5,96.7"
-           fill="#299bc9" fill-opacity="0.85" stroke="#65d7ff" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#299bc9" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(-1,0) center=(262,205) -->
   <polygon id="hcell-q-1r0" points="283.0,205.0 272.5,223.2 251.5,223.2 241.0,205.0 251.5,186.8 272.5,186.8"
-           fill="#6827a8" fill-opacity="0.85" stroke="#a463e4" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#6827a8" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(-1,1) center=(262,295) -->
   <polygon id="hcell-q-1r1" points="283.0,295.0 272.5,313.2 251.5,313.2 241.0,295.0 251.5,276.8 272.5,276.8"
-           fill="#436ecd" fill-opacity="0.85" stroke="#7faaff" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#436ecd" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(-1,2) center=(262,385) -->
   <polygon id="hcell-q-1r2" points="283.0,385.1 272.5,403.3 251.5,403.3 241.0,385.1 251.5,366.9 272.5,366.9"
-           fill="#24c494" fill-opacity="0.85" stroke="#60ffd0" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#24c494" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(0,-2) center=(340,70) -->
   <polygon id="hcell-q0r-2" points="361.0,69.9 350.5,88.1 329.5,88.1 319.0,69.9 329.5,51.7 350.5,51.7"
-           fill="#3c34a9" fill-opacity="0.85" stroke="#7870e5" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#3c34a9" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(0,-1) center=(340,160) -->
   <polygon id="hcell-q0r-1" points="361.0,159.9 350.5,178.1 329.5,178.1 319.0,159.9 329.5,141.7 350.5,141.7"
-           fill="#cc2136" fill-opacity="0.85" stroke="#ff5d72" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#cc2136" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(0,0) center=(340,250) -->
   <polygon id="hcell-q0r0" points="361.0,250.0 350.5,268.2 329.5,268.2 319.0,250.0 329.5,231.8 350.5,231.8"
-           fill="#9d2727" fill-opacity="0.85" stroke="#d96363" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#9d2727" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(0,1) center=(340,340) -->
   <polygon id="hcell-q0r1" points="361.0,340.1 350.5,358.3 329.5,358.3 319.0,340.1 329.5,321.9 350.5,321.9"
-           fill="#28ab2e" fill-opacity="0.85" stroke="#64e76a" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#28ab2e" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(0,2) center=(340,430) -->
   <polygon id="hcell-q0r2" points="361.0,430.1 350.5,448.3 329.5,448.3 319.0,430.1 329.5,411.9 350.5,411.9"
-           fill="#22c59c" fill-opacity="0.85" stroke="#5effd8" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#22c59c" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(1,-2) center=(418,115) -->
   <polygon id="hcell-q1r-2" points="439.0,114.9 428.5,133.1 407.5,133.1 397.0,114.9 407.5,96.7 428.5,96.7"
-           fill="#4489c6" fill-opacity="0.85" stroke="#80c5ff" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#4489c6" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(1,-1) center=(418,205) -->
   <polygon id="hcell-q1r-1" points="439.0,205.0 428.5,223.2 407.5,223.2 397.0,205.0 407.5,186.8 428.5,186.8"
-           fill="#2fb247" fill-opacity="0.85" stroke="#6bee83" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#2fb247" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(1,0) center=(418,295) -->
   <polygon id="hcell-q1r0" points="439.0,295.0 428.5,313.2 407.5,313.2 397.0,295.0 407.5,276.8 428.5,276.8"
-           fill="#2862a0" fill-opacity="0.85" stroke="#649edc" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#2862a0" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(1,1) center=(418,385) -->
   <polygon id="hcell-q1r1" points="439.0,385.1 428.5,403.3 407.5,403.3 397.0,385.1 407.5,366.9 428.5,366.9"
-           fill="#26b9bf" fill-opacity="0.85" stroke="#62f5fb" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#26b9bf" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(2,-2) center=(496,160) -->
   <polygon id="hcell-q2r-2" points="517.0,159.9 506.5,178.1 485.5,178.1 475.0,159.9 485.5,141.7 506.5,141.7"
-           fill="#1ca9a1" fill-opacity="0.85" stroke="#58e5dd" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#1ca9a1" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(2,-1) center=(496,250) -->
   <polygon id="hcell-q2r-1" points="517.0,250.0 506.5,268.2 485.5,268.2 475.0,250.0 485.5,231.8 506.5,231.8"
-           fill="#1eb76d" fill-opacity="0.85" stroke="#5af3a9" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#1eb76d" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
   <!-- HCell(2,0) center=(496,340) -->
   <polygon id="hcell-q2r0" points="517.0,340.1 506.5,358.3 485.5,358.3 475.0,340.1 485.5,321.9 506.5,321.9"
-           fill="#399ba7" fill-opacity="0.85" stroke="#75d7e3" stroke-width="1.8" stroke-linejoin="round"/>
+           fill="#399ba7" fill-opacity="0.85" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round"/>
 
   <!-- Corner entities at triple-junction GridVertex positions -->
   <g fill="#fff" opacity="0.4">
