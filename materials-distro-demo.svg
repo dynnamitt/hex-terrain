@@ -1,4 +1,96 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 500" width="680" height="500">
+  <!--
+    ═══════════════════════════════════════════════════════════════════
+    materials-distro-demo.svg — hex-terrain gap-fill color blending
+    ═══════════════════════════════════════════════════════════════════
+
+    Demonstrates how the h_terrain plugin distributes materials across
+    HexFace, Quad (gap-filler), and Tri (gap-filler) entities using
+    the TerrainMaterials resource and FovPalette color transitions.
+
+    HGrid layout: shapes::hexagon(Hex::ZERO, 2) → 3-4-5-4-3 = 19 HCells
+    Flat-top vertex order (hexx CW in SVG coords):
+      v0=Right  v1=LowerRight  v2=LowerLeft  v3=Left  v4=UpperLeft  v5=UpperRight
+
+    ───────────────────────────────────────────────────────────────────
+    TRI COLOR BLENDING (triple-junction vertex, 3 HCells meet)
+    ───────────────────────────────────────────────────────────────────
+
+    Each Tri entity sits at a GridVertex where exactly 3 HCells share
+    a corner. Its 3 mesh vertices each belong to a different HCell:
+
+      vertex 0 → TriOwner        (HCell A, canonical owner)
+      vertex 1 → TriPos1Emitter  (HCell B, neighbor 1)
+      vertex 2 → TriPos2Emitter  (HCell C, neighbor 2)
+
+    CENTER COLOR — picked at random from one of the 3 corners:
+      One corner index (0, 1, or 2) is chosen randomly as the "base".
+      The base HCell's color fills the ENTIRE triangle as a solid
+      background. This means the center of the tri — where none of
+      the overlay gradients reach — shows that base color pure.
+
+    CORNER OVERLAYS — the other 2 corners paint over the base:
+      Each non-base corner gets a linearGradient that goes from:
+        • SOLID (opacity=1) at that corner vertex         (0%–42.5%)
+        • BLEND HOTSPOT: 15% transition zone              (42.5%–57.5%)
+        • TRANSPARENT (opacity=0) at the opposite edge    (57.5%–100%)
+
+      The gradient direction runs from the corner point toward the
+      midpoint of the opposite edge (the edge shared by the other
+      two vertices). Each overlay is rendered at opacity="0.9".
+
+    VISUAL RESULT:
+      • Each corner shows its HCell's color nearly pure
+      • The center shows the randomly-chosen base color
+      • Edges between corners have a narrow 15% blend hotspot
+      • The base color "wins" wherever both overlays fade out
+
+    Example for a Tri with corners Red(A), Blue(B), Green(C),
+    base_idx=0 (Red chosen as base):
+
+      ┌─────────────────────────────────┐
+      │  Layer 1: solid Red fill        │  ← base, everywhere
+      │  Layer 2: Blue gradient overlay │  ← solid at B, fades toward AC edge
+      │  Layer 3: Green gradient overlay│  ← solid at C, fades toward AB edge
+      │  Layer 4: white stroke          │  ← 50% opacity edge line
+      └─────────────────────────────────┘
+
+      At center: Blue and Green both faded out → pure Red visible
+      At corner B: Blue overlay opaque → pure Blue
+      At corner C: Green overlay opaque → pure Green
+      Between B and C: both overlays partially visible → blend
+
+    ───────────────────────────────────────────────────────────────────
+    QUAD COLOR BLENDING (even-edge gap between 2 HCells)
+    ───────────────────────────────────────────────────────────────────
+
+    Simpler case: only 2 colors involved. Each Quad spans the gap
+    between two adjacent HCell edges (spawned on even edges 0, 2, 4).
+
+    Its 4 mesh vertices are:
+      vertex 0 → QuadOwner      (HCell A)
+      vertex 1 → QuadPos2Emitter (HCell B, neighbor)
+      vertex 2 → QuadPos3Emitter (HCell B, neighbor)
+      vertex 3 → QuadTail        (HCell A)
+
+    A single linearGradient runs perpendicular to the shared edge:
+      • Owner edge midpoint  → color A solid   (0%–42.5%)
+      • BLEND HOTSPOT: 15% transition zone     (42.5%–57.5%)
+      • Neighbor edge midpoint → color B solid  (57.5%–100%)
+
+    No layering needed — just one gradient fill per Quad.
+
+    ───────────────────────────────────────────────────────────────────
+    HEXFACE (solid color, drawn last / on top)
+    ───────────────────────────────────────────────────────────────────
+
+    Each HCell's HexFace is a simple solid fill (random HSV color).
+    Drawn after gaps so it overlaps gap edges cleanly.
+    All strokes: white (#fff) at 50% opacity, 1.5px width.
+
+    Entity counts: 19 HCells | 42 Quads | 24 Tris
+    ═══════════════════════════════════════════════════════════════════
+  -->
   <defs>
     <linearGradient id="gQ-e0-q-2r0" gradientUnits="userSpaceOnUse"
         x1="199.8" y1="169.0" x2="246.2" y2="195.9">
