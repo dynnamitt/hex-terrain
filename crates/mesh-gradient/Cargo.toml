@@ -1,0 +1,22 @@
+[package]
+name = "mesh-gradient"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies.bevy]
+version = "0.18"
+default-features = false
+features = [
+    "std",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_image",
+    "bevy_asset",
+    "bevy_color",
+]
+
+[lints.rust]
+unused = { level = "deny" }
+
+[lints.clippy]
+all = { level = "deny" }
