@@ -46,8 +46,8 @@ struct Indicator(u8);
 
 const FALLOFFS: [TriFalloff; 3] = [
     TriFalloff::Hotspot,
-    TriFalloff::Linear,
     TriFalloff::Quadratic,
+    TriFalloff::Plateau,
 ];
 
 fn setup(
