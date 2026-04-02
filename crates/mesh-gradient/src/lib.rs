@@ -187,16 +187,15 @@ fn tri_project(uv: [f32; 2], corner: usize) -> f32 {
     ((uv[0] - c[0]) * dx + (uv[1] - c[1]) * dy) / len_sq
 }
 
-/// Normalized 3-way blend: each corner gets a weight based on its gradient
-/// projection. Weights are normalized so edges are always a clean mix of
-/// their two adjacent corners — no base color leaking to the opposite edge.
-/// `base_idx` is used only as a fallback at the exact center where all
-/// three weights converge to zero.
-fn tri_blend(colors: &[LinearRgba; 3], uv: [f32; 2], band: f32, base_idx: usize) -> LinearRgba {
-    let w: [f32; 3] = std::array::from_fn(|i| {
-        let t = tri_project(uv, i);
-        1.0 - hotspot(t, band)
-    });
+/// Normalized 3-way blend with smooth linear falloff per corner.
+///
+/// Each corner's weight is `1 - t` where `t` is the projection toward
+/// the opposite edge (0 at corner, 1 at midpoint). Linear falloff never
+/// reaches zero inside the triangle, so there are no dead zones or hard
+/// boundaries between regions. Weights are normalized so edges are always
+/// a clean mix of their two adjacent corners.
+fn tri_blend(colors: &[LinearRgba; 3], uv: [f32; 2], _band: f32, base_idx: usize) -> LinearRgba {
+    let w: [f32; 3] = std::array::from_fn(|i| (1.0 - tri_project(uv, i).clamp(0.0, 1.0)).max(0.0));
     let total = w[0] + w[1] + w[2];
     if total < 1e-6 {
         return colors[base_idx];
