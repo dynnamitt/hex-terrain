@@ -14,8 +14,6 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 pub struct BlendCfg {
     /// Width of the transition band (0.0–1.0). Default: 0.15.
     pub band: f32,
-    /// Opacity of tri corner overlays (0.0–1.0). Default: 0.9.
-    pub overlay_opacity: f32,
     /// Quad texture dimensions `[width, height]`. Default: `[32, 16]`.
     pub quad_size: [u32; 2],
     /// Tri texture size (square). Default: 32.
@@ -26,7 +24,6 @@ impl Default for BlendCfg {
     fn default() -> Self {
         Self {
             band: 0.15,
-            overlay_opacity: 0.9,
             quad_size: [32, 16],
             tri_size: 32,
         }
@@ -78,18 +75,10 @@ pub fn blend_tri(
     let colors: [LinearRgba; 3] = mats.map(|m| LinearRgba::from(m.base_color));
     let roughness: [f32; 3] = mats.map(|m| m.perceptual_roughness);
     let metallic: [f32; 3] = mats.map(|m| m.metallic);
-    let ov1 = (base_idx + 1) % 3;
-    let ov2 = (base_idx + 2) % 3;
     let band = cfg.band;
-    let opacity = cfg.overlay_opacity;
 
     let color_tex = mk_image(sz, sz, TextureFormat::Rgba8UnormSrgb, |u, v| {
-        let mut c = colors[base_idx];
-        let a1 = overlay_alpha(tri_project([u, v], ov1), band, opacity);
-        c = c.mix(&colors[ov1], a1);
-        let a2 = overlay_alpha(tri_project([u, v], ov2), band, opacity);
-        c = c.mix(&colors[ov2], a2);
-        srgb_bytes(c)
+        srgb_bytes(tri_blend(&colors, [u, v], band, base_idx))
     });
 
     let avg_r = roughness.iter().sum::<f32>() / 3.0;
@@ -117,11 +106,6 @@ fn hotspot(t: f32, band: f32) -> f32 {
     let lo = 0.5 - band / 2.0;
     let hi = 0.5 + band / 2.0;
     ((t - lo) / (hi - lo)).clamp(0.0, 1.0)
-}
-
-/// Overlay alpha: opaque near the corner, transparent past the hotspot.
-fn overlay_alpha(t: f32, band: f32, opacity: f32) -> f32 {
-    (1.0 - hotspot(t, band)) * opacity
 }
 
 /// Linear RGB → sRGB-encoded RGBA bytes.
@@ -201,6 +185,28 @@ fn tri_project(uv: [f32; 2], corner: usize) -> f32 {
         return 0.0;
     }
     ((uv[0] - c[0]) * dx + (uv[1] - c[1]) * dy) / len_sq
+}
+
+/// Normalized 3-way blend: each corner gets a weight based on its gradient
+/// projection. Weights are normalized so edges are always a clean mix of
+/// their two adjacent corners — no base color leaking to the opposite edge.
+/// `base_idx` is used only as a fallback at the exact center where all
+/// three weights converge to zero.
+fn tri_blend(colors: &[LinearRgba; 3], uv: [f32; 2], band: f32, base_idx: usize) -> LinearRgba {
+    let w: [f32; 3] = std::array::from_fn(|i| {
+        let t = tri_project(uv, i);
+        1.0 - hotspot(t, band)
+    });
+    let total = w[0] + w[1] + w[2];
+    if total < 1e-6 {
+        return colors[base_idx];
+    }
+    LinearRgba::new(
+        (colors[0].red * w[0] + colors[1].red * w[1] + colors[2].red * w[2]) / total,
+        (colors[0].green * w[0] + colors[1].green * w[1] + colors[2].green * w[2]) / total,
+        (colors[0].blue * w[0] + colors[1].blue * w[1] + colors[2].blue * w[2]) / total,
+        1.0,
+    )
 }
 
 #[cfg(test)]
