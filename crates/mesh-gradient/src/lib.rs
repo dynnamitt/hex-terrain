@@ -15,12 +15,9 @@ pub enum TriFalloff {
     /// `1 - hotspot(t)` — sharp plateaus at corners, narrow transition band,
     /// but creates dead-zone rings where all weights hit zero.
     Hotspot,
-    /// `(1 - t)²` — sharp corners with a smooth tail toward the center.
-    /// No dead zones but corners start decaying immediately.
-    Quadratic,
     /// Flat plateau at corners (weight=1.0 up to the hotspot edge), then
-    /// quadratic decay toward the center. Merges the hotspot's sharp corner
-    /// identity with a smooth tail that never creates dead zones.
+    /// quadratic decay toward the center. Sharp corner identity with a
+    /// smooth tail that never creates dead zones.
     #[default]
     Plateau,
 }
@@ -216,7 +213,6 @@ fn tri_blend(
         let t = tri_project(uv, i).clamp(0.0, 1.0);
         match falloff {
             TriFalloff::Hotspot => 1.0 - hotspot(t, band),
-            TriFalloff::Quadratic => (1.0 - t) * (1.0 - t),
             TriFalloff::Plateau => {
                 let lo = (0.5 - band / 2.0).max(0.0);
                 if t <= lo {

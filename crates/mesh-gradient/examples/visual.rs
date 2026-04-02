@@ -44,11 +44,7 @@ struct TriTag(TriFalloff);
 #[derive(Component)]
 struct Indicator(u8);
 
-const FALLOFFS: [TriFalloff; 3] = [
-    TriFalloff::Hotspot,
-    TriFalloff::Quadratic,
-    TriFalloff::Plateau,
-];
+const FALLOFFS: [TriFalloff; 2] = [TriFalloff::Hotspot, TriFalloff::Plateau];
 
 fn setup(
     mut commands: Commands,
