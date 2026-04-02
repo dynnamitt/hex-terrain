@@ -2,9 +2,9 @@
 //!
 //! Run: `cargo run -p mesh-gradient --example visual --features visual`
 //!
-//! Every 3 seconds, two new random `StandardMaterial`s are generated and
-//! blended via `blend_quad` / `blend_tri`. The left mesh shows the quad
-//! gradient, the right mesh shows the tri 3-way blend.
+//! Every 3 seconds, three random materials are generated. The quad (left)
+//! blends materials A→B. The tri (right) blends all three. Small sphere
+//! indicators at each edge/vertex show the raw input materials.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
@@ -39,11 +39,37 @@ struct QuadMesh;
 #[derive(Component)]
 struct TriMesh;
 
+/// Indicator sphere index (0=A, 1=B, 2=C).
 #[derive(Component)]
-struct LabelA;
+struct Indicator(u8);
 
-#[derive(Component)]
-struct LabelB;
+// ── Quad geometry (left side of scene) ─────────────────────────────
+//
+//  indicator A          indicator B
+//     ●                    ●
+//     v0 ────────────── v1
+//     │  A ───>*<─── B  │
+//     v3 ────────────── v2
+//
+const QUAD_CENTER: Vec3 = Vec3::new(-1.5, 0.0, 0.0);
+const QUAD_A_POS: Vec3 = Vec3::new(-2.7, 0.0, 0.0);
+const QUAD_B_POS: Vec3 = Vec3::new(-0.3, 0.0, 0.0);
+
+// ── Tri geometry (right side of scene) ─────────────────────────────
+//
+//        ● A (v0)
+//       / \
+//      /   \
+//     /     \
+//  ● B       ● C
+//  (v1)      (v2)
+//
+// Tri mesh verts: v0=(-1,0,-0.5) v1=(1,0,-0.5) v2=(0,0,0.8)
+// World = TRI_CENTER + vert, indicator pushed further out from center.
+const TRI_CENTER: Vec3 = Vec3::new(1.5, 0.0, 0.1);
+const TRI_A_POS: Vec3 = Vec3::new(0.2, 0.0, -0.7); // outside v0
+const TRI_B_POS: Vec3 = Vec3::new(2.8, 0.0, -0.7); // outside v1
+const TRI_C_POS: Vec3 = Vec3::new(1.5, 0.0, 1.2); // outside v2
 
 fn setup(
     mut commands: Commands,
@@ -52,13 +78,10 @@ fn setup(
     mut images: ResMut<Assets<Image>>,
     cfg: Res<BlendCfg>,
 ) {
-    // Camera
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 3.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 4.0, 4.0).looking_at(Vec3::new(0.0, 0.0, 0.2), Vec3::Y),
     ));
-
-    // Lights
     commands.spawn((
         DirectionalLight {
             illuminance: 5000.0,
@@ -73,41 +96,54 @@ fn setup(
         ..default()
     });
 
-    let (mat_a, mat_b) = random_pair(0);
-    let quad_mat = blend_quad(&mat_a, &mat_b, &cfg, &mut images);
-    let tri_mat = blend_tri([&mat_a, &mat_b, &mat_a], 0, &cfg, &mut images);
+    let (a, b, c) = random_tri(0);
+    let sphere = meshes.add(Sphere::new(0.15));
 
-    // Quad mesh (left) — 4-vertex plane
-    let quad = meshes.add(mk_quad());
+    // ── Quad ───────────────────────────────────────────────────────
+    let quad_mat = blend_quad(&a, &b, &cfg, &mut images);
     commands.spawn((
         QuadMesh,
-        Mesh3d(quad),
+        Mesh3d(meshes.add(mk_quad())),
         MeshMaterial3d(materials.add(quad_mat)),
-        Transform::from_xyz(-1.5, 0.0, 0.0),
+        Transform::from_translation(QUAD_CENTER),
     ));
+    // Indicator spheres at short sides
+    spawn_indicator(&mut commands, &sphere, &mut materials, &a, QUAD_A_POS, 0);
+    spawn_indicator(&mut commands, &sphere, &mut materials, &b, QUAD_B_POS, 1);
 
-    // Tri mesh (right) — 3-vertex triangle
-    let tri = meshes.add(mk_tri());
+    // ── Tri ────────────────────────────────────────────────────────
+    let tri_mat = blend_tri([&a, &b, &c], 0, &cfg, &mut images);
     commands.spawn((
         TriMesh,
-        Mesh3d(tri),
+        Mesh3d(meshes.add(mk_tri())),
         MeshMaterial3d(materials.add(tri_mat)),
-        Transform::from_xyz(1.5, 0.0, 0.0),
+        Transform::from_translation(TRI_CENTER),
     ));
+    // Indicator spheres outside each vertex
+    spawn_indicator(&mut commands, &sphere, &mut materials, &a, TRI_A_POS, 0);
+    spawn_indicator(&mut commands, &sphere, &mut materials, &b, TRI_B_POS, 1);
+    spawn_indicator(&mut commands, &sphere, &mut materials, &c, TRI_C_POS, 2);
+}
 
-    // Reference swatches: small planes showing the two raw input materials
-    let swatch = meshes.add(Plane3d::new(Vec3::Y, Vec2::splat(0.4)));
+fn spawn_indicator(
+    commands: &mut Commands,
+    mesh: &Handle<Mesh>,
+    mats: &mut Assets<StandardMaterial>,
+    src: &StandardMaterial,
+    pos: Vec3,
+    idx: u8,
+) {
+    let mat = StandardMaterial {
+        base_color: src.base_color,
+        perceptual_roughness: src.perceptual_roughness,
+        metallic: src.metallic,
+        ..default()
+    };
     commands.spawn((
-        LabelA,
-        Mesh3d(swatch.clone()),
-        MeshMaterial3d(materials.add(mat_a)),
-        Transform::from_xyz(-2.5, 0.0, 1.5),
-    ));
-    commands.spawn((
-        LabelB,
-        Mesh3d(swatch),
-        MeshMaterial3d(materials.add(mat_b)),
-        Transform::from_xyz(-1.5, 0.0, 1.5),
+        Indicator(idx),
+        Mesh3d(mesh.clone()),
+        MeshMaterial3d(mats.add(mat)),
+        Transform::from_translation(pos),
     ));
 }
 
@@ -116,26 +152,12 @@ fn cycle_materials(
     mut timer: ResMut<CycleTimer>,
     cfg: Res<BlendCfg>,
     mut images: ResMut<Assets<Image>>,
-    mut mat_assets: ResMut<Assets<StandardMaterial>>,
+    mut mats: ResMut<Assets<StandardMaterial>>,
     mut quads: Query<&mut MeshMaterial3d<StandardMaterial>, With<QuadMesh>>,
     mut tris: Query<&mut MeshMaterial3d<StandardMaterial>, (With<TriMesh>, Without<QuadMesh>)>,
-    mut swatch_a: Query<
-        &mut MeshMaterial3d<StandardMaterial>,
-        (
-            With<LabelA>,
-            Without<QuadMesh>,
-            Without<TriMesh>,
-            Without<LabelB>,
-        ),
-    >,
-    mut swatch_b: Query<
-        &mut MeshMaterial3d<StandardMaterial>,
-        (
-            With<LabelB>,
-            Without<QuadMesh>,
-            Without<TriMesh>,
-            Without<LabelA>,
-        ),
+    mut indicators: Query<
+        (&Indicator, &mut MeshMaterial3d<StandardMaterial>),
+        (Without<QuadMesh>, Without<TriMesh>),
     >,
 ) {
     timer.0.tick(time.delta());
@@ -144,12 +166,19 @@ fn cycle_materials(
     }
 
     let seed = (time.elapsed_secs() * 1000.0) as u32;
-    let (mat_a, mat_b) = random_pair(seed);
+    let (a, b, c) = random_tri(seed);
 
-    let quad_h = mat_assets.add(blend_quad(&mat_a, &mat_b, &cfg, &mut images));
-    let tri_h = mat_assets.add(blend_tri([&mat_a, &mat_b, &mat_a], 0, &cfg, &mut images));
-    let a_h = mat_assets.add(mat_a);
-    let b_h = mat_assets.add(mat_b);
+    let quad_h = mats.add(blend_quad(&a, &b, &cfg, &mut images));
+    let tri_h = mats.add(blend_tri([&a, &b, &c], 0, &cfg, &mut images));
+    let raw = [&a, &b, &c];
+    let ind_h: [Handle<StandardMaterial>; 3] = std::array::from_fn(|i| {
+        mats.add(StandardMaterial {
+            base_color: raw[i].base_color,
+            perceptual_roughness: raw[i].perceptual_roughness,
+            metallic: raw[i].metallic,
+            ..default()
+        })
+    });
 
     for mut m in &mut quads {
         m.0 = quad_h.clone();
@@ -157,29 +186,36 @@ fn cycle_materials(
     for mut m in &mut tris {
         m.0 = tri_h.clone();
     }
-    for mut m in &mut swatch_a {
-        m.0 = a_h.clone();
-    }
-    for mut m in &mut swatch_b {
-        m.0 = b_h.clone();
+    for (idx, mut m) in &mut indicators {
+        m.0 = ind_h[idx.0 as usize].clone();
     }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-fn random_pair(seed: u32) -> (StandardMaterial, StandardMaterial) {
+/// Three materials with guaranteed distinct hues (120 apart on the color wheel).
+fn random_tri(seed: u32) -> (StandardMaterial, StandardMaterial, StandardMaterial) {
     let rng = |s: u32| -> f32 {
         let h = s.wrapping_mul(2654435761);
         (h & 0xFFFF) as f32 / 65535.0
     };
-    let mk = |s: u32| StandardMaterial {
-        base_color: Color::srgb(rng(s), rng(s.wrapping_add(1)), rng(s.wrapping_add(2))),
-        perceptual_roughness: 0.3 + rng(s.wrapping_add(3)) * 0.6,
-        metallic: rng(s.wrapping_add(4)) * 0.5,
-        cull_mode: None,
-        ..default()
+    // Random base hue, then +120 and +240 for guaranteed separation.
+    let base_hue = rng(seed) * 360.0;
+    let hues = [base_hue, base_hue + 120.0, base_hue + 240.0];
+
+    let mk = |i: usize| {
+        let s = seed.wrapping_add(i as u32 * 50);
+        let sat = 0.5 + rng(s.wrapping_add(10)) * 0.4;
+        let val = 0.4 + rng(s.wrapping_add(20)) * 0.5;
+        StandardMaterial {
+            base_color: Color::hsl(hues[i] % 360.0, sat, val),
+            perceptual_roughness: 0.3 + rng(s.wrapping_add(30)) * 0.5,
+            metallic: rng(s.wrapping_add(40)) * 0.3,
+            cull_mode: None,
+            ..default()
+        }
     };
-    (mk(seed), mk(seed.wrapping_add(100)))
+    (mk(0), mk(1), mk(2))
 }
 
 fn mk_quad() -> Mesh {
