@@ -89,7 +89,7 @@ pub fn generate_h_grid(
         let center = terrain.hex_to_world_pos(hex);
         let height = terrain.height(&hex).unwrap();
         let radius = terrain.radius(&hex).unwrap();
-        let mineral = Mineral::from_hex(hex, g.height_noise_seed);
+        let mineral = Mineral::from_hex(hex, g.mineral_seed);
         hex_colors.insert(hex, mineral.vertex_color());
 
         let cell_entity = commands

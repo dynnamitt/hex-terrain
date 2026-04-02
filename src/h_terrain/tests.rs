@@ -20,6 +20,7 @@ fn test_config() -> HTerrainConfig {
             point_spacing: 4.0,
             height_noise_seed: 43,
             radius_noise_seed: 137,
+            mineral_seed: 7919,
             height_noise_octaves: 4,
             radius_noise_octaves: 3,
             height_noise_scale: 50.0,
