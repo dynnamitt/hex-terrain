@@ -96,6 +96,25 @@ pub struct HGridSettings {
     pub max_hex_radius: f32,
 }
 
+impl HGridSettings {
+    /// Convert to the standalone `hex_grid::HGridSettings` (without ECS-specific fields).
+    pub fn to_grid_settings(&self) -> hex_grid::HGridSettings {
+        hex_grid::HGridSettings {
+            radius: self.radius,
+            point_spacing: self.point_spacing,
+            height_noise_seed: self.height_noise_seed,
+            radius_noise_seed: self.radius_noise_seed,
+            height_noise_octaves: self.height_noise_octaves,
+            radius_noise_octaves: self.radius_noise_octaves,
+            height_noise_scale: self.height_noise_scale,
+            radius_noise_scale: self.radius_noise_scale,
+            max_height: self.max_height,
+            min_hex_radius: self.min_hex_radius,
+            max_hex_radius: self.max_hex_radius,
+        }
+    }
+}
+
 impl Default for HTerrainConfig {
     fn default() -> Self {
         Self {

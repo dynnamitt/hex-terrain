@@ -10,7 +10,6 @@ use hexx::{Hex, HexLayout, PlaneMeshBuilder, shapes};
 use super::HTerrainConfig;
 use super::entities::{Corner, HCell, HGrid, HexFace, Quad, Tri};
 use super::gaps;
-use super::h_grid_layout::HGridLayout;
 use super::materials::TerrainMaterials;
 use super::math;
 use super::mineral::Mineral;
@@ -41,7 +40,7 @@ pub fn generate_h_grid(
     });
 
     let g = &cfg.grid;
-    let terrain = HGridLayout::from_settings(g);
+    let terrain = g.build_layout();
 
     let edge_thickness = 0.02;
     let fov = TerrainMaterials::new(&mut materials, &mut meshes, &mut images);
