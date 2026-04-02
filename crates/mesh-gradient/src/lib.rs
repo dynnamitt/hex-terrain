@@ -53,19 +53,11 @@ pub fn blend_quad(
         srgb_bytes(a_lin.mix(&b_lin, t))
     });
 
-    let (a_r, b_r) = (a.perceptual_roughness, b.perceptual_roughness);
-    let (a_m, b_m) = (a.metallic, b.metallic);
-    let mr_tex = mk_image(w, h, TextureFormat::Rgba8Unorm, |u, _| {
-        let t = hotspot(u, band);
-        mr_bytes(lerp(a_r, b_r, t), lerp(a_m, b_m, t))
-    });
-
     StandardMaterial {
         base_color: Color::WHITE,
         base_color_texture: Some(images.add(color_tex)),
-        metallic_roughness_texture: Some(images.add(mr_tex)),
-        metallic: 1.0,
-        perceptual_roughness: 1.0,
+        metallic: (a.metallic + b.metallic) / 2.0,
+        perceptual_roughness: (a.perceptual_roughness + b.perceptual_roughness) / 2.0,
         cull_mode: None,
         ..default()
     }
@@ -99,34 +91,20 @@ pub fn blend_tri(
         srgb_bytes(c)
     });
 
-    let mr_tex = mk_image(sz, sz, TextureFormat::Rgba8Unorm, |u, v| {
-        let mut r = roughness[base_idx];
-        let mut m = metallic[base_idx];
-        let a1 = overlay_alpha(tri_project([u, v], ov1), band, opacity);
-        r = lerp(r, roughness[ov1], a1);
-        m = lerp(m, metallic[ov1], a1);
-        let a2 = overlay_alpha(tri_project([u, v], ov2), band, opacity);
-        r = lerp(r, roughness[ov2], a2);
-        m = lerp(m, metallic[ov2], a2);
-        mr_bytes(r, m)
-    });
+    let avg_r = roughness.iter().sum::<f32>() / 3.0;
+    let avg_m = metallic.iter().sum::<f32>() / 3.0;
 
     StandardMaterial {
         base_color: Color::WHITE,
         base_color_texture: Some(images.add(color_tex)),
-        metallic_roughness_texture: Some(images.add(mr_tex)),
-        metallic: 1.0,
-        perceptual_roughness: 1.0,
+        metallic: avg_m,
+        perceptual_roughness: avg_r,
         cull_mode: None,
         ..default()
     }
 }
 
 // ── Internal helpers ───────────────────────────────────────────────
-
-fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    a + (b - a) * t
-}
 
 /// Blend factor with configurable hotspot transition.
 /// Returns 0.0 for t at the A side, 1.0 for t at the B side,
@@ -156,12 +134,6 @@ fn srgb_bytes(c: LinearRgba) -> [u8; 4] {
         (s.clamp(0.0, 1.0) * 255.0 + 0.5) as u8
     };
     [to_srgb(c.red), to_srgb(c.green), to_srgb(c.blue), 255]
-}
-
-/// Roughness + metallic → glTF metallic-roughness RGBA bytes.
-/// Green = roughness, Blue = metallic (red and alpha unused).
-fn mr_bytes(roughness: f32, metallic: f32) -> [u8; 4] {
-    [0, (roughness * 255.0) as u8, (metallic * 255.0) as u8, 255]
 }
 
 /// Generates a texture from a per-pixel function over normalized UV coords.
@@ -299,8 +271,9 @@ mod tests {
         };
         let result = blend_quad(&mat, &mat, &BlendCfg::default(), &mut images);
         assert!(result.base_color_texture.is_some());
-        assert!(result.metallic_roughness_texture.is_some());
         assert_eq!(result.cull_mode, None);
+        assert!((result.metallic - 0.2).abs() < 1e-6);
+        assert!((result.perceptual_roughness - 0.8).abs() < 1e-6);
     }
 
     #[test]
@@ -314,7 +287,7 @@ mod tests {
         };
         let result = blend_tri([&mat, &mat, &mat], 0, &BlendCfg::default(), &mut images);
         assert!(result.base_color_texture.is_some());
-        assert!(result.metallic_roughness_texture.is_some());
+        assert!((result.metallic - 0.2).abs() < 1e-6);
     }
 
     #[test]

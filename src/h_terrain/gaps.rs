@@ -17,7 +17,6 @@ use super::entities::{
 use super::h_grid_layout::HGridLayout;
 use super::math;
 use super::mineral::Mineral;
-use mesh_gradient::{BlendCfg, blend_quad, blend_tri};
 
 const EDGE_THICKNESS: f32 = 0.03;
 
@@ -31,8 +30,8 @@ const EDGE_THICKNESS: f32 = 0.03;
 /// systems can navigate from corner to gap mesh without hierarchy traversal.
 ///
 /// Four emissive [`QuadEdge`] cuboids are spawned as children of the mesh.
-/// The gap receives a gradient-blended material from owner → neighbor mineral
-/// via [`blend_quad`].
+/// The gap receives the owning hex's [`Mineral`] material so it matches its
+/// HexFace under PBR lighting.
 ///
 /// Returns `None` (no-op) when the neighbor or any corner entity is missing,
 /// which happens for hexes on the grid boundary.
@@ -40,9 +39,7 @@ const EDGE_THICKNESS: f32 = 0.03;
 pub(super) fn spawn_quad(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    mat_assets: &mut Assets<StandardMaterial>,
-    img_assets: &mut Assets<Image>,
-    blend_cfg: &BlendCfg,
+    mineral_handles: &[Handle<StandardMaterial>; Mineral::COUNT],
     edge_material: &Handle<StandardMaterial>,
     terrain: &HGridLayout,
     corner_entities: &HashMap<(Hex, u8), Entity>,
@@ -55,7 +52,6 @@ pub(super) fn spawn_quad(
     let neighbor = hex.neighbor(dir);
     let &neighbor_hex_entity = hex_entities.get(&neighbor)?;
     let mineral = *hex_minerals.get(&hex)?;
-    let neighbor_mineral = *hex_minerals.get(&neighbor)?;
 
     let (v0_idx, v1_idx, n0_idx, n1_idx) = quad_corner_indices(edge_index);
 
@@ -71,15 +67,6 @@ pub(super) fn spawn_quad(
     let v2 = terrain.vertex(neighbor, n1_idx)?;
     let v3 = terrain.vertex(hex, v1_idx)?;
 
-    // Blend owner + neighbor mineral materials into a gradient
-    let blended = blend_quad(
-        &mineral.material(),
-        &neighbor_mineral.material(),
-        blend_cfg,
-        img_assets,
-    );
-    let gap_handle = mat_assets.add(blended);
-
     // Build mesh in corner-local space
     let mesh = build_gap_mesh(&[v0, v1, v2, v3]);
     let mesh_entity = commands
@@ -88,7 +75,7 @@ pub(super) fn spawn_quad(
             mineral,
             RayCastBackfaces,
             Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(gap_handle),
+            MeshMaterial3d(mineral_handles[mineral.idx()].clone()),
             Transform::default(),
         ))
         .id();
@@ -138,7 +125,7 @@ pub(super) fn spawn_quad(
 /// The mesh is parented to the owner corner, and marker components
 /// ([`TriOwner`], [`TriPos1Emitter`], [`TriPos2Emitter`]) are inserted on
 /// the three participating [`Corner`](super::entities::Corner) entities.
-/// The tri receives a 3-way blended material via [`blend_tri`].
+/// The tri receives the canonical owner's [`Mineral`] material.
 ///
 /// Returns `None` when this hex is not the canonical owner, or when any of
 /// the three neighboring corners are missing (grid boundary).
@@ -146,9 +133,7 @@ pub(super) fn spawn_quad(
 pub(super) fn spawn_tri(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    mat_assets: &mut Assets<StandardMaterial>,
-    img_assets: &mut Assets<Image>,
-    blend_cfg: &BlendCfg,
+    mineral_handles: &[Handle<StandardMaterial>; Mineral::COUNT],
     terrain: &HGridLayout,
     corner_entities: &HashMap<(Hex, u8), Entity>,
     hex_entities: &HashMap<Hex, Entity>,
@@ -168,11 +153,7 @@ pub(super) fn spawn_tri(
 
     let &neighbor1_hex_entity = hex_entities.get(&coords[1])?;
     let &neighbor2_hex_entity = hex_entities.get(&coords[2])?;
-    let minerals = [
-        *hex_minerals.get(&coords[0])?,
-        *hex_minerals.get(&coords[1])?,
-        *hex_minerals.get(&coords[2])?,
-    ];
+    let mineral = *hex_minerals.get(&hex)?;
 
     let v0_idx = dir.index();
     let idx1 = corner_index_for_vertex(coords[1], &grid_vertex)?;
@@ -188,26 +169,15 @@ pub(super) fn spawn_tri(
     let v1 = terrain.vertex(coords[1], idx1)?;
     let v2 = terrain.vertex(coords[2], idx2)?;
 
-    // Deterministic base corner selection from hex coordinates
-    let base_idx = (coords.iter().map(|c| c.x + c.y).sum::<i32>().unsigned_abs() as usize) % 3;
-    let mats = minerals.map(|m| m.material());
-    let blended = blend_tri(
-        [&mats[0], &mats[1], &mats[2]],
-        base_idx,
-        blend_cfg,
-        img_assets,
-    );
-    let gap_handle = mat_assets.add(blended);
-
     // Build mesh in corner-local space
     let mesh = build_gap_mesh(&[v0, v1, v2]);
     let mesh_entity = commands
         .spawn((
             Tri,
-            minerals[0],
+            mineral,
             RayCastBackfaces,
             Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(gap_handle),
+            MeshMaterial3d(mineral_handles[mineral.idx()].clone()),
             Transform::default(),
         ))
         .id();
