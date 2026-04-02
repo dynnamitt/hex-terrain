@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 /// Blend gradient configuration.
+#[derive(Resource)]
 pub struct BlendCfg {
     /// Width of the transition band (0.0–1.0). Default: 0.15.
     pub band: f32,
