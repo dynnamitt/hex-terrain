@@ -110,9 +110,12 @@ pub fn blend_tri(
 
 // ── Internal helpers ───────────────────────────────────────────────
 
-/// Blend factor with configurable hotspot transition.
-/// Returns 0.0 for t at the A side, 1.0 for t at the B side,
-/// with a narrow linear ramp in the center band.
+// sRGB transfer function constants (IEC 61966-2-1).
+const SRGB_LINEAR_CUTOFF: f32 = 0.0031308;
+const SRGB_LINEAR_SCALE: f32 = 12.92;
+const SRGB_GAMMA: f32 = 2.4;
+const SRGB_A: f32 = 0.055;
+
 fn hotspot(t: f32, band: f32) -> f32 {
     if band <= 0.0 {
         return if t < 0.5 { 0.0 } else { 1.0 };
@@ -125,10 +128,10 @@ fn hotspot(t: f32, band: f32) -> f32 {
 /// Linear RGB → sRGB-encoded RGBA bytes.
 fn srgb_bytes(c: LinearRgba) -> [u8; 4] {
     let to_srgb = |v: f32| -> u8 {
-        let s = if v <= 0.0031308 {
-            v * 12.92
+        let s = if v <= SRGB_LINEAR_CUTOFF {
+            v * SRGB_LINEAR_SCALE
         } else {
-            1.055 * v.powf(1.0 / 2.4) - 0.055
+            (1.0 + SRGB_A) * v.powf(1.0 / SRGB_GAMMA) - SRGB_A
         };
         (s.clamp(0.0, 1.0) * 255.0 + 0.5) as u8
     };
@@ -177,21 +180,15 @@ fn mk_image(w: u32, h: u32, fmt: TextureFormat, pixel: impl Fn(f32, f32) -> [u8;
 /// UV positions matching gap mesh vertex order: v0=(0,0), v1=(1,0), v2=(0.5,1).
 const TRI_UVS: [[f32; 2]; 3] = [[0.0, 0.0], [1.0, 0.0], [0.5, 1.0]];
 
-/// Midpoint of the edge opposite to `corner` in the tri UV triangle.
-fn tri_opp_mid(corner: usize) -> [f32; 2] {
-    let j = (corner + 1) % 3;
-    let k = (corner + 2) % 3;
-    [
-        (TRI_UVS[j][0] + TRI_UVS[k][0]) / 2.0,
-        (TRI_UVS[j][1] + TRI_UVS[k][1]) / 2.0,
-    ]
-}
+/// Precomputed midpoint of the edge opposite each corner in UV space.
+/// `TRI_OPP_MIDS[i]` = midpoint of edge between corners `(i+1)%3` and `(i+2)%3`.
+const TRI_OPP_MIDS: [[f32; 2]; 3] = [[0.75, 0.5], [0.25, 0.5], [0.5, 0.0]];
 
 /// Projects a UV point onto the gradient axis from `corner` toward its
-/// opposite edge midpoint. Returns t in [0,1]: 0 = at corner, 1 = at midpoint.
+/// opposite edge midpoint. Returns t: 0 = at corner, 1 = at midpoint.
 fn tri_project(uv: [f32; 2], corner: usize) -> f32 {
     let c = TRI_UVS[corner];
-    let m = tri_opp_mid(corner);
+    let m = TRI_OPP_MIDS[corner];
     let dx = m[0] - c[0];
     let dy = m[1] - c[1];
     let len_sq = dx * dx + dy * dy;
@@ -258,17 +255,12 @@ mod tests {
     }
 
     #[test]
-    fn tri_opp_mid_corner0() {
-        let m = tri_opp_mid(0);
-        assert!((m[0] - 0.75).abs() < 1e-6);
-        assert!((m[1] - 0.5).abs() < 1e-6);
-    }
-
-    #[test]
-    fn tri_opp_mid_corner2() {
-        let m = tri_opp_mid(2);
-        assert!((m[0] - 0.5).abs() < 1e-6);
-        assert!((m[1] - 0.0).abs() < 1e-6);
+    fn tri_opp_mids_correct() {
+        // Verify precomputed midpoints match expected values.
+        assert!((TRI_OPP_MIDS[0][0] - 0.75).abs() < 1e-6);
+        assert!((TRI_OPP_MIDS[0][1] - 0.5).abs() < 1e-6);
+        assert!((TRI_OPP_MIDS[2][0] - 0.5).abs() < 1e-6);
+        assert!((TRI_OPP_MIDS[2][1] - 0.0).abs() < 1e-6);
     }
 
     #[test]
@@ -282,8 +274,7 @@ mod tests {
     #[test]
     fn tri_project_at_opp_mid_is_one() {
         for i in 0..3 {
-            let m = tri_opp_mid(i);
-            let t = tri_project(m, i);
+            let t = tri_project(TRI_OPP_MIDS[i], i);
             assert!((t - 1.0).abs() < 1e-4, "corner {i}: expected ~1, got {t}");
         }
     }

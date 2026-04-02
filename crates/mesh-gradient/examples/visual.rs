@@ -1,9 +1,9 @@
-//! Visual test: quad gradient + three tri falloff modes side by side.
+//! Visual test: quad gradient + tri falloff comparison.
 //!
 //! Run: `cargo run -p mesh-gradient --example visual --features visual`
 //!
 //! Every 3 seconds, three random materials cycle. The quad (far left)
-//! blends A→B. Three tris show Hotspot / Linear / Quadratic falloff.
+//! blends A→B. Two tris compare Hotspot vs Plateau falloff.
 //! Sphere indicators at vertices show the raw input materials.
 
 use bevy::asset::RenderAssetUsages;
