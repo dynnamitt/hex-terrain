@@ -25,7 +25,7 @@ impl Default for BlendCfg {
         Self {
             band: 0.15,
             quad_size: [32, 16],
-            tri_size: 32,
+            tri_size: 64,
         }
     }
 }
