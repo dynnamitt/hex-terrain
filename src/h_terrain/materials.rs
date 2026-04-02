@@ -12,14 +12,12 @@ use super::HTerrainConfig;
 use super::entities::{
     AimStar, FovTransition, HCell, HexFace, InFov, InSight, PreSightMaterial, Quad, QuadEdge, Tri,
 };
+use super::mineral::{HIGHLIGHT_EMISSIVE, Mineral};
 use crate::drone::Player;
 
-/// Base/default terrain color palette.
+/// Base/default terrain color palette (non-mineral items only).
 #[derive(Clone, Copy)]
 pub enum OrigPalette {
-    Hex,
-    Gap,
-    Edge,
     Debug,
     ClearColor,
 }
@@ -27,11 +25,8 @@ pub enum OrigPalette {
 impl From<OrigPalette> for Color {
     fn from(p: OrigPalette) -> Self {
         match p {
-            OrigPalette::Hex => Color::srgb(0.4, 0.5, 0.1), // olive green
-            OrigPalette::Gap => Color::srgb(0.1, 0.1, 0.04), // near-black brown
-            OrigPalette::Edge => Color::srgb(0.0, 0.5, 1.0), // azure blue
-            OrigPalette::Debug => Color::srgb(1.0, 0.2, 0.8), // hot pink
-            OrigPalette::ClearColor => Color::srgb(0.02, 0.03, 0.08), // deep twilight blue
+            OrigPalette::Debug => Color::srgb(1.0, 0.2, 0.8),
+            OrigPalette::ClearColor => Color::srgb(0.02, 0.03, 0.08),
         }
     }
 }
@@ -39,29 +34,23 @@ impl From<OrigPalette> for Color {
 impl From<OrigPalette> for LinearRgba {
     fn from(p: OrigPalette) -> Self {
         match p {
-            OrigPalette::Gap => LinearRgba::rgb(0.0255, 0.051, 0.085), // dim navy glow
-            OrigPalette::Edge => LinearRgba::rgb(0.0, 20.0, 40.0),     // intense cyan bloom
-            OrigPalette::Debug => LinearRgba::rgb(4.0, 0.8, 3.2),      // bright magenta bloom
-            _ => LinearRgba::BLACK,
+            OrigPalette::Debug => LinearRgba::rgb(4.0, 0.8, 3.2),
+            OrigPalette::ClearColor => LinearRgba::BLACK,
         }
     }
 }
 
-/// FoV highlight + aim color palette.
+/// FoV highlight color palette (edge + aim).
 #[derive(Clone, Copy)]
-pub enum FovPalette {
+pub(super) enum FovPalette {
     Hex,
-    Gap,
     Edge,
-    Aim,
 }
 
 impl From<FovPalette> for Color {
     fn from(p: FovPalette) -> Self {
         match p {
-            FovPalette::Hex | FovPalette::Edge => Color::srgb(0.2, 0.9, 0.3), // bright green
-            FovPalette::Gap => Color::srgb(0.165, 0.745, 0.25),               // muted lime green
-            FovPalette::Aim => Color::srgb(0.6, 0.1, 0.8),                    // purple
+            FovPalette::Hex | FovPalette::Edge => Color::srgb(0.2, 0.9, 0.3),
         }
     }
 }
@@ -69,24 +58,17 @@ impl From<FovPalette> for Color {
 impl From<FovPalette> for LinearRgba {
     fn from(p: FovPalette) -> Self {
         match p {
-            FovPalette::Hex | FovPalette::Edge => LinearRgba::rgb(0.04, 0.18, 0.06), // green-tinted glow
-            FovPalette::Gap => LinearRgba::rgb(0.022, 0.10, 0.034), // soft green glow
-            FovPalette::Aim => LinearRgba::rgb(0.92, 0.32, 2.56),   // vivid violet bloom
+            FovPalette::Hex | FovPalette::Edge => LinearRgba::rgb(0.04, 0.18, 0.06),
         }
     }
 }
 
-/// Material handles for terrain rendering: hex faces, gaps, aim highlight, and edges.
+/// Material handles for terrain rendering.
+///
+/// Hex faces and gaps use per-[`Mineral`] materials (created at startup, not stored here).
+/// Edges, aim highlight, and fire effects are stored here.
 #[derive(Resource)]
 pub struct TerrainMaterials {
-    /// Original hex face material.
-    pub hex_original: Handle<StandardMaterial>,
-    /// Highlight hex face material (emissive warm glow).
-    pub hex_highlight: Handle<StandardMaterial>,
-    /// Original gap (Quad/Tri) material.
-    pub gap_original: Handle<StandardMaterial>,
-    /// Highlight gap material (emissive cyan glow).
-    pub gap_highlight: Handle<StandardMaterial>,
     /// Green emissive material for the aimed-at hex face (screen center + within FoV).
     pub hex_in_aim: Handle<StandardMaterial>,
     /// Aim-star line material (azure glow, slightly more intense than edges).
@@ -110,24 +92,6 @@ impl TerrainMaterials {
         images: &mut Assets<Image>,
     ) -> Self {
         Self {
-            hex_original: materials.add(StandardMaterial {
-                base_color: OrigPalette::Hex.into(),
-                ..default()
-            }),
-            hex_highlight: materials.add(StandardMaterial {
-                base_color: FovPalette::Hex.into(),
-                ..default()
-            }),
-            gap_original: materials.add(StandardMaterial {
-                base_color: OrigPalette::Gap.into(),
-                cull_mode: None,
-                ..default()
-            }),
-            gap_highlight: materials.add(StandardMaterial {
-                base_color: FovPalette::Gap.into(),
-                cull_mode: None,
-                ..default()
-            }),
             hex_in_aim: materials.add(StandardMaterial {
                 base_color: FovPalette::Hex.into(),
                 ..default()
@@ -229,9 +193,14 @@ pub(super) struct FovChanges<'w, 's> {
 }
 
 /// Starts or reverses [`FovTransition`] on material entities when [`InFov`] changes.
+///
+/// Computes per-entity color endpoints based on entity type:
+/// - HexFace / Quad / Tri: mineral color → mineral highlight
+/// - QuadEdge: muted cyan → bright green bloom
 pub(super) fn start_fov_transitions(
     mut fov: FovChanges,
     mats: Res<TerrainMaterials>,
+    minerals: Query<&Mineral>,
     mut materials: Query<&mut MeshMaterial3d<StandardMaterial>>,
     mut transitions: Query<&mut FovTransition>,
     mut mat_assets: ResMut<Assets<StandardMaterial>>,
@@ -278,18 +247,35 @@ pub(super) fn start_fov_transitions(
         }
     }
 
+    if targets.is_empty() {
+        return;
+    }
+
+    // Pre-read fixed endpoint colors as LinearRgba to match FovTransition fields.
+    let read_ep = |orig: &Handle<StandardMaterial>, hi: &Handle<StandardMaterial>| {
+        mat_assets.get(orig).zip(mat_assets.get(hi)).map(|(o, h)| {
+            (
+                (LinearRgba::from(o.base_color), o.emissive),
+                (LinearRgba::from(h.base_color), h.emissive),
+            )
+        })
+    };
+    let edge_ep = read_ep(&mats.edge, &mats.edge_highlight);
+
     for (entity, fade_in) in targets {
         // InSight entities can't transition — update the stashed target instead.
         if fov.in_sight.contains(entity) {
-            let target = if fade_in {
-                &mats.hex_highlight
-            } else {
-                &mats.hex_original
-            };
-            commands
-                .entity(entity)
-                .insert(PreSightMaterial(target.clone()))
-                .remove::<FovTransition>();
+            if let Ok(&mineral) = minerals.get(entity) {
+                let target = if fade_in {
+                    mineral.highlight_material()
+                } else {
+                    mineral.material()
+                };
+                commands
+                    .entity(entity)
+                    .insert(PreSightMaterial(mat_assets.add(target)))
+                    .remove::<FovTransition>();
+            }
             continue;
         }
 
@@ -303,29 +289,47 @@ pub(super) fn start_fov_transitions(
             if let Some(current) = mat_assets.get(&mat.0).cloned() {
                 mat.0 = mat_assets.add(current);
             }
+
+            let endpoints = if fov.quad_edges.contains(entity) {
+                edge_ep
+            } else {
+                minerals.get(entity).ok().map(|m| {
+                    (
+                        (LinearRgba::from(m.color()), LinearRgba::BLACK),
+                        (LinearRgba::from(m.highlight_color()), HIGHLIGHT_EMISSIVE),
+                    )
+                })
+            };
+            let Some(((orig_base, orig_emissive), (hi_base, hi_emissive))) = endpoints else {
+                continue;
+            };
+
             let progress = if fade_in { 0.0 } else { 1.0 };
             commands.entity(entity).insert(FovTransition {
                 progress,
                 direction,
+                orig_base,
+                orig_emissive,
+                hi_base,
+                hi_emissive,
             });
         }
     }
 }
 
 /// Ticks [`FovTransition`] progress and lerps material colors each frame.
-#[allow(clippy::type_complexity)]
+///
+/// Endpoints are stored in the [`FovTransition`] component itself, so this
+/// system is mineral-agnostic — no resource lookups needed.
 pub(super) fn animate_fov_transitions(
     mut query: Query<
         (
             Entity,
             &mut FovTransition,
-            &mut MeshMaterial3d<StandardMaterial>,
-            Has<HexFace>,
-            Has<QuadEdge>,
+            &MeshMaterial3d<StandardMaterial>,
         ),
         Without<InSight>,
     >,
-    mats: Res<TerrainMaterials>,
     mut mat_assets: ResMut<Assets<StandardMaterial>>,
     cfg: Res<HTerrainConfig>,
     time: Res<Time>,
@@ -334,50 +338,24 @@ pub(super) fn animate_fov_transitions(
     let dt = time.delta_secs();
     let duration = cfg.fov_transition_secs;
 
-    // Copy target colors upfront to avoid borrow conflicts with get_mut below.
-    let grab = |h: &Handle<StandardMaterial>| mat_assets.get(h).map(|m| (m.base_color, m.emissive));
-    let pairs = [
-        (grab(&mats.hex_original), grab(&mats.hex_highlight)),
-        (grab(&mats.gap_original), grab(&mats.gap_highlight)),
-        (grab(&mats.edge), grab(&mats.edge_highlight)),
-    ];
-    let [
-        (Some(hex_orig), Some(hex_hi)),
-        (Some(gap_orig), Some(gap_hi)),
-        (Some(edge_orig), Some(edge_hi)),
-    ] = pairs
-    else {
-        return;
-    };
-
-    for (entity, mut tr, mat_handle, is_hex, is_edge) in &mut query {
+    for (entity, mut tr, mat_handle) in &mut query {
         tr.progress = (tr.progress + tr.direction * dt / duration).clamp(0.0, 1.0);
         let t = tr.progress;
-
-        let ((orig_base, orig_emissive), (hi_base, hi_emissive)) = if is_hex {
-            (hex_orig, hex_hi)
-        } else if is_edge {
-            (edge_orig, edge_hi)
-        } else {
-            (gap_orig, gap_hi)
-        };
 
         if t <= 0.0 || t >= 1.0 {
             if let Some(mat) = mat_assets.get_mut(&mat_handle.0) {
                 let (base, emissive) = if t >= 1.0 {
-                    (hi_base, hi_emissive)
+                    (tr.hi_base, tr.hi_emissive)
                 } else {
-                    (orig_base, orig_emissive)
+                    (tr.orig_base, tr.orig_emissive)
                 };
-                mat.base_color = base;
+                mat.base_color = Color::from(base);
                 mat.emissive = emissive;
             }
             commands.entity(entity).remove::<FovTransition>();
         } else if let Some(mat) = mat_assets.get_mut(&mat_handle.0) {
-            let orig_lin = LinearRgba::from(orig_base);
-            let hi_lin = LinearRgba::from(hi_base);
-            mat.base_color = Color::from(orig_lin.mix(&hi_lin, t));
-            mat.emissive = orig_emissive.mix(&hi_emissive, t);
+            mat.base_color = Color::from(tr.orig_base.mix(&tr.hi_base, t));
+            mat.emissive = tr.orig_emissive.mix(&tr.hi_emissive, t);
         }
     }
 }

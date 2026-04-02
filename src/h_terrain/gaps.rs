@@ -16,6 +16,7 @@ use super::entities::{
 };
 use super::h_grid_layout::HGridLayout;
 use super::math;
+use super::mineral::Mineral;
 
 const EDGE_THICKNESS: f32 = 0.03;
 
@@ -29,6 +30,8 @@ const EDGE_THICKNESS: f32 = 0.03;
 /// systems can navigate from corner to gap mesh without hierarchy traversal.
 ///
 /// Four emissive [`QuadEdge`] cuboids are spawned as children of the mesh.
+/// The gap receives the owning hex's [`Mineral`] material so it matches its
+/// HexFace under PBR lighting.
 ///
 /// Returns `None` (no-op) when the neighbor or any corner entity is missing,
 /// which happens for hexes on the grid boundary.
@@ -36,17 +39,19 @@ const EDGE_THICKNESS: f32 = 0.03;
 pub(super) fn spawn_quad(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    gap_material: &Handle<StandardMaterial>,
+    mineral_handles: &[Handle<StandardMaterial>; Mineral::COUNT],
     edge_material: &Handle<StandardMaterial>,
     terrain: &HGridLayout,
     corner_entities: &HashMap<(Hex, u8), Entity>,
     hex_entities: &HashMap<Hex, Entity>,
+    hex_minerals: &HashMap<Hex, Mineral>,
     hex: Hex,
     edge_index: u8,
 ) -> Option<()> {
     let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
     let neighbor = hex.neighbor(dir);
     let &neighbor_hex_entity = hex_entities.get(&neighbor)?;
+    let mineral = *hex_minerals.get(&hex)?;
 
     let (v0_idx, v1_idx, n0_idx, n1_idx) = quad_corner_indices(edge_index);
 
@@ -67,9 +72,10 @@ pub(super) fn spawn_quad(
     let mesh_entity = commands
         .spawn((
             Quad,
+            mineral,
             RayCastBackfaces,
             Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(gap_material.clone()),
+            MeshMaterial3d(mineral_handles[mineral.idx()].clone()),
             Transform::default(),
         ))
         .id();
@@ -119,6 +125,7 @@ pub(super) fn spawn_quad(
 /// The mesh is parented to the owner corner, and marker components
 /// ([`TriOwner`], [`TriPos1Emitter`], [`TriPos2Emitter`]) are inserted on
 /// the three participating [`Corner`](super::entities::Corner) entities.
+/// The tri receives the canonical owner's [`Mineral`] material.
 ///
 /// Returns `None` when this hex is not the canonical owner, or when any of
 /// the three neighboring corners are missing (grid boundary).
@@ -126,10 +133,11 @@ pub(super) fn spawn_quad(
 pub(super) fn spawn_tri(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    gap_material: &Handle<StandardMaterial>,
+    mineral_handles: &[Handle<StandardMaterial>; Mineral::COUNT],
     terrain: &HGridLayout,
     corner_entities: &HashMap<(Hex, u8), Entity>,
     hex_entities: &HashMap<Hex, Entity>,
+    hex_minerals: &HashMap<Hex, Mineral>,
     hex: Hex,
     vertex_index: u8,
 ) -> Option<()> {
@@ -145,6 +153,7 @@ pub(super) fn spawn_tri(
 
     let &neighbor1_hex_entity = hex_entities.get(&coords[1])?;
     let &neighbor2_hex_entity = hex_entities.get(&coords[2])?;
+    let mineral = *hex_minerals.get(&hex)?;
 
     let v0_idx = dir.index();
     let idx1 = corner_index_for_vertex(coords[1], &grid_vertex)?;
@@ -165,9 +174,10 @@ pub(super) fn spawn_tri(
     let mesh_entity = commands
         .spawn((
             Tri,
+            mineral,
             RayCastBackfaces,
             Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(gap_material.clone()),
+            MeshMaterial3d(mineral_handles[mineral.idx()].clone()),
             Transform::default(),
         ))
         .id();
@@ -212,7 +222,6 @@ fn quad_corner_indices(edge_index: u8) -> (u8, u8, u8, u8) {
 /// Constructs a triangle (3 verts) or quad (4 verts) [`Mesh`] from world-space
 /// positions, translated into the first vertex's local space.
 ///
-/// The mesh includes position, normal, and UV attributes, plus index data.
 /// `MAIN_WORLD` asset usage is set so the mesh is available for
 /// [`MeshRayCast`](bevy::picking::mesh_picking::ray_cast::MeshRayCast) hits.
 fn build_gap_mesh(world_verts: &[Vec3]) -> Mesh {

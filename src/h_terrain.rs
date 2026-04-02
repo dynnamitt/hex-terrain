@@ -5,6 +5,7 @@ mod gaps;
 mod h_grid_layout;
 pub(crate) mod materials;
 mod math;
+pub(crate) mod mineral;
 mod startup_systems;
 mod systems;
 #[cfg(test)]
@@ -77,6 +78,8 @@ pub struct HGridSettings {
     pub height_noise_seed: u32,
     /// Seed for the per-hex radius noise generator.
     pub radius_noise_seed: u32,
+    /// Seed for deterministic mineral assignment per hex.
+    pub mineral_seed: u32,
     /// Number of octaves for height noise.
     pub height_noise_octaves: usize,
     /// Number of octaves for radius noise.
@@ -102,6 +105,7 @@ impl Default for HTerrainConfig {
                 point_spacing: 4.0,
                 height_noise_seed: 43,
                 radius_noise_seed: 137,
+                mineral_seed: 7919,
                 height_noise_octaves: 4,
                 radius_noise_octaves: 3,
                 height_noise_scale: 50.0,
@@ -149,6 +153,7 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::InSight>()
             .register_type::<entities::PreSightMaterial>()
             .register_type::<entities::AimStar>()
+            .register_type::<mineral::Mineral>()
             .insert_resource(self.config.clone())
             .insert_resource(ClearColor(self.config.clear_color))
             .configure_sets(
