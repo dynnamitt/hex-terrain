@@ -9,6 +9,21 @@ use bevy::image::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
+/// Tri corner falloff curve for 3-way blending.
+#[derive(Clone, Copy, Debug, Default)]
+pub enum TriFalloff {
+    /// `1 - hotspot(t)` — sharp plateaus at corners, narrow transition band,
+    /// but creates dead-zone rings where all weights hit zero.
+    Hotspot,
+    /// `1 - t` — smooth everywhere, no dead zones, but corners lose
+    /// their distinct identity (too blended).
+    Linear,
+    /// `(1 - t)²` — sharp corners with a smooth tail toward the center.
+    /// No dead zones. Best balance of precision and smoothness.
+    #[default]
+    Quadratic,
+}
+
 /// Blend gradient configuration.
 #[derive(Resource)]
 pub struct BlendCfg {
@@ -63,11 +78,12 @@ pub fn blend_quad(
 
 /// Blends three materials into a tri gradient material.
 ///
-/// `base_idx` (0, 1, or 2) selects which corner fills the center.
-/// The other two corners paint gradient overlays from their vertex inward.
+/// `base_idx` (0, 1, or 2) selects the center fallback corner.
+/// `falloff` controls corner sharpness (see [`TriFalloff`]).
 pub fn blend_tri(
     mats: [&StandardMaterial; 3],
     base_idx: usize,
+    falloff: TriFalloff,
     cfg: &BlendCfg,
     images: &mut Assets<Image>,
 ) -> StandardMaterial {
@@ -78,7 +94,7 @@ pub fn blend_tri(
     let band = cfg.band;
 
     let color_tex = mk_image(sz, sz, TextureFormat::Rgba8UnormSrgb, |u, v| {
-        srgb_bytes(tri_blend(&colors, [u, v], band, base_idx))
+        srgb_bytes(tri_blend(&colors, [u, v], band, base_idx, falloff))
     });
 
     let avg_r = roughness.iter().sum::<f32>() / 3.0;
@@ -187,16 +203,21 @@ fn tri_project(uv: [f32; 2], corner: usize) -> f32 {
     ((uv[0] - c[0]) * dx + (uv[1] - c[1]) * dy) / len_sq
 }
 
-/// Normalized 3-way blend with quadratic falloff per corner.
-///
-/// Weight = `(1 - t)²` — sharp near corners (dominant color) with a
-/// smooth tail toward the center (no dead zones). Quadratic preserves
-/// distinct corner regions while avoiding the hard boundary rings that
-/// the hotspot cutoff produced.
-fn tri_blend(colors: &[LinearRgba; 3], uv: [f32; 2], _band: f32, base_idx: usize) -> LinearRgba {
+/// Normalized 3-way blend dispatching on [`TriFalloff`].
+fn tri_blend(
+    colors: &[LinearRgba; 3],
+    uv: [f32; 2],
+    band: f32,
+    base_idx: usize,
+    falloff: TriFalloff,
+) -> LinearRgba {
     let w: [f32; 3] = std::array::from_fn(|i| {
         let t = tri_project(uv, i).clamp(0.0, 1.0);
-        (1.0 - t) * (1.0 - t)
+        match falloff {
+            TriFalloff::Hotspot => 1.0 - hotspot(t, band),
+            TriFalloff::Linear => 1.0 - t,
+            TriFalloff::Quadratic => (1.0 - t) * (1.0 - t),
+        }
     });
     let total = w[0] + w[1] + w[2];
     if total < 1e-6 {
@@ -293,7 +314,13 @@ mod tests {
             metallic: 0.2,
             ..default()
         };
-        let result = blend_tri([&mat, &mat, &mat], 0, &BlendCfg::default(), &mut images);
+        let result = blend_tri(
+            [&mat, &mat, &mat],
+            0,
+            TriFalloff::default(),
+            &BlendCfg::default(),
+            &mut images,
+        );
         assert!(result.base_color_texture.is_some());
         assert!((result.metallic - 0.2).abs() < 1e-6);
     }
