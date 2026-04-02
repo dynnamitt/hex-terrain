@@ -117,6 +117,7 @@ impl Mineral {
             base_color: self.color(),
             perceptual_roughness: p.roughness,
             metallic: p.metallic,
+            cull_mode: None,
             ..default()
         }
     }
@@ -134,13 +135,9 @@ impl Mineral {
             perceptual_roughness: p.roughness,
             metallic: p.metallic,
             emissive: HIGHLIGHT_EMISSIVE,
+            cull_mode: None,
             ..default()
         }
-    }
-
-    /// Vertex color (linear RGBA) for gap mesh `ATTRIBUTE_COLOR`.
-    pub fn vertex_color(self) -> [f32; 4] {
-        LinearRgba::from(self.color()).to_f32_array()
     }
 
     /// Deterministic mineral selection from hex coordinates + seed.

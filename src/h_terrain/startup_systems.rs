@@ -83,14 +83,14 @@ pub fn generate_h_grid(
     // ── Pass 1: Spawn HCells + Corners, build lookup maps ────────
     let mut corner_entities: HashMap<(Hex, u8), Entity> = HashMap::new();
     let mut hex_entities: HashMap<Hex, Entity> = HashMap::new();
-    let mut hex_colors: HashMap<Hex, [f32; 4]> = HashMap::new();
+    let mut hex_minerals: HashMap<Hex, Mineral> = HashMap::new();
 
     for hex in shapes::hexagon(Hex::ZERO, g.radius) {
         let center = terrain.hex_to_world_pos(hex);
         let height = terrain.height(&hex).unwrap();
         let radius = terrain.radius(&hex).unwrap();
         let mineral = Mineral::from_hex(hex, g.mineral_seed);
-        hex_colors.insert(hex, mineral.vertex_color());
+        hex_minerals.insert(hex, mineral);
 
         let cell_entity = commands
             .spawn((
@@ -153,12 +153,12 @@ pub fn generate_h_grid(
             gaps::spawn_quad(
                 &mut commands,
                 &mut meshes,
-                &fov.gap_base,
+                &mineral_handles,
                 &fov.edge,
                 &terrain,
                 &corner_entities,
                 &hex_entities,
-                &hex_colors,
+                &hex_minerals,
                 hex,
                 edge_index,
             );
@@ -169,11 +169,11 @@ pub fn generate_h_grid(
             gaps::spawn_tri(
                 &mut commands,
                 &mut meshes,
-                &fov.gap_base,
+                &mineral_handles,
                 &terrain,
                 &corner_entities,
                 &hex_entities,
-                &hex_colors,
+                &hex_minerals,
                 hex,
                 vertex_index,
             );

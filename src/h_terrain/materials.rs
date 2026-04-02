@@ -65,15 +65,10 @@ impl From<FovPalette> for LinearRgba {
 
 /// Material handles for terrain rendering.
 ///
-/// Hex faces use per-[`Mineral`] materials (created at startup, not stored here).
-/// Gaps use vertex-colored meshes with a white base material.
+/// Hex faces and gaps use per-[`Mineral`] materials (created at startup, not stored here).
 /// Edges, aim highlight, and fire effects are stored here.
 #[derive(Resource)]
 pub struct TerrainMaterials {
-    /// Gap base material (white, two-sided — vertex colors provide gradient).
-    pub gap_base: Handle<StandardMaterial>,
-    /// Gap FoV highlight (tiny emissive boost over vertex colors).
-    pub gap_highlight: Handle<StandardMaterial>,
     /// Green emissive material for the aimed-at hex face (screen center + within FoV).
     pub hex_in_aim: Handle<StandardMaterial>,
     /// Aim-star line material (azure glow, slightly more intense than edges).
@@ -97,17 +92,6 @@ impl TerrainMaterials {
         images: &mut Assets<Image>,
     ) -> Self {
         Self {
-            gap_base: materials.add(StandardMaterial {
-                base_color: Color::WHITE,
-                cull_mode: None,
-                ..default()
-            }),
-            gap_highlight: materials.add(StandardMaterial {
-                base_color: Color::WHITE,
-                emissive: HIGHLIGHT_EMISSIVE,
-                cull_mode: None,
-                ..default()
-            }),
             hex_in_aim: materials.add(StandardMaterial {
                 base_color: FovPalette::Hex.into(),
                 ..default()
@@ -211,8 +195,7 @@ pub(super) struct FovChanges<'w, 's> {
 /// Starts or reverses [`FovTransition`] on material entities when [`InFov`] changes.
 ///
 /// Computes per-entity color endpoints based on entity type:
-/// - HexFace: mineral color → mineral highlight
-/// - Quad/Tri gap: white → white + tiny emissive
+/// - HexFace / Quad / Tri: mineral color → mineral highlight
 /// - QuadEdge: muted cyan → bright green bloom
 pub(super) fn start_fov_transitions(
     mut fov: FovChanges,
@@ -278,7 +261,6 @@ pub(super) fn start_fov_transitions(
         })
     };
     let edge_ep = read_ep(&mats.edge, &mats.edge_highlight);
-    let gap_ep = read_ep(&mats.gap_base, &mats.gap_highlight);
 
     for (entity, fade_in) in targets {
         // InSight entities can't transition — update the stashed target instead.
@@ -308,17 +290,15 @@ pub(super) fn start_fov_transitions(
                 mat.0 = mat_assets.add(current);
             }
 
-            let endpoints = if fov.hex_faces.contains(entity) {
+            let endpoints = if fov.quad_edges.contains(entity) {
+                edge_ep
+            } else {
                 minerals.get(entity).ok().map(|m| {
                     (
                         (LinearRgba::from(m.color()), LinearRgba::BLACK),
                         (LinearRgba::from(m.highlight_color()), HIGHLIGHT_EMISSIVE),
                     )
                 })
-            } else if fov.quad_edges.contains(entity) {
-                edge_ep
-            } else {
-                gap_ep
             };
             let Some(((orig_base, orig_emissive), (hi_base, hi_emissive))) = endpoints else {
                 continue;

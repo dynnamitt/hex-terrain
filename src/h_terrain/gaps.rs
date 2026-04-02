@@ -16,6 +16,7 @@ use super::entities::{
 };
 use super::h_grid_layout::HGridLayout;
 use super::math;
+use super::mineral::Mineral;
 
 const EDGE_THICKNESS: f32 = 0.03;
 
@@ -29,9 +30,8 @@ const EDGE_THICKNESS: f32 = 0.03;
 /// systems can navigate from corner to gap mesh without hierarchy traversal.
 ///
 /// Four emissive [`QuadEdge`] cuboids are spawned as children of the mesh.
-/// `hex_colors` maps each hex to a linear-RGBA vertex color derived from its
-/// [`Mineral`](super::mineral::Mineral); the mesh uses `ATTRIBUTE_COLOR` so
-/// the GPU interpolates a gradient between the two adjacent minerals.
+/// The gap receives the owning hex's [`Mineral`] material so it matches its
+/// HexFace under PBR lighting.
 ///
 /// Returns `None` (no-op) when the neighbor or any corner entity is missing,
 /// which happens for hexes on the grid boundary.
@@ -39,18 +39,19 @@ const EDGE_THICKNESS: f32 = 0.03;
 pub(super) fn spawn_quad(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    gap_material: &Handle<StandardMaterial>,
+    mineral_handles: &[Handle<StandardMaterial>; Mineral::COUNT],
     edge_material: &Handle<StandardMaterial>,
     terrain: &HGridLayout,
     corner_entities: &HashMap<(Hex, u8), Entity>,
     hex_entities: &HashMap<Hex, Entity>,
-    hex_colors: &HashMap<Hex, [f32; 4]>,
+    hex_minerals: &HashMap<Hex, Mineral>,
     hex: Hex,
     edge_index: u8,
 ) -> Option<()> {
     let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
     let neighbor = hex.neighbor(dir);
     let &neighbor_hex_entity = hex_entities.get(&neighbor)?;
+    let mineral = *hex_minerals.get(&hex)?;
 
     let (v0_idx, v1_idx, n0_idx, n1_idx) = quad_corner_indices(edge_index);
 
@@ -66,19 +67,15 @@ pub(super) fn spawn_quad(
     let v2 = terrain.vertex(neighbor, n1_idx)?;
     let v3 = terrain.vertex(hex, v1_idx)?;
 
-    // Vertex colors: owner hex for v0/v3, neighbor hex for v1/v2
-    let oc = *hex_colors.get(&hex)?;
-    let nc = *hex_colors.get(&neighbor)?;
-    let colors = [oc, nc, nc, oc];
-
     // Build mesh in corner-local space
-    let mesh = build_gap_mesh(&[v0, v1, v2, v3], &colors);
+    let mesh = build_gap_mesh(&[v0, v1, v2, v3]);
     let mesh_entity = commands
         .spawn((
             Quad,
+            mineral,
             RayCastBackfaces,
             Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(gap_material.clone()),
+            MeshMaterial3d(mineral_handles[mineral.idx()].clone()),
             Transform::default(),
         ))
         .id();
@@ -128,7 +125,7 @@ pub(super) fn spawn_quad(
 /// The mesh is parented to the owner corner, and marker components
 /// ([`TriOwner`], [`TriPos1Emitter`], [`TriPos2Emitter`]) are inserted on
 /// the three participating [`Corner`](super::entities::Corner) entities.
-/// `hex_colors` provides per-hex vertex colors for 3-way gradient blending.
+/// The tri receives the canonical owner's [`Mineral`] material.
 ///
 /// Returns `None` when this hex is not the canonical owner, or when any of
 /// the three neighboring corners are missing (grid boundary).
@@ -136,11 +133,11 @@ pub(super) fn spawn_quad(
 pub(super) fn spawn_tri(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
-    gap_material: &Handle<StandardMaterial>,
+    mineral_handles: &[Handle<StandardMaterial>; Mineral::COUNT],
     terrain: &HGridLayout,
     corner_entities: &HashMap<(Hex, u8), Entity>,
     hex_entities: &HashMap<Hex, Entity>,
-    hex_colors: &HashMap<Hex, [f32; 4]>,
+    hex_minerals: &HashMap<Hex, Mineral>,
     hex: Hex,
     vertex_index: u8,
 ) -> Option<()> {
@@ -156,6 +153,7 @@ pub(super) fn spawn_tri(
 
     let &neighbor1_hex_entity = hex_entities.get(&coords[1])?;
     let &neighbor2_hex_entity = hex_entities.get(&coords[2])?;
+    let mineral = *hex_minerals.get(&hex)?;
 
     let v0_idx = dir.index();
     let idx1 = corner_index_for_vertex(coords[1], &grid_vertex)?;
@@ -171,19 +169,15 @@ pub(super) fn spawn_tri(
     let v1 = terrain.vertex(coords[1], idx1)?;
     let v2 = terrain.vertex(coords[2], idx2)?;
 
-    // Vertex colors: one per hex for 3-way gradient
-    let c0 = *hex_colors.get(&coords[0])?;
-    let c1 = *hex_colors.get(&coords[1])?;
-    let c2 = *hex_colors.get(&coords[2])?;
-
     // Build mesh in corner-local space
-    let mesh = build_gap_mesh(&[v0, v1, v2], &[c0, c1, c2]);
+    let mesh = build_gap_mesh(&[v0, v1, v2]);
     let mesh_entity = commands
         .spawn((
             Tri,
+            mineral,
             RayCastBackfaces,
             Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(gap_material.clone()),
+            MeshMaterial3d(mineral_handles[mineral.idx()].clone()),
             Transform::default(),
         ))
         .id();
@@ -228,14 +222,9 @@ fn quad_corner_indices(edge_index: u8) -> (u8, u8, u8, u8) {
 /// Constructs a triangle (3 verts) or quad (4 verts) [`Mesh`] from world-space
 /// positions, translated into the first vertex's local space.
 ///
-/// `colors` provides per-vertex linear-RGBA values stored as
-/// [`Mesh::ATTRIBUTE_COLOR`] so the GPU interpolates a gradient between
-/// adjacent minerals.
-///
 /// `MAIN_WORLD` asset usage is set so the mesh is available for
 /// [`MeshRayCast`](bevy::picking::mesh_picking::ray_cast::MeshRayCast) hits.
-fn build_gap_mesh(world_verts: &[Vec3], colors: &[[f32; 4]]) -> Mesh {
-    debug_assert_eq!(world_verts.len(), colors.len());
+fn build_gap_mesh(world_verts: &[Vec3]) -> Mesh {
     let (positions, normal) = math::gap_vertex_data(world_verts);
     let normals = vec![normal; positions.len()];
 
@@ -255,7 +244,6 @@ fn build_gap_mesh(world_verts: &[Vec3], colors: &[[f32; 4]]) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
-    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colors.to_vec())
     .with_inserted_indices(Indices::U16(indices))
 }
 
@@ -507,8 +495,7 @@ mod tests {
             .world_mut()
             .spawn(GlobalTransform::from_translation(v0))
             .id();
-        let colors: Vec<[f32; 4]> = vec![[1.0; 4]; world_verts.len()];
-        let mesh = build_gap_mesh(world_verts, &colors);
+        let mesh = build_gap_mesh(world_verts);
         let mesh_handle = app.world_mut().resource_mut::<Assets<Mesh>>().add(mesh);
         let gap = app.world_mut().spawn(Mesh3d(mesh_handle)).id();
         app.world_mut().entity_mut(owner).add_child(gap);
