@@ -5,6 +5,7 @@ mod gaps;
 mod h_grid_layout;
 pub(crate) mod materials;
 mod math;
+pub(crate) mod mineral;
 mod startup_systems;
 mod systems;
 #[cfg(test)]
@@ -149,6 +150,7 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::InSight>()
             .register_type::<entities::PreSightMaterial>()
             .register_type::<entities::AimStar>()
+            .register_type::<mineral::Mineral>()
             .insert_resource(self.config.clone())
             .insert_resource(ClearColor(self.config.clear_color))
             .configure_sets(

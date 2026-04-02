@@ -159,12 +159,23 @@ pub struct HexFace;
 pub struct QuadEdge;
 
 /// Tracks an in-progress color transition between original and highlight materials.
+///
+/// Stores both endpoint color pairs so the animate system is self-contained
+/// and mineral-agnostic.
 #[derive(Component, Reflect)]
 pub struct FovTransition {
     /// 0.0 = original colors, 1.0 = highlight colors.
     pub progress: f32,
     /// +1.0 when fading toward highlight, -1.0 when fading toward original.
     pub direction: f32,
+    /// Base color at original (non-FoV) state (linear; avoids per-frame sRGB→linear).
+    pub orig_base: LinearRgba,
+    /// Emissive at original state.
+    pub orig_emissive: LinearRgba,
+    /// Base color at highlight (in-FoV) state (linear).
+    pub hi_base: LinearRgba,
+    /// Emissive at highlight state.
+    pub hi_emissive: LinearRgba,
 }
 
 /// Marker on the single hex face the camera is looking directly at.

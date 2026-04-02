@@ -13,6 +13,7 @@ use super::gaps;
 use super::h_grid_layout::HGridLayout;
 use super::materials::TerrainMaterials;
 use super::math;
+use super::mineral::Mineral;
 use crate::DebugFlag;
 
 /// Spawns the [`HGrid`] entity with [`HCell`] children, [`Corner`] grandchildren,
@@ -75,26 +76,35 @@ pub fn generate_h_grid(
         ))
         .id();
 
+    // Pre-create per-mineral material handles
+    let mineral_handles: [Handle<StandardMaterial>; Mineral::COUNT] =
+        Mineral::ALL.map(|m| materials.add(m.material()));
+
     // ── Pass 1: Spawn HCells + Corners, build lookup maps ────────
     let mut corner_entities: HashMap<(Hex, u8), Entity> = HashMap::new();
     let mut hex_entities: HashMap<Hex, Entity> = HashMap::new();
+    let mut hex_colors: HashMap<Hex, [f32; 4]> = HashMap::new();
 
     for hex in shapes::hexagon(Hex::ZERO, g.radius) {
         let center = terrain.hex_to_world_pos(hex);
         let height = terrain.height(&hex).unwrap();
         let radius = terrain.radius(&hex).unwrap();
+        let mineral = Mineral::from_hex(hex, g.height_noise_seed);
+        hex_colors.insert(hex, mineral.vertex_color());
 
         let cell_entity = commands
             .spawn((
                 HCell { hex },
+                mineral,
                 Name::new(format!("HCell({},{})", hex.x, hex.y)),
                 Transform::from_xyz(center.x, height, center.y),
                 Visibility::default(),
             ))
             .with_child((
                 HexFace,
+                mineral,
                 Mesh3d(hex_mesh.clone()),
-                MeshMaterial3d(fov.hex_original.clone()),
+                MeshMaterial3d(mineral_handles[mineral.idx()].clone()),
                 Transform::from_scale(Vec3::new(radius, 1.0, radius)),
             ))
             .id();
@@ -143,11 +153,12 @@ pub fn generate_h_grid(
             gaps::spawn_quad(
                 &mut commands,
                 &mut meshes,
-                &fov.gap_original,
+                &fov.gap_base,
                 &fov.edge,
                 &terrain,
                 &corner_entities,
                 &hex_entities,
+                &hex_colors,
                 hex,
                 edge_index,
             );
@@ -158,10 +169,11 @@ pub fn generate_h_grid(
             gaps::spawn_tri(
                 &mut commands,
                 &mut meshes,
-                &fov.gap_original,
+                &fov.gap_base,
                 &terrain,
                 &corner_entities,
                 &hex_entities,
+                &hex_colors,
                 hex,
                 vertex_index,
             );
