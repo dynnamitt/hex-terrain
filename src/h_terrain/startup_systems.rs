@@ -15,6 +15,7 @@ use super::materials::TerrainMaterials;
 use super::math;
 use super::mineral::Mineral;
 use crate::DebugFlag;
+use mesh_gradient::BlendCfg;
 
 /// Spawns the [`HGrid`] entity with [`HCell`] children, [`Corner`] grandchildren,
 /// and Quad/Tri gap geometry with distributed emitter markers.
@@ -147,13 +148,16 @@ pub fn generate_h_grid(
     }
 
     // ── Pass 2: Spawn Quad and Tri gap geometry with markers ─────
+    let blend_cfg = BlendCfg::default();
     for hex in shapes::hexagon(Hex::ZERO, g.radius) {
         // Quads: even edge indices 0, 2, 4
         for edge_index in [0u8, 2, 4] {
             gaps::spawn_quad(
                 &mut commands,
                 &mut meshes,
-                &mineral_handles,
+                &mut materials,
+                &mut images,
+                &blend_cfg,
                 &fov.edge,
                 &terrain,
                 &corner_entities,
@@ -169,7 +173,9 @@ pub fn generate_h_grid(
             gaps::spawn_tri(
                 &mut commands,
                 &mut meshes,
-                &mineral_handles,
+                &mut materials,
+                &mut images,
+                &blend_cfg,
                 &terrain,
                 &corner_entities,
                 &hex_entities,
