@@ -1,0 +1,31 @@
+name: Hex Grid SVG
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  svg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Generate SVG
+        run: cargo run -p hex-grid --example svg --release > hex-grid.svg
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hex-grid-svg
+          path: hex-grid.svg
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" hex-grid.svg --clobber
