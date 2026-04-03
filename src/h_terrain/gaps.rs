@@ -645,7 +645,7 @@ mod tests {
             });
 
         let expected_world = [v0, Vec3::new(v1.x, new_y, v1.z), v2];
-        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world, true);
+        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world, false);
 
         assert_eq!(read_positions(&app, gap), expected_positions);
         assert_eq!(read_normals(&app, gap), vec![expected_normal; 3]);
@@ -669,7 +669,7 @@ mod tests {
 
         // Vertex 1 Y shifted by delta; others unchanged
         let expected_world = [v0, Vec3::new(v1.x, delta, v1.z), v2];
-        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world, true);
+        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world, false);
 
         assert_eq!(read_positions(&app, gap), expected_positions);
         assert_eq!(read_normals(&app, gap), vec![expected_normal; 3]);

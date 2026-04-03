@@ -32,6 +32,7 @@ fn test_config() -> HTerrainConfig {
         },
         clear_color: Color::BLACK,
         fov_transition_secs: 0.3,
+        alt_material_for_in_fov: true,
     }
 }
 

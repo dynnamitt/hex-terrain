@@ -63,6 +63,9 @@ pub struct HTerrainConfig {
     pub clear_color: Color,
     /// Duration of the fov highlight fade in seconds.
     pub fov_transition_secs: f32,
+    /// Swap HexFace/Quad/Tri materials on FoV entry (highlight colors).
+    /// When false, only QuadEdge materials change. Default: false.
+    pub alt_material_for_in_fov: bool,
 }
 
 /// Grid layout and noise parameters.
@@ -116,10 +119,11 @@ impl Default for HTerrainConfig {
                 max_height: 20.0,
                 min_hex_radius: 0.2,
                 max_hex_radius: 2.6,
-                flat_gap_normals: true,
+                flat_gap_normals: false,
             },
             clear_color: OrigPalette::ClearColor.into(),
             fov_transition_secs: 0.5,
+            alt_material_for_in_fov: false,
         }
     }
 }

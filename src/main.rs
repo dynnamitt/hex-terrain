@@ -32,9 +32,9 @@ struct Cli {
     #[arg(long)]
     intro_duration: Option<f32>,
 
-    /// Use computed surface normals on gap meshes instead of flat Y-up.
+    /// Use flat Y-up normals on gap meshes instead of computed surface normals.
     #[arg(long)]
-    gap_normals: bool,
+    flat_gap_normals: bool,
 }
 /// Application-wide game state, used for system scheduling.
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect)]
@@ -80,12 +80,12 @@ pub struct PlayerMoved(pub bool);
 
 fn main() {
     #[cfg(not(target_arch = "wasm32"))]
-    let (debug, intro_duration_override, gap_normals) = {
+    let (debug, intro_duration_override, flat_gap_normals) = {
         let cli = Cli::parse();
-        (cli.debug, cli.intro_duration, cli.gap_normals)
+        (cli.debug, cli.intro_duration, cli.flat_gap_normals)
     };
     #[cfg(target_arch = "wasm32")]
-    let (debug, intro_duration_override, gap_normals) = (false, None::<f32>, false);
+    let (debug, intro_duration_override, flat_gap_normals) = (false, None::<f32>, false);
 
     let mut intro_cfg = intro::IntroConfig::default();
     if let Some(d) = intro_duration_override {
@@ -125,7 +125,7 @@ fn main() {
     app.add_plugins((RemotePlugin::default(), RemoteHttpPlugin::default()));
 
     let mut terrain_cfg = h_terrain::HTerrainConfig::default();
-    terrain_cfg.grid.flat_gap_normals = !gap_normals;
+    terrain_cfg.grid.flat_gap_normals = flat_gap_normals;
     app.add_plugins(h_terrain::HTerrainPlugin {
         config: terrain_cfg,
         after_player_movement: Some(drone::systems::fly.into_system_set().intern()),

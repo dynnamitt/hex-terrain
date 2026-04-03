@@ -201,6 +201,7 @@ pub(super) struct FovChanges<'w, 's> {
 /// - QuadEdge: muted cyan → bright green bloom
 pub(super) fn start_fov_transitions(
     mut fov: FovChanges,
+    cfg: Res<HTerrainConfig>,
     mats: Res<TerrainMaterials>,
     minerals: Query<&Mineral>,
     mut materials: Query<&mut MeshMaterial3d<StandardMaterial>>,
@@ -208,12 +209,16 @@ pub(super) fn start_fov_transitions(
     mut mat_assets: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
+    let alt = cfg.alt_material_for_in_fov;
+
     // Collect (material_entity, fade_in) pairs, then process.
     let mut targets: Vec<(Entity, bool)> = Vec::new();
 
     for entity in fov.removed.read() {
         if materials.contains(entity) {
-            targets.push((entity, false));
+            if alt {
+                targets.push((entity, false));
+            }
             // Propagate to QuadEdge children of removed gap entities.
             if let Ok(children) = fov.gap_children.get(entity) {
                 for child in children.iter() {
@@ -222,23 +227,29 @@ pub(super) fn start_fov_transitions(
                     }
                 }
             }
-        } else if let Ok(children) = fov.cells.get(entity) {
-            for child in children.iter() {
-                if fov.hex_faces.contains(child) {
-                    targets.push((child, false));
+        } else if alt {
+            if let Ok(children) = fov.cells.get(entity) {
+                for child in children.iter() {
+                    if fov.hex_faces.contains(child) {
+                        targets.push((child, false));
+                    }
                 }
             }
         }
     }
-    for children in &fov.added_cells {
-        for child in children.iter() {
-            if fov.hex_faces.contains(child) {
-                targets.push((child, true));
+    if alt {
+        for children in &fov.added_cells {
+            for child in children.iter() {
+                if fov.hex_faces.contains(child) {
+                    targets.push((child, true));
+                }
             }
         }
     }
     for entity in &fov.added_gaps {
-        targets.push((entity, true));
+        if alt {
+            targets.push((entity, true));
+        }
         // Propagate to QuadEdge children of added gap entities.
         if let Ok(children) = fov.gap_children.get(entity) {
             for child in children.iter() {
