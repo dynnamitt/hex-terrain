@@ -153,6 +153,19 @@ pub fn generate_h_grid(
     // ── Pass 2: Spawn Quad and Tri gap geometry with markers ─────
     {
         let blend_cfg = BlendCfg::default();
+        let dbg_normal = debug.0.then(|| {
+            let mat = materials.add(StandardMaterial {
+                base_color: Color::srgb(1.0, 1.0, 0.0),
+                unlit: true,
+                ..default()
+            });
+            let mesh = meshes.add(Cuboid::new(
+                gaps::DBG_NORMAL_THICKNESS,
+                gaps::DBG_NORMAL_LEN,
+                gaps::DBG_NORMAL_THICKNESS,
+            ));
+            (mat, mesh)
+        });
         let mut ctx = gaps::GapSpawnCtx {
             materials: &mut materials,
             meshes: &mut meshes,
@@ -163,12 +176,14 @@ pub fn generate_h_grid(
             blend_cfg: &blend_cfg,
             highlight_mix: HIGHLIGHT_MIX,
             highlight_emissive: HIGHLIGHT_EMISSIVE,
+            flat_normals: g.flat_gap_normals,
             terrain: &terrain,
             corner_entities: &corner_entities,
             hex_entities: &hex_entities,
             hex_minerals: &hex_minerals,
             quad_cache: HashMap::new(),
             tri_cache: HashMap::new(),
+            dbg_normal,
         };
 
         for hex in shapes::hexagon(Hex::ZERO, g.radius) {

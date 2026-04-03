@@ -21,9 +21,15 @@ use super::math;
 use super::mineral::Mineral;
 
 const EDGE_THICKNESS: f32 = 0.03;
+pub(super) const DBG_NORMAL_LEN: f32 = 0.3;
+pub(super) const DBG_NORMAL_THICKNESS: f32 = 0.02;
 
 /// Normal + highlight handle pair for gradient gap materials.
 type GradPair = (Handle<StandardMaterial>, Handle<StandardMaterial>);
+
+/// Marker on debug normal-indicator lines (spawned when `--debug`).
+#[derive(Component)]
+pub(super) struct NormalDbg;
 
 /// Shared state for gap mesh spawning during grid generation.
 pub(super) struct GapSpawnCtx<'a> {
@@ -36,6 +42,7 @@ pub(super) struct GapSpawnCtx<'a> {
     pub blend_cfg: &'a BlendCfg,
     pub highlight_mix: f32,
     pub highlight_emissive: LinearRgba,
+    pub flat_normals: bool,
     pub terrain: &'a HGridLayout,
     pub corner_entities: &'a HashMap<(Hex, u8), Entity>,
     pub hex_entities: &'a HashMap<Hex, Entity>,
@@ -44,6 +51,8 @@ pub(super) struct GapSpawnCtx<'a> {
     pub quad_cache: HashMap<(Mineral, Mineral), GradPair>,
     /// Cached (normal, highlight) tri gradient materials by (owner, n1, n2) triple.
     pub tri_cache: HashMap<(Mineral, Mineral, Mineral), GradPair>,
+    /// Debug normal indicator material + mesh (only when `--debug`).
+    pub dbg_normal: Option<(Handle<StandardMaterial>, Handle<Mesh>)>,
 }
 
 /// Spawns a quad gap mesh bridging an even edge between `hex` and its neighbor.
@@ -107,7 +116,8 @@ pub(super) fn spawn_quad(
     };
 
     // Build mesh in corner-local space
-    let mesh = build_gap_mesh(&[v0, v1, v2, v3]);
+    let world_verts = [v0, v1, v2, v3];
+    let mesh = build_gap_mesh(&world_verts, ctx.flat_normals);
     let mesh_entity = commands
         .spawn((
             Quad,
@@ -120,6 +130,7 @@ pub(super) fn spawn_quad(
         ))
         .id();
     commands.entity(owner_entity).add_child(mesh_entity);
+    spawn_normal_dbg(commands, ctx, mesh_entity, &world_verts);
 
     // Add marker components to corner entities
     commands.entity(owner_entity).insert(QuadOwner {
@@ -220,7 +231,8 @@ pub(super) fn spawn_tri(
     };
 
     // Build mesh in corner-local space
-    let mesh = build_gap_mesh(&[v0, v1, v2]);
+    let world_verts = [v0, v1, v2];
+    let mesh = build_gap_mesh(&world_verts, ctx.flat_normals);
     let mesh_entity = commands
         .spawn((
             Tri,
@@ -233,6 +245,7 @@ pub(super) fn spawn_tri(
         ))
         .id();
     commands.entity(owner_entity).add_child(mesh_entity);
+    spawn_normal_dbg(commands, ctx, mesh_entity, &world_verts);
 
     // Add marker components to corner entities
     commands.entity(owner_entity).insert(TriOwner {
@@ -275,8 +288,8 @@ fn quad_corner_indices(edge_index: u8) -> (u8, u8, u8, u8) {
 ///
 /// `MAIN_WORLD` asset usage is set so the mesh is available for
 /// [`MeshRayCast`](bevy::picking::mesh_picking::ray_cast::MeshRayCast) hits.
-fn build_gap_mesh(world_verts: &[Vec3]) -> Mesh {
-    let (positions, normal) = math::gap_vertex_data(world_verts);
+fn build_gap_mesh(world_verts: &[Vec3], flat_normals: bool) -> Mesh {
+    let (positions, normal) = math::gap_vertex_data(world_verts, flat_normals);
     let normals = vec![normal; positions.len()];
 
     let (uvs, indices): (Vec<[f32; 2]>, Vec<u16>) = if world_verts.len() == 4 {
@@ -298,9 +311,38 @@ fn build_gap_mesh(world_verts: &[Vec3]) -> Mesh {
     .with_inserted_indices(Indices::U16(indices))
 }
 
+/// Spawns a thin yellow line showing the gap normal direction (debug only).
+fn spawn_normal_dbg(
+    commands: &mut Commands,
+    ctx: &GapSpawnCtx,
+    mesh_entity: Entity,
+    world_verts: &[Vec3],
+) {
+    let Some((ref mat, ref mesh)) = ctx.dbg_normal else {
+        return;
+    };
+    let origin = world_verts[0];
+    let center: Vec3 =
+        world_verts.iter().map(|&v| v - origin).sum::<Vec3>() / world_verts.len() as f32;
+    let (_, normal_arr) = math::gap_vertex_data(world_verts, ctx.flat_normals);
+    let normal = Vec3::from_array(normal_arr);
+    let rotation = Quat::from_rotation_arc(Vec3::Y, normal);
+    let pos = center + normal * (DBG_NORMAL_LEN / 2.0);
+    let dbg = commands
+        .spawn((
+            NormalDbg,
+            Mesh3d(mesh.clone()),
+            MeshMaterial3d(mat.clone()),
+            Transform::from_translation(pos).with_rotation(rotation),
+        ))
+        .id();
+    commands.entity(mesh_entity).add_child(dbg);
+}
+
 /// Bundles ECS queries needed to update a single vertex of a gap mesh at runtime.
 #[derive(SystemParam)]
 pub(super) struct GapMeshAccess<'w, 's> {
+    cfg: Res<'w, super::HTerrainConfig>,
     parents: Query<'w, 's, &'static ChildOf>,
     transforms: Query<'w, 's, &'static GlobalTransform>,
     meshes: ResMut<'w, Assets<Mesh>>,
@@ -369,7 +411,8 @@ impl GapMeshAccess<'_, '_> {
     /// Recomputes local positions and normals from world-space vertices
     /// and writes them back to the gap entity's mesh.
     fn write_gap_geometry(&mut self, gap: Entity, world_verts: &[Vec3]) {
-        let (new_positions, normal) = math::gap_vertex_data(world_verts);
+        let flat = self.cfg.grid.flat_gap_normals;
+        let (new_positions, normal) = math::gap_vertex_data(world_verts, flat);
         let normals = vec![normal; new_positions.len()];
         let Some(handle) = self.mesh_handles.get(gap).ok().map(|h| h.0.clone()) else {
             return;
@@ -505,7 +548,8 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
             .init_asset::<Mesh>()
-            .init_asset::<StandardMaterial>();
+            .init_asset::<StandardMaterial>()
+            .insert_resource(super::super::HTerrainConfig::default());
         app.update();
         app
     }
@@ -546,7 +590,7 @@ mod tests {
             .world_mut()
             .spawn(GlobalTransform::from_translation(v0))
             .id();
-        let mesh = build_gap_mesh(world_verts);
+        let mesh = build_gap_mesh(world_verts, true);
         let mesh_handle = app.world_mut().resource_mut::<Assets<Mesh>>().add(mesh);
         let gap = app.world_mut().spawn(Mesh3d(mesh_handle)).id();
         app.world_mut().entity_mut(owner).add_child(gap);
@@ -601,7 +645,7 @@ mod tests {
             });
 
         let expected_world = [v0, Vec3::new(v1.x, new_y, v1.z), v2];
-        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world);
+        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world, true);
 
         assert_eq!(read_positions(&app, gap), expected_positions);
         assert_eq!(read_normals(&app, gap), vec![expected_normal; 3]);
@@ -625,7 +669,7 @@ mod tests {
 
         // Vertex 1 Y shifted by delta; others unchanged
         let expected_world = [v0, Vec3::new(v1.x, delta, v1.z), v2];
-        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world);
+        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world, true);
 
         assert_eq!(read_positions(&app, gap), expected_positions);
         assert_eq!(read_normals(&app, gap), vec![expected_normal; 3]);

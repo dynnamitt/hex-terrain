@@ -94,6 +94,9 @@ pub struct HGridSettings {
     pub min_hex_radius: f32,
     /// Largest visual hex radius (noise-derived per cell).
     pub max_hex_radius: f32,
+    /// Use fixed Y-up normals for gap meshes (matching hex faces) instead of
+    /// computing normals from vertex geometry. Default: true.
+    pub flat_gap_normals: bool,
 }
 
 impl Default for HTerrainConfig {
@@ -113,6 +116,7 @@ impl Default for HTerrainConfig {
                 max_height: 20.0,
                 min_hex_radius: 0.2,
                 max_hex_radius: 2.6,
+                flat_gap_normals: true,
             },
             clear_color: OrigPalette::ClearColor.into(),
             fov_transition_secs: 0.5,
