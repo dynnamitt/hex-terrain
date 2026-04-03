@@ -39,7 +39,8 @@ fn compute_normal(v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
 pub(super) fn gap_vertex_data(world_verts: &[Vec3]) -> (Vec<[f32; 3]>, [f32; 3]) {
     let origin = world_verts[0];
     let local: Vec<Vec3> = world_verts.iter().map(|&v| v - origin).collect();
-    let normal = compute_normal(local[0], local[1], local[2]);
+    // Negate: vertex winding produces a downward normal but gaps face up.
+    let normal = -compute_normal(local[0], local[1], local[2]);
     let positions = local.iter().map(|v| v.to_array()).collect();
     (positions, normal.to_array())
 }
@@ -213,12 +214,9 @@ mod tests {
         assert_eq!(positions[0], [0.0, 0.0, 0.0], "first vertex is origin");
         assert_eq!(positions[1], [1.0, 0.0, 0.0]);
         assert_eq!(positions[2], [0.0, 0.0, 1.0]);
-        // X × Z cross in local space → -Y normal
+        // Negated cross → +Y (upward-facing gap)
         let n = Vec3::from_array(normal);
-        assert!(
-            (n - Vec3::NEG_Y).length() < 1e-6,
-            "expected -Y normal, got {n}"
-        );
+        assert!((n - Vec3::Y).length() < 1e-6, "expected +Y normal, got {n}");
     }
 
     #[test]
@@ -233,10 +231,7 @@ mod tests {
         assert_eq!(positions.len(), 4);
         assert_eq!(positions[0], [0.0, 0.0, 0.0]);
         let n = Vec3::from_array(normal);
-        assert!(
-            (n - Vec3::NEG_Y).length() < 1e-6,
-            "expected -Y normal, got {n}"
-        );
+        assert!((n - Vec3::Y).length() < 1e-6, "expected +Y normal, got {n}");
     }
 
     #[test]
