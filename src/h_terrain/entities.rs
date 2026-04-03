@@ -154,10 +154,10 @@ pub struct Tri;
 #[derive(Component, Reflect)]
 pub struct HexFace;
 
-/// Marker on gap entities whose material uses a gradient texture.
-/// FoV transitions use WHITE-based endpoints instead of mineral-color endpoints.
+/// Stores the FoV highlight material handle for gradient-textured gap entities.
+/// The FoV system reads endpoints from this handle instead of computing them.
 #[derive(Component, Reflect)]
-pub struct TexturedGap;
+pub struct GapHighlight(pub Handle<StandardMaterial>);
 
 /// Marker on edge-line cuboid entities (child of a [`Quad`]).
 #[derive(Component, Reflect)]

@@ -15,7 +15,7 @@ use super::gaps;
 use super::h_grid_layout::HGridLayout;
 use super::materials::TerrainMaterials;
 use super::math;
-use super::mineral::Mineral;
+use super::mineral::{HIGHLIGHT_EMISSIVE, HIGHLIGHT_MIX, Mineral};
 use crate::DebugFlag;
 
 /// Spawns the [`HGrid`] entity with [`HCell`] children, [`Corner`] grandchildren,
@@ -78,9 +78,11 @@ pub fn generate_h_grid(
         ))
         .id();
 
-    // Pre-create per-mineral material handles
+    // Pre-create per-mineral normal + highlight material handles
     let mineral_handles: [Handle<StandardMaterial>; Mineral::COUNT] =
         Mineral::ALL.map(|m| materials.add(m.material()));
+    let highlight_handles: [Handle<StandardMaterial>; Mineral::COUNT] =
+        Mineral::ALL.map(|m| materials.add(m.highlight_material()));
 
     // ── Pass 1: Spawn HCells + Corners, build lookup maps ────────
     let mut corner_entities: HashMap<(Hex, u8), Entity> = HashMap::new();
@@ -156,8 +158,11 @@ pub fn generate_h_grid(
             meshes: &mut meshes,
             images: &mut images,
             mineral_handles: &mineral_handles,
+            highlight_handles: &highlight_handles,
             edge_material: &fov.edge,
             blend_cfg: &blend_cfg,
+            highlight_mix: HIGHLIGHT_MIX,
+            highlight_emissive: HIGHLIGHT_EMISSIVE,
             terrain: &terrain,
             corner_entities: &corner_entities,
             hex_entities: &hex_entities,

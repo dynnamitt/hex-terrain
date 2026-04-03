@@ -10,11 +10,11 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use hexx::{EdgeDirection, Hex, VertexDirection};
 
-use mesh_gradient::{BlendCfg, TriFalloff, blend_quad, blend_tri};
+use mesh_gradient::{BlendCfg, TriFalloff, blend_quad, blend_tri, highlight};
 
 use super::entities::{
-    HCell, Quad, QuadEdge, QuadOwner, QuadPos1Emitter, QuadPos2Emitter, QuadTail, TexturedGap, Tri,
-    TriOwner, TriPos1Emitter, TriPos2Emitter,
+    GapHighlight, HCell, Quad, QuadEdge, QuadOwner, QuadPos1Emitter, QuadPos2Emitter, QuadTail,
+    Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
 use super::h_grid_layout::HGridLayout;
 use super::math;
@@ -22,22 +22,28 @@ use super::mineral::Mineral;
 
 const EDGE_THICKNESS: f32 = 0.03;
 
+/// Normal + highlight handle pair for gradient gap materials.
+type GradPair = (Handle<StandardMaterial>, Handle<StandardMaterial>);
+
 /// Shared state for gap mesh spawning during grid generation.
 pub(super) struct GapSpawnCtx<'a> {
     pub materials: &'a mut Assets<StandardMaterial>,
     pub meshes: &'a mut Assets<Mesh>,
     pub images: &'a mut Assets<Image>,
     pub mineral_handles: &'a [Handle<StandardMaterial>; Mineral::COUNT],
+    pub highlight_handles: &'a [Handle<StandardMaterial>; Mineral::COUNT],
     pub edge_material: &'a Handle<StandardMaterial>,
     pub blend_cfg: &'a BlendCfg,
+    pub highlight_mix: f32,
+    pub highlight_emissive: LinearRgba,
     pub terrain: &'a HGridLayout,
     pub corner_entities: &'a HashMap<(Hex, u8), Entity>,
     pub hex_entities: &'a HashMap<Hex, Entity>,
     pub hex_minerals: &'a HashMap<Hex, Mineral>,
-    /// Cached quad gradient materials keyed by ordered (owner, neighbor) mineral pair.
-    pub quad_cache: HashMap<(Mineral, Mineral), Handle<StandardMaterial>>,
-    /// Cached tri gradient materials keyed by ordered (owner, n1, n2) mineral triple.
-    pub tri_cache: HashMap<(Mineral, Mineral, Mineral), Handle<StandardMaterial>>,
+    /// Cached (normal, highlight) quad gradient materials by (owner, neighbor) pair.
+    pub quad_cache: HashMap<(Mineral, Mineral), GradPair>,
+    /// Cached (normal, highlight) tri gradient materials by (owner, n1, n2) triple.
+    pub tri_cache: HashMap<(Mineral, Mineral, Mineral), GradPair>,
 }
 
 /// Spawns a quad gap mesh bridging an even edge between `hex` and its neighbor.
@@ -76,13 +82,14 @@ pub(super) fn spawn_quad(
     let v2 = ctx.terrain.vertex(neighbor, n1_idx)?;
     let v3 = ctx.terrain.vertex(hex, v1_idx)?;
 
-    let (mat_handle, is_gradient) = if mineral == neighbor_mineral {
-        (ctx.mineral_handles[mineral.idx()].clone(), false)
+    let (mat_handle, hi_handle) = if mineral == neighbor_mineral {
+        (
+            ctx.mineral_handles[mineral.idx()].clone(),
+            ctx.highlight_handles[mineral.idx()].clone(),
+        )
     } else {
-        let key = (mineral, neighbor_mineral);
-        let handle = ctx
-            .quad_cache
-            .entry(key)
+        ctx.quad_cache
+            .entry((mineral, neighbor_mineral))
             .or_insert_with(|| {
                 let a = ctx
                     .materials
@@ -92,27 +99,26 @@ pub(super) fn spawn_quad(
                     .materials
                     .get(&ctx.mineral_handles[neighbor_mineral.idx()])
                     .unwrap();
-                ctx.materials
-                    .add(blend_quad(a, b, ctx.blend_cfg, ctx.images))
+                let normal = blend_quad(a, b, ctx.blend_cfg, ctx.images);
+                let hi = highlight(&normal, ctx.highlight_mix, ctx.highlight_emissive);
+                (ctx.materials.add(normal), ctx.materials.add(hi))
             })
-            .clone();
-        (handle, true)
+            .clone()
     };
 
     // Build mesh in corner-local space
     let mesh = build_gap_mesh(&[v0, v1, v2, v3]);
-    let mut entity_cmds = commands.spawn((
-        Quad,
-        mineral,
-        RayCastBackfaces,
-        Mesh3d(ctx.meshes.add(mesh)),
-        MeshMaterial3d(mat_handle),
-        Transform::default(),
-    ));
-    if is_gradient {
-        entity_cmds.insert(TexturedGap);
-    }
-    let mesh_entity = entity_cmds.id();
+    let mesh_entity = commands
+        .spawn((
+            Quad,
+            mineral,
+            GapHighlight(hi_handle),
+            RayCastBackfaces,
+            Mesh3d(ctx.meshes.add(mesh)),
+            MeshMaterial3d(mat_handle),
+            Transform::default(),
+        ))
+        .id();
     commands.entity(owner_entity).add_child(mesh_entity);
 
     // Add marker components to corner entities
@@ -195,42 +201,37 @@ pub(super) fn spawn_tri(
     let v1 = ctx.terrain.vertex(coords[1], idx1)?;
     let v2 = ctx.terrain.vertex(coords[2], idx2)?;
 
-    let (mat_handle, is_gradient) = if mineral == mineral1 && mineral == mineral2 {
-        (ctx.mineral_handles[mineral.idx()].clone(), false)
+    let (mat_handle, hi_handle) = if mineral == mineral1 && mineral == mineral2 {
+        (
+            ctx.mineral_handles[mineral.idx()].clone(),
+            ctx.highlight_handles[mineral.idx()].clone(),
+        )
     } else {
-        let key = (mineral, mineral1, mineral2);
-        let handle = ctx
-            .tri_cache
-            .entry(key)
+        ctx.tri_cache
+            .entry((mineral, mineral1, mineral2))
             .or_insert_with(|| {
                 let m = [mineral, mineral1, mineral2]
                     .map(|m| ctx.materials.get(&ctx.mineral_handles[m.idx()]).unwrap());
-                ctx.materials.add(blend_tri(
-                    m,
-                    0,
-                    TriFalloff::default(),
-                    ctx.blend_cfg,
-                    ctx.images,
-                ))
+                let normal = blend_tri(m, 0, TriFalloff::default(), ctx.blend_cfg, ctx.images);
+                let hi = highlight(&normal, ctx.highlight_mix, ctx.highlight_emissive);
+                (ctx.materials.add(normal), ctx.materials.add(hi))
             })
-            .clone();
-        (handle, true)
+            .clone()
     };
 
     // Build mesh in corner-local space
     let mesh = build_gap_mesh(&[v0, v1, v2]);
-    let mut entity_cmds = commands.spawn((
-        Tri,
-        mineral,
-        RayCastBackfaces,
-        Mesh3d(ctx.meshes.add(mesh)),
-        MeshMaterial3d(mat_handle),
-        Transform::default(),
-    ));
-    if is_gradient {
-        entity_cmds.insert(TexturedGap);
-    }
-    let mesh_entity = entity_cmds.id();
+    let mesh_entity = commands
+        .spawn((
+            Tri,
+            mineral,
+            GapHighlight(hi_handle),
+            RayCastBackfaces,
+            Mesh3d(ctx.meshes.add(mesh)),
+            MeshMaterial3d(mat_handle),
+            Transform::default(),
+        ))
+        .id();
     commands.entity(owner_entity).add_child(mesh_entity);
 
     // Add marker components to corner entities
