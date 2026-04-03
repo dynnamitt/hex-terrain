@@ -2,10 +2,10 @@ name: SVG Preview
 
 on:
   push:
-    branches: [main]
     paths:
       - "crates/hex-grid/**"
       - "web/svg-preview.html"
+      - ".github/workflows/svg-preview.yml"
   workflow_dispatch:
 
 permissions:
