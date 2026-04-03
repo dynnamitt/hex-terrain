@@ -25,29 +25,37 @@ cargo run -- --intro-duration 5    # override tilt-up duration (seconds)
 ## Architecture
 
 Four modules, each split into files: module root (config + plugin), `entities.rs`, `systems.rs`.
-The terrain module additionally has `startup_systems.rs`, a layout helper, terrain-specific math, and a materials module. The drone module has its own materials module.
+The terrain module additionally has `startup_systems.rs`, a layout helper, terrain-specific math, materials, minerals, and gap geometry modules. The drone module has its own materials module. A workspace member crate (`mesh-gradient`) provides procedural gradient textures.
 
 ```
 src/
   main.rs              # CLI (clap), PlayerPos, PlayerMoved, GroundLevel, GameState,
                        # TerrainSeededPhase, DebugFlag, draw_fps, toggle_inspector
   math.rs              # Cross-module helpers (ease_out_cubic, clamp_pitch)
-  h_terrain.rs             # HTerrainConfig (HGridSettings), HTerrainPlugin, HTerrainPhase
+  h_terrain.rs             # HTerrainConfig (HGridSettings), HTerrainPlugin, HTerrainPhase,
+                           # LaserStrength resource
     h_terrain/h_grid_layout    # HGridLayout: encapsulates HexLayout + per-hex heights/radii,
                                # vertex computation, height interpolation
     h_terrain/math             # Terrain-specific math: map_noise_to_range, compute_normal,
-                               # gap_filler, idw_interpolate_height, edge_cuboid_transform,
-                               # quad_corner_indices, build_gap_mesh
+                               # gap_filler, gap_vertex_data, idw_interpolate_height,
+                               # edge_cuboid_transform
+    h_terrain/gaps             # Quad/tri gap spawning + mesh construction: spawn_quad,
+                               # spawn_tri, GapSpawnCtx, GapMeshAccess SystemParam,
+                               # quad_corner_indices, build_gap_mesh, corner_index_for_vertex
+    h_terrain/mineral          # Mineral enum (8 variants), deterministic per-hex assignment
+                               # via from_hex(hex, seed), material/highlight_material generation,
+                               # HIGHLIGHT_MIX/HIGHLIGHT_EMISSIVE constants
     h_terrain/materials        # OrigPalette, FovPalette, TerrainMaterials resource,
                                # radial_gradient (procedural stepped-band texture),
                                # FovChanges/SightParams SystemParam bundles,
                                # start_fov_transitions, animate_fov_transitions, track_in_sight
     h_terrain/entities         # HGrid, HCell, HexFace, Corner, Quad, QuadEdge, Tri,
-                               # QuadOwner, QuadPos2Emitter, QuadPos3Emitter, QuadTail,
+                               # QuadOwner, QuadPos1Emitter, QuadPos2Emitter, QuadTail,
                                # TriOwner, TriPos1Emitter, TriPos2Emitter,
-                               # InFov, FovTransition, InSight, PreSightMaterial
+                               # GapHighlight, InFov, FovTransition, InSight, PreSightMaterial
     h_terrain/startup_systems  # generate_h_grid, seed_ground_level, verify_gap_counts
-    h_terrain/systems          # update_ground_level, track_player_fov
+    h_terrain/systems          # update_ground_level, track_player_fov, extract_ore,
+                               # GapLookup/OreExtraction SystemParam bundles
     h_terrain/tests            # ECS integration tests (cfg(test))
   drone.rs             # DroneConfig, DronePlugin
     drone/entities     # Player, Elbow, LaserPipe, LaserRay, ArmingComplete,
@@ -59,12 +67,16 @@ src/
                        # lock_cursor_on_click (wasm)
     drone/tests        # drone unit tests (cfg(test))
   intro.rs             # IntroConfig, IntroPlugin (animation built in spawn_drone)
+crates/
+  mesh-gradient/       # Workspace member: procedural gradient materials for gap blending.
+                       # Exports: BlendCfg, TriFalloff, blend_quad, blend_tri, highlight
 ```
 
 ### Config Resources
 Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ... }`).
 
-- `HTerrainConfig` — `HGridSettings` (radius, fov_reach, spacing, noise seeds/octaves/scales, height/radius ranges) + `clear_color` + `fov_transition_secs`
+- `HTerrainConfig` — `HGridSettings` (radius, fov_reach, spacing, noise seeds/octaves/scales, height/radius ranges, mineral_seed) + `clear_color` + `fov_transition_secs`
+- `LaserStrength` — mining resource: `level` (upgrade tier), `extract_height` (Y units per tick), `extraction_time` (seconds between ticks)
 - `DroneConfig` — move speed, mouse sensitivity, lowest_offset, height lerp, bloom intensity, pipe geometry (offset/length/radius), laser_thickness, arm_duration
 - `IntroConfig` — tilt-up/down durations, highlight delay, tilt-down angle
 
@@ -73,6 +85,9 @@ Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ...
 - `LaserFx` — bundles aim-star and hex-face material queries + TerrainMaterials for `fire_laser` visual effects
 - `FovChanges` — bundles InFov change-detection queries and cell→HexFace/gap navigation
 - `SightParams` — bundles camera raycast, hex face queries, and InSight state for `track_in_sight`
+- `GapMeshAccess` — bundles mesh/transform queries for runtime gap vertex updates (realign, shift, edge reposition)
+- `GapLookup` — bundles corner→gap entity discovery (owner children + emitter refs) for FoV propagation
+- `OreExtraction` — bundles all `extract_ore` inputs (time, keys, mouse, strength, sight, cells, emitters, owners)
 
 ### Other Key Resources
 - `PlayerPos` — in main.rs: drone writes xz + offset (above ground)
@@ -80,15 +95,16 @@ Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ...
 - `GroundLevel` — `Option<f32>`: `None` until terrain seeded, then `Some(terrain_height)` under the player
 - `GameState` — States enum: `Intro`, `Arming`, `Running`, `Inspecting`
 - `DebugFlag` — CLI `--debug` flag; enables FPS overlay and `verify_gap_counts`
-- `TerrainMaterials` — material handles for hex faces, gaps, edges, aim/fire effects (9 handles + 1 mesh)
+- `LaserStrength` — mining config: extract rate and tick interval (init_resource in HTerrainPlugin)
+- `TerrainMaterials` — material handles for edges, aim, and fire effects (7 handles + 1 mesh). Hex/gap face materials are per-`Mineral`, created at startup, not stored here.
 - `DroneMaterials` — material handles for laser pipe and ray
 - `HGrid` — Component, single entity parenting all HCells; wraps `HGridLayout`
 - `HGridLayout` — encapsulates `HexLayout` + per-hex heights/radii; `vertex()`, `interpolate_height()`
 
 ### Color Palettes
-- `OrigPalette` — base terrain colors: Hex (olive), Gap (near-black), Edge (azure), Debug (hot pink), ClearColor (twilight blue)
-- `FovPalette` — FoV highlight colors: Hex/Edge (bright green), Gap (muted lime), Aim (purple)
-- Both implement `From<T> for Color` (base_color) and `From<T> for LinearRgba` (emissive)
+- `OrigPalette` — non-mineral base colors: Debug (hot pink), ClearColor (twilight blue). Implements `From<T> for Color` and `From<T> for LinearRgba`.
+- `FovPalette` — FoV highlight colors: Hex/Edge (bright green). Implements `From<T> for Color` and `From<T> for LinearRgba`.
+- `Mineral` — 8-variant enum (Granite, Basalt, Slate, Sandstone, Obsidian, Marble, Quartz, Copper). Each has `color()` (sRGB), `highlight_color()` (mixed toward white by `HIGHLIGHT_MIX`), `material()`, `highlight_material()` (with `HIGHLIGHT_EMISSIVE` glow). Deterministic per-hex via `from_hex(hex, seed)` using scarcity-weighted hashing.
 
 ### Lighting
 - **DirectionalLight** — key light (illuminance 5000, shadows enabled), spawned in `generate_h_grid`
@@ -122,10 +138,11 @@ LaserRay (root entity, world-space positioned cuboid, Visibility::Hidden until f
 - `Intro → Arming`: intro clip (tilt-up CubicOut → hold → tilt-down CubicIn) fires `IntroComplete` event → observer sets `GameState::Arming`
 - `Arming → Running`: `start_arming` (OnEnter Arming) plays arming clip (BackOut easing) → `ArmingComplete` event → observer sets `GameState::Running` and stops animation to prevent PostUpdate overwrite
 **Update** (via `HTerrainPhase` pipeline, Running only): `UpdateGround` → `TrackFov` → `Highlight` → `Sight`
-- `update_ground_level` — sets `GroundLevel` from terrain interpolation (guarded by `PlayerMoved`)
+- `update_ground_level` — sets `GroundLevel` by raycasting NEG_Y onto terrain surfaces (HexFace/Quad/Tri)
 - `track_player_fov` — adds/removes `InFov` on nearby HCells
 - `start_fov_transitions` / `animate_fov_transitions` — material color lerp for FoV reveal
 - `track_in_sight` — raycasts screen center, tags aimed HexFace with `InSight` + purple material
+- `extract_ore` — lowers HCell Y on laser fire (Space/LMB), realigns neighboring gap vertices via `GapMeshAccess`
 **Update** (Running only): `aim_pipe` (slerp with ease-out toward InSight target, eases back to armed when no target), `draw_crosshair`, `fire_laser` (after Sight phase), `fly` (after `recenter_cursor`)
 
 ## Dependencies
@@ -133,6 +150,7 @@ LaserRay (root entity, world-space positioned cuboid, Visibility::Hidden until f
 - `bevy` 0.18 — selective features, no default (see Cargo.toml for full list)
 - `hexx` 0.24 — hex coordinates, layouts, mesh builders (with `bevy` feature for Reflect/Component derives)
 - `noise` 0.9 — Fbm<Perlin> terrain generation
+- `mesh-gradient` — workspace member (`crates/mesh-gradient`), procedural gradient materials for gap blending between minerals. Exports `BlendCfg`, `TriFalloff`, `blend_quad`, `blend_tri`, `highlight`.
 - `clap` 4 — CLI argument parsing (optional, native only via `dep:clap`)
 - `bevy-inspector-egui` 0.36 + `bevy_egui` 0.39 — dev inspection UI
 
@@ -190,8 +208,8 @@ The even-edge `[0,2,4]` ownership rule and vertex canonical ownership guarantee 
 |---|---|---|
 | `QuadOwner` | 0, 2, 4 | `vertex_dirs[0]` for even edges |
 | `QuadTail` | 5, 1, 3 | `vertex_dirs[1]` for even edges |
-| `QuadPos2Emitter(Entity)` | 0, 2, 4 | neighbor's `opp_vertex_dirs[1]` only fires for even spawn edges |
-| `QuadPos3Emitter(Entity)` | 1, 3, 5 | neighbor's `opp_vertex_dirs[0]` only fires for even spawn edges |
+| `QuadPos1Emitter(Entity)` | 0, 2, 4 | neighbor's `opp_vertex_dirs[1]` only fires for even spawn edges |
+| `QuadPos2Emitter(Entity)` | 1, 3, 5 | neighbor's `opp_vertex_dirs[0]` only fires for even spawn edges |
 | `TriOwner` | 0, 1 | canonical `coords[0] == hex` for vertex indices 0, 1 |
 | `TriPos1Emitter(Entity)` | at most once | same canonical ownership |
 | `TriPos2Emitter(Entity)` | at most once | same canonical ownership |
@@ -240,7 +258,10 @@ intro
 - `start_fov_transitions` / `animate_fov_transitions` direction and completion
 
 Additional test modules:
-- `h_terrain/math` — unit tests for `gap_filler`, `map_noise_to_range`, `compute_normal`, `idw_interpolate_height`, `edge_cuboid_transform`, `quad_corner_indices`
+- `h_terrain/math` — unit tests for `gap_filler`, `map_noise_to_range`, `compute_normal`, `gap_vertex_data`, `idw_interpolate_height`, `edge_cuboid_transform`
+- `h_terrain/gaps` — tests for `quad_corner_indices`, `GapMeshAccess` (realign_neighboring_vertex, shift_vertex_y, edge repositioning)
+- `h_terrain/mineral` — tests for variant indexing, scarcity, `from_hex` determinism, highlight brightness
+- `mesh-gradient` — tests for `hotspot`, `tri_project`, `srgb_bytes`, `blend_quad`, `blend_tri`, `mk_image`
 - `math` — unit tests for `ease_out_cubic`, `clamp_pitch`
 - `drone/tests` — drone controller tests
 
