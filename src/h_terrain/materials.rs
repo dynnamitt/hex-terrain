@@ -10,9 +10,10 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use super::HTerrainConfig;
 use super::entities::{
-    AimStar, FovTransition, HCell, HexFace, InFov, InSight, PreSightMaterial, Quad, QuadEdge, Tri,
+    AimStar, FovTransition, HCell, HexFace, InFov, InSight, PreSightMaterial, Quad, QuadEdge,
+    TexturedGap, Tri,
 };
-use super::mineral::{HIGHLIGHT_EMISSIVE, Mineral};
+use super::mineral::{HIGHLIGHT_EMISSIVE, HIGHLIGHT_MIX, Mineral};
 use crate::drone::Player;
 
 /// Base/default terrain color palette (non-mineral items only).
@@ -190,6 +191,7 @@ pub(super) struct FovChanges<'w, 's> {
     in_sight: Query<'w, 's, (), With<InSight>>,
     gap_children: Query<'w, 's, &'static Children, Or<(With<Quad>, With<Tri>)>>,
     quad_edges: Query<'w, 's, (), With<QuadEdge>>,
+    textured_gaps: Query<'w, 's, (), With<TexturedGap>>,
 }
 
 /// Starts or reverses [`FovTransition`] on material entities when [`InFov`] changes.
@@ -292,6 +294,17 @@ pub(super) fn start_fov_transitions(
 
             let endpoints = if fov.quad_edges.contains(entity) {
                 edge_ep
+            } else if fov.textured_gaps.contains(entity) {
+                // Bevy multiplies base_color × base_color_texture, so WHITE = no tint.
+                // Overbright (>1.0) base_color uniformly brightens the gradient texture.
+                let hi_tint = 1.0 + HIGHLIGHT_MIX;
+                Some((
+                    (LinearRgba::WHITE, LinearRgba::BLACK),
+                    (
+                        LinearRgba::new(hi_tint, hi_tint, hi_tint, 1.0),
+                        HIGHLIGHT_EMISSIVE,
+                    ),
+                ))
             } else {
                 minerals.get(entity).ok().map(|m| {
                     (

@@ -147,6 +147,7 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::Quad>()
             .register_type::<entities::QuadEdge>()
             .register_type::<entities::Tri>()
+            .register_type::<entities::TexturedGap>()
             .register_type::<entities::InFov>()
             .register_type::<entities::HexFace>()
             .register_type::<entities::FovTransition>()

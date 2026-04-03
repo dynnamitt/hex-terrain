@@ -7,6 +7,8 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use hexx::{Hex, HexLayout, PlaneMeshBuilder, shapes};
 
+use mesh_gradient::BlendCfg;
+
 use super::HTerrainConfig;
 use super::entities::{Corner, HCell, HGrid, HexFace, Quad, Tri};
 use super::gaps;
@@ -147,36 +149,30 @@ pub fn generate_h_grid(
     }
 
     // ── Pass 2: Spawn Quad and Tri gap geometry with markers ─────
-    for hex in shapes::hexagon(Hex::ZERO, g.radius) {
-        // Quads: even edge indices 0, 2, 4
-        for edge_index in [0u8, 2, 4] {
-            gaps::spawn_quad(
-                &mut commands,
-                &mut meshes,
-                &mineral_handles,
-                &fov.edge,
-                &terrain,
-                &corner_entities,
-                &hex_entities,
-                &hex_minerals,
-                hex,
-                edge_index,
-            );
-        }
+    {
+        let blend_cfg = BlendCfg::default();
+        let mut ctx = gaps::GapSpawnCtx {
+            materials: &mut materials,
+            meshes: &mut meshes,
+            images: &mut images,
+            mineral_handles: &mineral_handles,
+            edge_material: &fov.edge,
+            blend_cfg: &blend_cfg,
+            terrain: &terrain,
+            corner_entities: &corner_entities,
+            hex_entities: &hex_entities,
+            hex_minerals: &hex_minerals,
+            quad_cache: HashMap::new(),
+            tri_cache: HashMap::new(),
+        };
 
-        // Tris: vertex indices 0, 1
-        for vertex_index in [0u8, 1] {
-            gaps::spawn_tri(
-                &mut commands,
-                &mut meshes,
-                &mineral_handles,
-                &terrain,
-                &corner_entities,
-                &hex_entities,
-                &hex_minerals,
-                hex,
-                vertex_index,
-            );
+        for hex in shapes::hexagon(Hex::ZERO, g.radius) {
+            for edge_index in [0u8, 2, 4] {
+                gaps::spawn_quad(&mut commands, &mut ctx, hex, edge_index);
+            }
+            for vertex_index in [0u8, 1] {
+                gaps::spawn_tri(&mut commands, &mut ctx, hex, vertex_index);
+            }
         }
     }
 
