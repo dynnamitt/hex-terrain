@@ -96,3 +96,23 @@ jobs:
           git add .
           git commit -m "deploy ${VERSION}"
           git push
+
+  svg:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Generate SVG
+        run: cargo run -p hex-grid --example svg --release > hex-grid.svg
+
+      - name: Create release and attach SVG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          gh release create "$TAG" --generate-notes || true
+          gh release upload "$TAG" hex-grid.svg --clobber
