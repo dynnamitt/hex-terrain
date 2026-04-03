@@ -89,6 +89,15 @@ fn main() {
         );
     }
 
+    // Draw quad gap long edges (hex↔neighbor bridging lines, no fill).
+    let long_edges = layout.quad_long_edges();
+    for (from, to) in &long_edges {
+        println!(
+            r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="#40e0d0" stroke-width="0.06" opacity="0.7"/>"##,
+            from.x, from.y, to.x, to.y,
+        );
+    }
+
     // Draw height labels at hex centers.
     let font = settings.point_spacing * 0.22;
     for hd in &hex_data {

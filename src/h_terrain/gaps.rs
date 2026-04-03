@@ -17,6 +17,7 @@ use super::entities::{
 use super::h_grid_layout::HGridLayout;
 use super::math;
 use super::mineral::Mineral;
+use hex_grid::quad_corner_indices;
 
 const EDGE_THICKNESS: f32 = 0.03;
 
@@ -196,27 +197,6 @@ pub(super) fn spawn_tri(
         .entity(pos2_entity)
         .insert(TriPos2Emitter(mesh_entity));
     Some(())
-}
-
-/// Maps an even edge index (0, 2, or 4) to the four corner indices that
-/// form the quad gap across that edge.
-///
-/// Returns `(v0, v1, n0, n1)` where `v0`/`v1` are vertex indices on the
-/// owning hex and `n0`/`n1` are vertex indices on the neighbor. The winding
-/// is chosen so that `v0` is the [`QuadOwner`] corner and `v1` is the
-/// [`QuadTail`], while `n0`/`n1` map to [`QuadPos1Emitter`]/[`QuadPos2Emitter`].
-fn quad_corner_indices(edge_index: u8) -> (u8, u8, u8, u8) {
-    let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
-    let vertex_dirs = dir.vertex_directions();
-    let v0_idx = vertex_dirs[0].index();
-    let v1_idx = vertex_dirs[1].index();
-
-    let opp_dir = dir.const_neg();
-    let opp_vertex_dirs = opp_dir.vertex_directions();
-    let n0_idx = opp_vertex_dirs[1].index();
-    let n1_idx = opp_vertex_dirs[0].index();
-
-    (v0_idx, v1_idx, n0_idx, n1_idx)
 }
 
 /// Constructs a triangle (3 verts) or quad (4 verts) [`Mesh`] from world-space

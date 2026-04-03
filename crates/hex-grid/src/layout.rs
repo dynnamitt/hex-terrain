@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use glam::{Vec2, Vec3};
-use hexx::{Hex, HexLayout, shapes};
+use hexx::{EdgeDirection, Hex, HexLayout, shapes};
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
 use crate::math;
@@ -60,6 +60,7 @@ impl Default for HGridSettings {
 pub struct HGridLayout {
     layout: HexLayout,
     unit_corners: [Vec2; 6],
+    grid_radius: u32,
     heights: HashMap<Hex, f32>,
     radii: HashMap<Hex, f32>,
 }
@@ -108,6 +109,7 @@ impl HGridLayout {
         Self {
             layout,
             unit_corners,
+            grid_radius: g.radius,
             heights,
             radii,
         }
@@ -152,6 +154,42 @@ impl HGridLayout {
     }
 
     // ── Compute methods ────────────────────────────────────────────
+
+    /// Returns the two long-side edges of each quad gap as `(from, to)` pairs
+    /// in world-space XZ (projected, Y=0). Uses the even-edge `[0,2,4]` ownership
+    /// rule so each gap is emitted exactly once — no overlaps.
+    ///
+    /// "Long sides" are the edges that bridge hex→neighbor (v0→n0 and v1→n1),
+    /// not the short edges running along each hex's perimeter.
+    pub fn quad_long_edges(&self) -> Vec<(Vec2, Vec2)> {
+        let hexes: Vec<Hex> = shapes::hexagon(Hex::ZERO, self.grid_radius).collect();
+        let mut edges = Vec::new();
+        for &hex in &hexes {
+            for edge_index in [0u8, 2, 4] {
+                let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
+                let neighbor = hex.neighbor(dir);
+                if self.heights.get(&neighbor).is_none() {
+                    continue;
+                }
+                let (v0_idx, v1_idx, n0_idx, n1_idx) = math::quad_corner_indices(edge_index);
+                if let (Some(a), Some(b), Some(c), Some(d)) = (
+                    self.vertex(hex, v0_idx),
+                    self.vertex(neighbor, n0_idx),
+                    self.vertex(hex, v1_idx),
+                    self.vertex(neighbor, n1_idx),
+                ) {
+                    edges.push((Vec2::new(a.x, a.z), Vec2::new(b.x, b.z)));
+                    edges.push((Vec2::new(c.x, c.z), Vec2::new(d.x, d.z)));
+                }
+            }
+        }
+        edges
+    }
+
+    /// Grid radius (number of hex rings around the origin).
+    pub fn grid_radius(&self) -> u32 {
+        self.grid_radius
+    }
 
     /// Inverse-distance-weighted height interpolation from nearby hex vertices.
     pub fn interpolate_height(&self, pos: Vec2) -> f32 {
@@ -229,6 +267,28 @@ mod tests {
             for j in (i + 1)..6 {
                 assert_ne!(corners[i], corners[j], "corners {i} and {j} are identical");
             }
+        }
+    }
+
+    #[test]
+    fn quad_long_edges_count_matches_gap_filler() {
+        for r in [1, 2, 4] {
+            let g = HGridSettings {
+                radius: r,
+                ..default_settings()
+            };
+            let layout = HGridLayout::from_settings(&g);
+            let grid: Vec<Hex> = shapes::hexagon(Hex::ZERO, r).collect();
+            let (expected_quads, _) = crate::math::gap_filler(&grid);
+            let edges = layout.quad_long_edges();
+            assert_eq!(
+                edges.len(),
+                expected_quads * 2,
+                "radius {r}: expected {} long edges ({}×2), got {}",
+                expected_quads * 2,
+                expected_quads,
+                edges.len()
+            );
         }
     }
 }
