@@ -2,14 +2,19 @@
 //!
 //! ```sh
 //! cargo run -p hex-grid --example svg > grid.svg
+//! cargo run -p hex-grid --example svg -- 5 2.0 > grid.svg
 //! ```
 
 use hex_grid::{HGridLayout, HGridSettings};
 use hexx::{Hex, shapes};
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let radius: u32 = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(3);
+    let pad: f32 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(4.0);
+
     let settings = HGridSettings {
-        radius: 3,
+        radius,
         point_spacing: 4.0,
         ..HGridSettings::default()
     };
@@ -54,7 +59,7 @@ fn main() {
         })
         .collect();
 
-    let padding = settings.point_spacing;
+    let padding = pad;
     let vb_x = min_x - padding;
     let vb_z = min_z - padding;
     let vb_w = (max_x - min_x) + 2.0 * padding;
