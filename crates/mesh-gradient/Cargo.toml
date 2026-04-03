@@ -1,0 +1,45 @@
+[package]
+name = "mesh-gradient"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+visual = [
+    "bevy/bevy_winit",
+    "bevy/bevy_window",
+    "bevy/bevy_core_pipeline",
+    "bevy/bevy_camera",
+    "bevy/bevy_light",
+    "bevy/bevy_mesh",
+    "bevy/bevy_shader",
+    "bevy/bevy_log",
+    "bevy/x11",
+    "bevy/hdr",
+    "bevy/tonemapping_luts",
+    "bevy/zstd_rust",
+]
+
+[dependencies]
+half = "2"
+
+[dependencies.bevy]
+version = "0.18"
+default-features = false
+features = [
+    "std",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_image",
+    "bevy_asset",
+    "bevy_color",
+]
+
+[[example]]
+name = "visual"
+required-features = ["visual"]
+
+[lints.rust]
+unused = { level = "deny" }
+
+[lints.clippy]
+all = { level = "deny" }

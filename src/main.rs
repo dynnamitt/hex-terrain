@@ -31,6 +31,10 @@ struct Cli {
     /// Override intro tilt-up duration (seconds).
     #[arg(long)]
     intro_duration: Option<f32>,
+
+    /// Use flat Y-up normals on gap meshes instead of computed surface normals.
+    #[arg(long)]
+    flat_gap_normals: bool,
 }
 /// Application-wide game state, used for system scheduling.
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect)]
@@ -76,12 +80,12 @@ pub struct PlayerMoved(pub bool);
 
 fn main() {
     #[cfg(not(target_arch = "wasm32"))]
-    let (debug, intro_duration_override) = {
+    let (debug, intro_duration_override, flat_gap_normals) = {
         let cli = Cli::parse();
-        (cli.debug, cli.intro_duration)
+        (cli.debug, cli.intro_duration, cli.flat_gap_normals)
     };
     #[cfg(target_arch = "wasm32")]
-    let (debug, intro_duration_override) = (false, None::<f32>);
+    let (debug, intro_duration_override, flat_gap_normals) = (false, None::<f32>, false);
 
     let mut intro_cfg = intro::IntroConfig::default();
     if let Some(d) = intro_duration_override {
@@ -120,8 +124,10 @@ fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     app.add_plugins((RemotePlugin::default(), RemoteHttpPlugin::default()));
 
+    let mut terrain_cfg = h_terrain::HTerrainConfig::default();
+    terrain_cfg.grid.flat_gap_normals = flat_gap_normals;
     app.add_plugins(h_terrain::HTerrainPlugin {
-        config: h_terrain::HTerrainConfig::default(),
+        config: terrain_cfg,
         after_player_movement: Some(drone::systems::fly.into_system_set().intern()),
         terrain_seeded_set: Some(TerrainSeededPhase.intern()),
     });

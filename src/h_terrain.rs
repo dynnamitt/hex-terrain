@@ -63,6 +63,9 @@ pub struct HTerrainConfig {
     pub clear_color: Color,
     /// Duration of the fov highlight fade in seconds.
     pub fov_transition_secs: f32,
+    /// Swap HexFace/Quad/Tri materials on FoV entry (highlight colors).
+    /// When false, only QuadEdge materials change. Default: false.
+    pub alt_material_for_in_fov: bool,
 }
 
 /// Grid layout and noise parameters.
@@ -94,6 +97,9 @@ pub struct HGridSettings {
     pub min_hex_radius: f32,
     /// Largest visual hex radius (noise-derived per cell).
     pub max_hex_radius: f32,
+    /// Use fixed Y-up normals for gap meshes (matching hex faces) instead of
+    /// computing normals from vertex geometry. Default: true.
+    pub flat_gap_normals: bool,
 }
 
 impl Default for HTerrainConfig {
@@ -113,9 +119,11 @@ impl Default for HTerrainConfig {
                 max_height: 20.0,
                 min_hex_radius: 0.2,
                 max_hex_radius: 2.6,
+                flat_gap_normals: false,
             },
             clear_color: OrigPalette::ClearColor.into(),
             fov_transition_secs: 0.5,
+            alt_material_for_in_fov: false,
         }
     }
 }
@@ -147,6 +155,7 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::Quad>()
             .register_type::<entities::QuadEdge>()
             .register_type::<entities::Tri>()
+            .register_type::<entities::GapHighlight>()
             .register_type::<entities::InFov>()
             .register_type::<entities::HexFace>()
             .register_type::<entities::FovTransition>()
