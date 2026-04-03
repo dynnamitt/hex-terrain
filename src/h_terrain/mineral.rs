@@ -19,7 +19,9 @@ pub enum Mineral {
 
 struct Props {
     color: [f32; 3],
+    #[expect(dead_code, reason = "retained for future normal-mapped geometry")]
     roughness: f32,
+    #[expect(dead_code, reason = "retained for future normal-mapped geometry")]
     metallic: f32,
     scarcity: f32,
 }
@@ -76,7 +78,7 @@ const PROPS: [Props; Mineral::COUNT] = [
 ];
 
 /// Mix factor for FoV highlight (base_color toward white).
-const HIGHLIGHT_MIX: f32 = 0.15;
+pub(crate) const HIGHLIGHT_MIX: f32 = 0.15;
 
 /// Tiny emissive glow applied to FoV-highlighted hex faces and gaps.
 pub const HIGHLIGHT_EMISSIVE: LinearRgba = LinearRgba::new(0.03, 0.03, 0.03, 1.0);
@@ -112,11 +114,10 @@ impl Mineral {
     }
 
     pub fn material(self) -> StandardMaterial {
-        let p = self.props();
         StandardMaterial {
             base_color: self.color(),
-            perceptual_roughness: p.roughness,
-            metallic: p.metallic,
+            perceptual_roughness: 0.5,
+            metallic: 0.0,
             cull_mode: None,
             ..default()
         }
@@ -129,11 +130,10 @@ impl Mineral {
     }
 
     pub fn highlight_material(self) -> StandardMaterial {
-        let p = self.props();
         StandardMaterial {
             base_color: self.highlight_color(),
-            perceptual_roughness: p.roughness,
-            metallic: p.metallic,
+            perceptual_roughness: 0.5,
+            metallic: 0.0,
             emissive: HIGHLIGHT_EMISSIVE,
             cull_mode: None,
             ..default()

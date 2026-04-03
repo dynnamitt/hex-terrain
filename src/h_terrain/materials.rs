@@ -10,7 +10,8 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 use super::HTerrainConfig;
 use super::entities::{
-    AimStar, FovTransition, HCell, HexFace, InFov, InSight, PreSightMaterial, Quad, QuadEdge, Tri,
+    AimStar, FovTransition, GapHighlight, HCell, HexFace, InFov, InSight, PreSightMaterial, Quad,
+    QuadEdge, Tri,
 };
 use super::mineral::{HIGHLIGHT_EMISSIVE, Mineral};
 use crate::drone::Player;
@@ -190,6 +191,7 @@ pub(super) struct FovChanges<'w, 's> {
     in_sight: Query<'w, 's, (), With<InSight>>,
     gap_children: Query<'w, 's, &'static Children, Or<(With<Quad>, With<Tri>)>>,
     quad_edges: Query<'w, 's, (), With<QuadEdge>>,
+    gap_highlights: Query<'w, 's, &'static GapHighlight>,
 }
 
 /// Starts or reverses [`FovTransition`] on material entities when [`InFov`] changes.
@@ -199,6 +201,7 @@ pub(super) struct FovChanges<'w, 's> {
 /// - QuadEdge: muted cyan → bright green bloom
 pub(super) fn start_fov_transitions(
     mut fov: FovChanges,
+    cfg: Res<HTerrainConfig>,
     mats: Res<TerrainMaterials>,
     minerals: Query<&Mineral>,
     mut materials: Query<&mut MeshMaterial3d<StandardMaterial>>,
@@ -206,12 +209,16 @@ pub(super) fn start_fov_transitions(
     mut mat_assets: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
+    let alt = cfg.alt_material_for_in_fov;
+
     // Collect (material_entity, fade_in) pairs, then process.
     let mut targets: Vec<(Entity, bool)> = Vec::new();
 
     for entity in fov.removed.read() {
         if materials.contains(entity) {
-            targets.push((entity, false));
+            if alt {
+                targets.push((entity, false));
+            }
             // Propagate to QuadEdge children of removed gap entities.
             if let Ok(children) = fov.gap_children.get(entity) {
                 for child in children.iter() {
@@ -220,23 +227,29 @@ pub(super) fn start_fov_transitions(
                     }
                 }
             }
-        } else if let Ok(children) = fov.cells.get(entity) {
-            for child in children.iter() {
-                if fov.hex_faces.contains(child) {
-                    targets.push((child, false));
+        } else if alt {
+            if let Ok(children) = fov.cells.get(entity) {
+                for child in children.iter() {
+                    if fov.hex_faces.contains(child) {
+                        targets.push((child, false));
+                    }
                 }
             }
         }
     }
-    for children in &fov.added_cells {
-        for child in children.iter() {
-            if fov.hex_faces.contains(child) {
-                targets.push((child, true));
+    if alt {
+        for children in &fov.added_cells {
+            for child in children.iter() {
+                if fov.hex_faces.contains(child) {
+                    targets.push((child, true));
+                }
             }
         }
     }
     for entity in &fov.added_gaps {
-        targets.push((entity, true));
+        if alt {
+            targets.push((entity, true));
+        }
         // Propagate to QuadEdge children of added gap entities.
         if let Ok(children) = fov.gap_children.get(entity) {
             for child in children.iter() {
@@ -292,6 +305,16 @@ pub(super) fn start_fov_transitions(
 
             let endpoints = if fov.quad_edges.contains(entity) {
                 edge_ep
+            } else if let Ok(gap_hi) = fov.gap_highlights.get(entity) {
+                mat_assets
+                    .get(&mat.0)
+                    .zip(mat_assets.get(&gap_hi.0))
+                    .map(|(o, h)| {
+                        (
+                            (LinearRgba::from(o.base_color), o.emissive),
+                            (LinearRgba::from(h.base_color), h.emissive),
+                        )
+                    })
             } else {
                 minerals.get(entity).ok().map(|m| {
                     (

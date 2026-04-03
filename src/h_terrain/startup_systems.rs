@@ -7,12 +7,14 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use hexx::{Hex, HexLayout, PlaneMeshBuilder, shapes};
 
+use mesh_gradient::BlendCfg;
+
 use super::HTerrainConfig;
 use super::entities::{Corner, HCell, HGrid, HexFace, Quad, Tri};
 use super::gaps;
 use super::materials::TerrainMaterials;
 use super::math;
-use super::mineral::Mineral;
+use super::mineral::{HIGHLIGHT_EMISSIVE, HIGHLIGHT_MIX, Mineral};
 use crate::DebugFlag;
 
 /// Spawns the [`HGrid`] entity with [`HCell`] children, [`Corner`] grandchildren,
@@ -75,9 +77,11 @@ pub fn generate_h_grid(
         ))
         .id();
 
-    // Pre-create per-mineral material handles
+    // Pre-create per-mineral normal + highlight material handles
     let mineral_handles: [Handle<StandardMaterial>; Mineral::COUNT] =
         Mineral::ALL.map(|m| materials.add(m.material()));
+    let highlight_handles: [Handle<StandardMaterial>; Mineral::COUNT] =
+        Mineral::ALL.map(|m| materials.add(m.highlight_material()));
 
     // ── Pass 1: Spawn HCells + Corners, build lookup maps ────────
     let mut corner_entities: HashMap<(Hex, u8), Entity> = HashMap::new();
@@ -146,36 +150,48 @@ pub fn generate_h_grid(
     }
 
     // ── Pass 2: Spawn Quad and Tri gap geometry with markers ─────
-    for hex in shapes::hexagon(Hex::ZERO, g.radius) {
-        // Quads: even edge indices 0, 2, 4
-        for edge_index in [0u8, 2, 4] {
-            gaps::spawn_quad(
-                &mut commands,
-                &mut meshes,
-                &mineral_handles,
-                &fov.edge,
-                &terrain,
-                &corner_entities,
-                &hex_entities,
-                &hex_minerals,
-                hex,
-                edge_index,
-            );
-        }
+    {
+        let blend_cfg = BlendCfg::default();
+        let dbg_normal = debug.0.then(|| {
+            let mat = materials.add(StandardMaterial {
+                base_color: Color::srgb(1.0, 1.0, 0.0),
+                unlit: true,
+                ..default()
+            });
+            let mesh = meshes.add(Cuboid::new(
+                gaps::DBG_NORMAL_THICKNESS,
+                gaps::DBG_NORMAL_LEN,
+                gaps::DBG_NORMAL_THICKNESS,
+            ));
+            (mat, mesh)
+        });
+        let mut ctx = gaps::GapSpawnCtx {
+            materials: &mut materials,
+            meshes: &mut meshes,
+            images: &mut images,
+            mineral_handles: &mineral_handles,
+            highlight_handles: &highlight_handles,
+            edge_material: &fov.edge,
+            blend_cfg: &blend_cfg,
+            highlight_mix: HIGHLIGHT_MIX,
+            highlight_emissive: HIGHLIGHT_EMISSIVE,
+            flat_normals: g.flat_gap_normals,
+            terrain: &terrain,
+            corner_entities: &corner_entities,
+            hex_entities: &hex_entities,
+            hex_minerals: &hex_minerals,
+            quad_cache: HashMap::new(),
+            tri_cache: HashMap::new(),
+            dbg_normal,
+        };
 
-        // Tris: vertex indices 0, 1
-        for vertex_index in [0u8, 1] {
-            gaps::spawn_tri(
-                &mut commands,
-                &mut meshes,
-                &mineral_handles,
-                &terrain,
-                &corner_entities,
-                &hex_entities,
-                &hex_minerals,
-                hex,
-                vertex_index,
-            );
+        for hex in shapes::hexagon(Hex::ZERO, g.radius) {
+            for edge_index in [0u8, 2, 4] {
+                gaps::spawn_quad(&mut commands, &mut ctx, hex, edge_index);
+            }
+            for vertex_index in [0u8, 1] {
+                gaps::spawn_tri(&mut commands, &mut ctx, hex, vertex_index);
+            }
         }
     }
 
