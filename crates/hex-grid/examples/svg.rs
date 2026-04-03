@@ -9,7 +9,7 @@ use hexx::{Hex, shapes};
 
 fn main() {
     let settings = HGridSettings {
-        radius: 6,
+        radius: 7,
         point_spacing: 4.0,
         ..HGridSettings::default()
     };

@@ -4,16 +4,7 @@
 
 [![Play in browser](https://img.shields.io/badge/Play_in_browser-654FF0?style=for-the-badge&logo=webassembly&logoColor=white)](https://dynnamitt.github.io/hex-terrain/)
 
- 
-          v2----v1
-         /       \
-       v3          v0
-         \        /
-          v4----v5
-
-## 1st proto memory:
-
-![1st ed](screenshot.png)
+![hex-grid preview](https://dynnamitt.github.io/hex-terrain/svg/hex-grid.svg)
 
 ## Startup system ordering
 
@@ -23,6 +14,7 @@ graph LR
     generate_h_grid --> verify_gap_counts
     seed_ground_level -- TerrainSeededPhase --> spawn_drone
     create_drone_materials --> spawn_drone
+    spawn_drone --> link_elbow_animation
 
     subgraph h_terrain
         generate_h_grid
@@ -33,26 +25,24 @@ graph LR
     subgraph drone
         create_drone_materials
         spawn_drone
+        link_elbow_animation
         hide_cursor[hide_cursor<br/><i>native only</i>]
     end
 ```
 
-## Update systems — Intro & Arming
+## State transitions — Intro & Arming
 
 ```mermaid
 graph LR
-    run_intro -- "set Arming" --> arm_pipe
-    arm_pipe -- "set Running" --> done([Running])
+    intro_clip["Intro clip<br/>(tilt-up → hold → tilt-down)"]
+    intro_clip -- IntroComplete --> set_arming["observer: set Arming"]
+    set_arming --> start_arming["start_arming<br/>(OnEnter Arming)"]
+    start_arming -- ArmingComplete --> set_running["observer: set Running"]
 
-    subgraph "Intro state"
-        run_intro
+    subgraph "AnimationGraph events"
+        intro_clip
+        start_arming
     end
-
-    subgraph "Arming state"
-        arm_pipe
-    end
-
-    recenter_cursor[recenter_cursor<br/><i>native only</i>]
 ```
 
 ## Update systems — Running
@@ -65,12 +55,15 @@ graph LR
     track_player_fov --> start_fov_transitions
     start_fov_transitions --> animate_fov_transitions
     start_fov_transitions --> track_in_sight
-    track_in_sight --> fire_laser
+    track_in_sight --> aim_pipe
+    track_in_sight --> extract_ore
+    aim_pipe --> fire_laser
 
     subgraph drone
         recenter_cursor[recenter_cursor<br/><i>native only</i>]
         fly
         draw_crosshair
+        aim_pipe
         fire_laser
         lock_cursor_on_click[lock_cursor_on_click<br/><i>wasm only</i>]
     end
@@ -83,5 +76,6 @@ graph LR
             animate_fov_transitions
             track_in_sight
         end
+        extract_ore
     end
 ```
