@@ -27,20 +27,6 @@ pub fn generate_h_grid(
     cfg: Res<HTerrainConfig>,
     debug: Res<DebugFlag>,
 ) {
-    commands.spawn((
-        DirectionalLight {
-            illuminance: 5000.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        Transform::IDENTITY.looking_to(Vec3::new(-0.3, -1.0, -0.5), Vec3::Y),
-    ));
-    commands.spawn(AmbientLight {
-        color: Color::WHITE,
-        brightness: 200.0,
-        ..default()
-    });
-
     let g = &cfg.grid;
     let terrain = g.build_layout();
 

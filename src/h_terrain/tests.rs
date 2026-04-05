@@ -31,7 +31,6 @@ fn test_config() -> HTerrainConfig {
             max_hex_radius: 2.6,
             flat_gap_normals: true,
         },
-        clear_color: Color::BLACK,
         fov_transition_secs: 0.3,
         alt_material_for_in_fov: true,
     }

@@ -17,7 +17,6 @@ use crate::{DebugFlag, GameState};
 
 pub use entities::{AimStar, InSight};
 pub use hex_grid::edge_cuboid_transform;
-pub use materials::OrigPalette;
 
 /// Pipeline ordering for h_terrain update systems.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -58,8 +57,6 @@ impl Default for LaserStrength {
 pub struct HTerrainConfig {
     /// Grid generation settings.
     pub grid: HGridSettings,
-    /// Background clear color.
-    pub clear_color: Color,
     /// Duration of the fov highlight fade in seconds.
     pub fov_transition_secs: f32,
     /// Swap HexFace/Quad/Tri materials on FoV entry (highlight colors).
@@ -138,7 +135,6 @@ impl Default for HTerrainConfig {
                 max_hex_radius: 2.6,
                 flat_gap_normals: false,
             },
-            clear_color: OrigPalette::ClearColor.into(),
             fov_transition_secs: 0.5,
             alt_material_for_in_fov: false,
         }
@@ -181,7 +177,6 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::AimStar>()
             .register_type::<mineral::Mineral>()
             .insert_resource(self.config.clone())
-            .insert_resource(ClearColor(self.config.clear_color))
             .configure_sets(
                 Update,
                 (

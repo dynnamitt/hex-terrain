@@ -16,31 +16,6 @@ use super::entities::{
 use super::mineral::{HIGHLIGHT_EMISSIVE, Mineral};
 use crate::drone::Player;
 
-/// Base/default terrain color palette (non-mineral items only).
-#[derive(Clone, Copy)]
-pub enum OrigPalette {
-    Debug,
-    ClearColor,
-}
-
-impl From<OrigPalette> for Color {
-    fn from(p: OrigPalette) -> Self {
-        match p {
-            OrigPalette::Debug => Color::srgb(1.0, 0.2, 0.8),
-            OrigPalette::ClearColor => Color::srgb(0.02, 0.03, 0.08),
-        }
-    }
-}
-
-impl From<OrigPalette> for LinearRgba {
-    fn from(p: OrigPalette) -> Self {
-        match p {
-            OrigPalette::Debug => LinearRgba::rgb(4.0, 0.8, 3.2),
-            OrigPalette::ClearColor => LinearRgba::BLACK,
-        }
-    }
-}
-
 /// FoV highlight color palette (edge + aim).
 #[derive(Clone, Copy)]
 pub(super) enum FovPalette {
@@ -135,8 +110,8 @@ impl TerrainMaterials {
 
     pub fn debug_material(materials: &mut Assets<StandardMaterial>) -> Handle<StandardMaterial> {
         materials.add(StandardMaterial {
-            base_color: OrigPalette::Debug.into(),
-            emissive: OrigPalette::Debug.into(),
+            base_color: Color::srgb(1.0, 0.2, 0.8),
+            emissive: LinearRgba::rgb(4.0, 0.8, 3.2),
             unlit: true,
             ..default()
         })

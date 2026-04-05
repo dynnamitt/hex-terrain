@@ -83,6 +83,9 @@ pub(crate) const HIGHLIGHT_MIX: f32 = 0.15;
 /// Tiny emissive glow applied to FoV-highlighted hex faces and gaps.
 pub const HIGHLIGHT_EMISSIVE: LinearRgba = LinearRgba::new(0.03, 0.03, 0.03, 1.0);
 
+/// Low specular reflectance for matte rock surfaces (default 0.5 is too shiny).
+pub(crate) const REFLECTANCE: f32 = 0.1;
+
 impl Mineral {
     pub const ALL: [Self; 8] = [
         Self::Granite,
@@ -118,6 +121,7 @@ impl Mineral {
             base_color: self.color(),
             perceptual_roughness: 0.5,
             metallic: 0.0,
+            reflectance: REFLECTANCE,
             cull_mode: None,
             ..default()
         }
@@ -134,6 +138,7 @@ impl Mineral {
             base_color: self.highlight_color(),
             perceptual_roughness: 0.5,
             metallic: 0.0,
+            reflectance: REFLECTANCE,
             emissive: HIGHLIGHT_EMISSIVE,
             cull_mode: None,
             ..default()

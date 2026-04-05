@@ -1,8 +1,12 @@
 use bevy::animation::{AnimatedBy, AnimationTargetId, animated_field, prelude::*};
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::input::mouse::MouseScrollUnit;
+#[cfg(not(target_arch = "wasm32"))]
+use bevy::light::AtmosphereEnvironmentMapLight;
 use bevy::light::NotShadowCaster;
 use bevy::math::curve::{Interval, adaptors::ConstantCurve, easing::EasingCurve};
+#[cfg(not(target_arch = "wasm32"))]
+use bevy::pbr::{Atmosphere, ScatteringMedium};
 use bevy::post_process::bloom::{Bloom, BloomCompositeMode};
 use bevy::prelude::*;
 use bevy::render::view::Hdr;
@@ -217,6 +221,45 @@ pub fn link_elbow_animation(
 ) {
     commands.entity(*player_q).insert(AnimatedBy(*player_q));
     commands.entity(*elbow_q).insert(AnimatedBy(*player_q));
+}
+
+/// Adds atmosphere, IBL, and sun to the scene after the Player camera is spawned.
+///
+/// On native: procedural sky via `Atmosphere` + IBL fill via `AtmosphereEnvironmentMapLight`.
+/// On WASM/WebGL2: atmosphere requires compute shaders (unavailable), so an `AmbientLight`
+/// provides the fill instead.
+pub fn setup_scene_lighting(
+    mut commands: Commands,
+    #[cfg(not(target_arch = "wasm32"))] player: Single<Entity, With<Player>>,
+    #[cfg(not(target_arch = "wasm32"))] mut mediums: ResMut<Assets<ScatteringMedium>>,
+) {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let medium = mediums.add(ScatteringMedium::earthlike(256, 256));
+        commands.entity(*player).insert((
+            Atmosphere::earthlike(medium),
+            AtmosphereEnvironmentMapLight {
+                size: UVec2::splat(256),
+                ..default()
+            },
+        ));
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    commands.spawn(AmbientLight {
+        color: Color::WHITE,
+        brightness: 500.0,
+        ..default()
+    });
+
+    commands.spawn((
+        DirectionalLight {
+            illuminance: 2000.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::IDENTITY.looking_to(Vec3::new(-0.3, -1.0, -0.5), Vec3::Y),
+    ));
 }
 
 /// Resource storing the arming animation node index for triggering on state enter.
