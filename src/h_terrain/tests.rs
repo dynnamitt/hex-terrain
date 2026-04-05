@@ -9,8 +9,9 @@ use hexx::{Hex, shapes};
 
 use super::entities::{Corner, FovTransition, HCell, HGrid, HexFace, InFov, Quad, QuadEdge, Tri};
 use super::materials::TerrainMaterials;
-use super::{HTerrainConfig, HTerrainPhase, materials, math, startup_systems, systems};
+use super::{HTerrainConfig, HTerrainPhase, materials, startup_systems, systems};
 use crate::{DebugFlag, GameState, GroundLevel, PlayerMoved, PlayerPos};
+use hex_grid::gap_filler;
 
 fn test_config() -> HTerrainConfig {
     HTerrainConfig {
@@ -140,7 +141,7 @@ fn startup_spawns_gap_entities() {
     let mut app = test_app();
 
     let hexes: Vec<Hex> = shapes::hexagon(Hex::ZERO, 2).collect();
-    let (expected_quads, expected_tris) = math::gap_filler(&hexes);
+    let (expected_quads, expected_tris) = gap_filler(&hexes);
 
     let w = app.world_mut();
     let quad_count = w.query::<&Quad>().iter(w).count();

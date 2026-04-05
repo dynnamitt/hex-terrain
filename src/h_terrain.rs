@@ -4,7 +4,6 @@ mod entities;
 mod gaps;
 mod h_grid_layout;
 pub(crate) mod materials;
-mod math;
 pub(crate) mod mineral;
 mod startup_systems;
 mod systems;
@@ -17,8 +16,8 @@ use bevy::prelude::*;
 use crate::{DebugFlag, GameState};
 
 pub use entities::{AimStar, InSight};
+pub use hex_grid::edge_cuboid_transform;
 pub use materials::OrigPalette;
-pub use math::edge_cuboid_transform;
 
 /// Pipeline ordering for h_terrain update systems.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -96,21 +95,20 @@ pub struct HGridSettings {
     pub max_hex_radius: f32,
 }
 
-impl HGridSettings {
-    /// Convert to the standalone `hex_grid::HGridSettings` (without ECS-specific fields).
-    pub fn to_grid_settings(&self) -> hex_grid::HGridSettings {
-        hex_grid::HGridSettings {
-            radius: self.radius,
-            point_spacing: self.point_spacing,
-            height_noise_seed: self.height_noise_seed,
-            radius_noise_seed: self.radius_noise_seed,
-            height_noise_octaves: self.height_noise_octaves,
-            radius_noise_octaves: self.radius_noise_octaves,
-            height_noise_scale: self.height_noise_scale,
-            radius_noise_scale: self.radius_noise_scale,
-            max_height: self.max_height,
-            min_hex_radius: self.min_hex_radius,
-            max_hex_radius: self.max_hex_radius,
+impl From<&HGridSettings> for hex_grid::HGridSettings {
+    fn from(s: &HGridSettings) -> Self {
+        Self {
+            radius: s.radius,
+            point_spacing: s.point_spacing,
+            height_noise_seed: s.height_noise_seed,
+            radius_noise_seed: s.radius_noise_seed,
+            height_noise_octaves: s.height_noise_octaves,
+            radius_noise_octaves: s.radius_noise_octaves,
+            height_noise_scale: s.height_noise_scale,
+            radius_noise_scale: s.radius_noise_scale,
+            max_height: s.max_height,
+            min_hex_radius: s.min_hex_radius,
+            max_hex_radius: s.max_hex_radius,
         }
     }
 }

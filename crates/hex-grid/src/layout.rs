@@ -168,7 +168,7 @@ impl HGridLayout {
             for edge_index in [0u8, 2, 4] {
                 let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
                 let neighbor = hex.neighbor(dir);
-                if self.heights.get(&neighbor).is_none() {
+                if !self.heights.contains_key(&neighbor) {
                     continue;
                 }
                 let (v0_idx, v1_idx, n0_idx, n1_idx) = math::quad_corner_indices(edge_index);
