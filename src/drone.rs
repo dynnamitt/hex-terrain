@@ -108,10 +108,11 @@ impl Plugin for DronePlugin {
             );
         }
 
-        // Link Elbow's AnimatedBy after spawn_drone has run
+        // Post-spawn decoration: AnimatedBy linkage + scene lighting
         app.add_systems(
             Startup,
-            systems::link_elbow_animation.after(systems::spawn_drone),
+            (systems::link_elbow_animation, systems::setup_scene_lighting)
+                .after(systems::spawn_drone),
         );
 
         // Start arming animation on state enter

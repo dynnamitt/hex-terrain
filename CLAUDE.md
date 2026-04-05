@@ -45,7 +45,7 @@ src/
     h_terrain/mineral          # Mineral enum (8 variants), deterministic per-hex assignment
                                # via from_hex(hex, seed), material/highlight_material generation,
                                # HIGHLIGHT_MIX/HIGHLIGHT_EMISSIVE constants
-    h_terrain/materials        # OrigPalette, FovPalette, TerrainMaterials resource,
+    h_terrain/materials        # FovPalette, TerrainMaterials resource,
                                # radial_gradient (procedural stepped-band texture),
                                # FovChanges/SightParams SystemParam bundles,
                                # start_fov_transitions, animate_fov_transitions, track_in_sight
@@ -61,7 +61,7 @@ src/
     drone/entities     # Player, Elbow, LaserPipe, LaserRay, ArmingComplete,
                        # IntroComplete, CursorRecentered, LaserFx, DroneInput
     drone/materials    # DroneMaterials resource (pipe, laser_ray)
-    drone/systems      # create_drone_materials, spawn_drone, link_elbow_animation,
+    drone/systems      # create_drone_materials, spawn_drone, link_elbow_animation, setup_scene_lighting,
                        # start_arming, fly, aim_pipe, draw_crosshair, fire_laser,
                        # hide_cursor, recenter_cursor (native),
                        # lock_cursor_on_click (wasm)
@@ -75,7 +75,7 @@ crates/
 ### Config Resources
 Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ... }`).
 
-- `HTerrainConfig` — `HGridSettings` (radius, fov_reach, spacing, noise seeds/octaves/scales, height/radius ranges, mineral_seed) + `clear_color` + `fov_transition_secs`
+- `HTerrainConfig` — `HGridSettings` (radius, fov_reach, spacing, noise seeds/octaves/scales, height/radius ranges, mineral_seed) + `fov_transition_secs`
 - `LaserStrength` — mining resource: `level` (upgrade tier), `extract_height` (Y units per tick), `extraction_time` (seconds between ticks)
 - `DroneConfig` — move speed, mouse sensitivity, lowest_offset, height lerp, bloom intensity, pipe geometry (offset/length/radius), laser_thickness, arm_duration
 - `IntroConfig` — tilt-up/down durations, highlight delay, tilt-down angle
@@ -102,17 +102,18 @@ Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ...
 - `HGridLayout` — encapsulates `HexLayout` + per-hex heights/radii; `vertex()`, `interpolate_height()`
 
 ### Color Palettes
-- `OrigPalette` — non-mineral base colors: Debug (hot pink), ClearColor (twilight blue). Implements `From<T> for Color` and `From<T> for LinearRgba`.
 - `FovPalette` — FoV highlight colors: Hex/Edge (bright green). Implements `From<T> for Color` and `From<T> for LinearRgba`.
 - `Mineral` — 8-variant enum (Granite, Basalt, Slate, Sandstone, Obsidian, Marble, Quartz, Copper). Each has `color()` (sRGB), `highlight_color()` (mixed toward white by `HIGHLIGHT_MIX`), `material()`, `highlight_material()` (with `HIGHLIGHT_EMISSIVE` glow). Deterministic per-hex via `from_hex(hex, seed)` using scarcity-weighted hashing.
 
 ### Lighting
-- **DirectionalLight** — key light (illuminance 5000, shadows enabled), spawned in `generate_h_grid`
-- **AmbientLight** — fill light (brightness 200, white), spawned in `generate_h_grid`
+- **Atmosphere** (native only) — `Atmosphere::earthlike(medium)` on the Player camera, procedural Hillaire 2020 sky. `ScatteringMedium::earthlike(256, 256)` provides Rayleigh + Mie scattering terms. Requires compute shaders; `#[cfg]`-gated out on WASM.
+- **AtmosphereEnvironmentMapLight** (native only) — IBL generated from the atmosphere sky dome, soft omnidirectional fill light on the camera entity (256×256 cubemap).
+- **AmbientLight** (WASM only) — fallback fill light (brightness 500, white) replacing atmosphere IBL on WebGL2 where compute shaders are unavailable.
+- **DirectionalLight** — sun (illuminance 2000, shadows enabled), spawned in `setup_scene_lighting`
 - **Bloom** — additive, intensity 0.3 (`Bloom::NATURAL` base), on Camera3d. Only catches emissive materials.
 - **Tonemapping** — `TonyMcMapface`
 - **Emissive strategy** — only FoV `edge_highlight` and aim-star materials use emissive (bloom glow). Hex/gap faces are PBR-lit by scene lights, no emissive. Non-FoV edges use muted unlit cyan, no emissive.
-- **ClearColor** — deep twilight blue `rgb(0.02, 0.03, 0.08)`
+- **Mineral reflectance** — `reflectance: 0.1` on all mineral materials (default 0.5 was too specular for matte terrain)
 
 ### Entity Hierarchy
 ```
@@ -124,7 +125,8 @@ HGrid (Component + Transform + Visibility)
         │     │     └── QuadEdge ×4 (emissive cyan cuboid edge lines)
         │     └── Tri (gap mesh child of TriOwner corners, vertices 0,1)
 
-Player (Camera3d + Hdr + Bloom + AnimationPlayer + AnimationGraphHandle)
+Player (Camera3d + Hdr + Bloom + Atmosphere* + AtmosphereEnvironmentMapLight* + AnimationPlayer + AnimationGraphHandle)
+  * native only — WASM uses AmbientLight fallback
   └── Elbow (pivot, AnimatedBy Player — arming animation target)
         └── LaserPipe (cylinder mesh)
 
@@ -132,7 +134,7 @@ LaserRay (root entity, world-space positioned cuboid, Visibility::Hidden until f
 ```
 
 ### System Order
-**Startup**: `create_drone_materials` → `generate_h_grid` → `seed_ground_level` (in `TerrainSeededPhase`) → `spawn_drone` (after both) → `link_elbow_animation` (after `spawn_drone`)
+**Startup**: `create_drone_materials` → `generate_h_grid` → `seed_ground_level` (in `TerrainSeededPhase`) → `spawn_drone` (after both) → `link_elbow_animation` + `setup_scene_lighting` (after `spawn_drone`)
 **Startup** (debug only): `verify_gap_counts` (after `generate_h_grid`)
 **State transitions** (via AnimationGraph — procedural curves on Player's AnimationPlayer):
 - `Intro → Arming`: intro clip (tilt-up CubicOut → hold → tilt-down CubicIn) fires `IntroComplete` event → observer sets `GameState::Arming`
@@ -221,6 +223,7 @@ A corner *can* hold multiple *different* marker types simultaneously (e.g. `Quad
 The project compiles to WebAssembly with `make wasm`. Platform differences:
 - CLI parsing (`clap`) is `#[cfg(not(target_arch = "wasm32"))]`; WASM defaults to `debug=false`
 - `RemotePlugin` / `RemoteHttpPlugin` are native-only
+- Lighting: native uses `Atmosphere` + `AtmosphereEnvironmentMapLight` (compute shaders); WASM falls back to `AmbientLight` (WebGL2 lacks compute). Both get `DirectionalLight`.
 - Cursor handling: native uses `hide_cursor` + `recenter_cursor`; WASM uses `lock_cursor_on_click` (browser requires user gesture for pointer lock)
 - Canvas binding: `#game-canvas` selector, `fit_canvas_to_parent: true`
 - WASM build profile: `wasm-release` (inherits release, `opt-level = "s"`, thin LTO, strip debuginfo)
