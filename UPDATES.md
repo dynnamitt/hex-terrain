@@ -1,5 +1,13 @@
 # Updates
 
+## v0.0.6
+
+- Procedural atmosphere sky replaces flat twilight background — Hillaire 2020 scattering with IBL fill eliminates pale gap artifacts on camera rotation
+- Computed gap surface normals (default on) — gap faces respond to terrain slope lighting instead of fixed Y-up
+- hex-grid workspace crate — layout, math, and gap geometry extracted for reuse with SVG example
+- Matte mineral surfaces — low reflectance (0.1) removes specular flash on dark minerals like Basalt and Obsidian
+- WASM fallback — AmbientLight replaces atmosphere IBL on WebGL2 where compute shaders are unavailable
+
 ## v0.0.5
 
 - Scene lighting overhaul — DirectionalLight + AmbientLight replace pure-emissive model, hex/gap faces now PBR-shaded
