@@ -5,7 +5,6 @@
 
 mod entities;
 pub(crate) mod materials;
-pub(crate) mod mesh;
 pub(crate) mod systems;
 #[cfg(test)]
 mod tests;

@@ -161,7 +161,7 @@ pub fn spawn_drone(
                     elbow.spawn((
                         Name::new("LaserPipe"),
                         LaserPipe,
-                        Mesh3d(meshes.add(super::mesh::build())),
+                        Mesh3d(meshes.add(Cylinder::new(cfg.pipe_radius, cfg.pipe_length / 2.0))),
                         MeshMaterial3d(drone_mats.pipe.clone()),
                         Transform::from_translation(Vec3::NEG_Y * (cfg.pipe_length / 4.0)),
                     ));
@@ -466,7 +466,7 @@ pub fn fire_laser(
     }
     hex_mat.0 = fx.mats.hex_during_fire.clone();
 
-    let tip = pipe_q.transform_point(Vec3::new(0.0, super::mesh::TIP_Y, 0.0));
+    let tip = pipe_q.transform_point(Vec3::NEG_Y * (cfg.pipe_length / 4.0));
     let target = target_gt.translation();
 
     let (midpoint, length, rotation) = edge_cuboid_transform(tip, target);

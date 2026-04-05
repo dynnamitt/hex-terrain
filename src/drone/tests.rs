@@ -216,6 +216,8 @@ fn laser_hidden_when_firing_without_target() {
 #[test]
 fn laser_tip_at_pipe_front() {
     let mut app = test_app();
+    let cfg = app.world().resource::<DroneConfig>().clone();
+    let half_h = cfg.pipe_length / 4.0;
 
     // Spawn InSight target; aim_pipe will rotate elbow toward it.
     // fire_laser's LaserFx queries InSight with MeshMaterial3d, so attach a dummy handle.
@@ -235,9 +237,8 @@ fn laser_tip_at_pipe_front() {
             .unwrap()
     };
 
-    let tip_y = super::mesh::TIP_Y;
-    let front = pipe_gt.transform_point(Vec3::new(0.0, tip_y, 0.0));
-    let back = pipe_gt.transform_point(Vec3::new(0.0, -tip_y, 0.0));
+    let front = pipe_gt.transform_point(Vec3::NEG_Y * half_h);
+    let back = pipe_gt.transform_point(Vec3::Y * half_h);
 
     // Fire laser.
     app.world_mut()
