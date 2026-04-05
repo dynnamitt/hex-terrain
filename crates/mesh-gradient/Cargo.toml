@@ -19,6 +19,9 @@ visual = [
     "bevy/zstd_rust",
 ]
 
+[dependencies]
+half = "2"
+
 [dependencies.bevy]
 version = "0.18"
 default-features = false

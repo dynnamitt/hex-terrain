@@ -154,6 +154,11 @@ pub struct Tri;
 #[derive(Component, Reflect)]
 pub struct HexFace;
 
+/// Stores the FoV highlight material handle for gradient-textured gap entities.
+/// The FoV system reads endpoints from this handle instead of computing them.
+#[derive(Component, Reflect)]
+pub struct GapHighlight(pub Handle<StandardMaterial>);
+
 /// Marker on edge-line cuboid entities (child of a [`Quad`]).
 #[derive(Component, Reflect)]
 pub struct QuadEdge;

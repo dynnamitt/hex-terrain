@@ -3318,6 +3318,7 @@ name = "mesh-gradient"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "half",
 ]
 
 [[package]]

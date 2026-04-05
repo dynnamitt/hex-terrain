@@ -21,25 +21,21 @@ pub fn map_noise_to_range(noise_val: f64, min: f32, max: f32) -> f32 {
     min + ((noise_val as f32 + 1.0) / 2.0) * (max - min)
 }
 
-/// Computes the face normal of a triangle defined by three vertices.
+/// Converts world-space gap vertices to origin-local positions and a normal.
 ///
-/// Uses the cross product of edges `(v1 - v0)` and `(v2 - v0)`.
-/// Returns `Vec3::ZERO` if the triangle is degenerate (collinear points).
-fn compute_normal(v0: Vec3, v1: Vec3, v2: Vec3) -> Vec3 {
-    let edge1 = v1 - v0;
-    let edge2 = v2 - v0;
-    edge1.cross(edge2).normalize_or_zero()
-}
-
-/// Converts world-space gap vertices to origin-local positions and a flat normal.
-///
-/// Subtracts the first vertex as origin, then computes the face normal from
-/// the first three local-space vertices. Works for both triangle (3) and
-/// quad (4) gaps.
-pub fn gap_vertex_data(world_verts: &[Vec3]) -> (Vec<[f32; 3]>, [f32; 3]) {
+/// When `flat` is true, returns a fixed Y-up normal matching hex face planes —
+/// keeps lighting consistent regardless of terrain height variation.
+/// When false, computes the actual surface normal via cross product (negated
+/// because vertex winding produces a downward normal but gaps face up).
+pub fn gap_vertex_data(world_verts: &[Vec3], flat: bool) -> (Vec<[f32; 3]>, [f32; 3]) {
     let origin = world_verts[0];
     let local: Vec<Vec3> = world_verts.iter().map(|&v| v - origin).collect();
-    let normal = compute_normal(local[0], local[1], local[2]);
+    let normal = if flat {
+        Vec3::Y
+    } else {
+        let cross = (local[1] - local[0]).cross(local[2] - local[0]);
+        -cross.normalize_or_zero()
+    };
     let positions = local.iter().map(|v| v.to_array()).collect();
     (positions, normal.to_array())
 }
@@ -194,74 +190,74 @@ mod tests {
         assert!((result - 0.0).abs() < 1e-6);
     }
 
-    // ── compute_normal ──────────────────────────────────────────────
-
-    #[test]
-    fn normal_of_xy_plane_triangle() {
-        let n = compute_normal(Vec3::ZERO, Vec3::X, Vec3::Y);
-        assert!((n - Vec3::Z).length() < 1e-6);
-    }
-
-    #[test]
-    fn normal_of_xz_plane_triangle() {
-        let n = compute_normal(Vec3::ZERO, Vec3::X, Vec3::Z);
-        assert!((n - Vec3::NEG_Y).length() < 1e-6);
-    }
-
-    #[test]
-    fn degenerate_triangle_returns_zero() {
-        let n = compute_normal(Vec3::ZERO, Vec3::X, Vec3::X * 2.0);
-        assert_eq!(n, Vec3::ZERO);
-    }
-
     // ── gap_vertex_data ────────────────────────────────────────────────
 
     #[test]
-    fn gap_vertex_data_triangle() {
+    fn gap_vertex_data_flat_triangle() {
         let verts = [
             Vec3::new(1.0, 0.0, 0.0),
             Vec3::new(2.0, 0.0, 0.0),
             Vec3::new(1.0, 0.0, 1.0),
         ];
-        let (positions, normal) = gap_vertex_data(&verts);
+        let (positions, normal) = gap_vertex_data(&verts, true);
         assert_eq!(positions.len(), 3);
         assert_eq!(positions[0], [0.0, 0.0, 0.0], "first vertex is origin");
         assert_eq!(positions[1], [1.0, 0.0, 0.0]);
         assert_eq!(positions[2], [0.0, 0.0, 1.0]);
-        let n = Vec3::from_array(normal);
-        assert!(
-            (n - Vec3::NEG_Y).length() < 1e-6,
-            "expected -Y normal, got {n}"
-        );
+        assert_eq!(normal, [0.0, 1.0, 0.0], "flat mode → Y-up");
     }
 
     #[test]
-    fn gap_vertex_data_quad() {
+    fn gap_vertex_data_flat_quad() {
         let verts = [
             Vec3::new(0.0, 0.0, 0.0),
             Vec3::new(1.0, 0.0, 0.0),
             Vec3::new(1.0, 0.0, 1.0),
             Vec3::new(0.0, 0.0, 1.0),
         ];
-        let (positions, normal) = gap_vertex_data(&verts);
+        let (positions, normal) = gap_vertex_data(&verts, true);
         assert_eq!(positions.len(), 4);
         assert_eq!(positions[0], [0.0, 0.0, 0.0]);
+        assert_eq!(normal, [0.0, 1.0, 0.0], "flat mode → Y-up");
+    }
+
+    #[test]
+    fn gap_vertex_data_tilted_flat_still_y_up() {
+        let verts = [
+            Vec3::new(0.0, 0.0, 0.0),
+            Vec3::new(1.0, 2.0, 0.0),
+            Vec3::new(0.5, 1.0, 1.0),
+        ];
+        let (_, normal) = gap_vertex_data(&verts, true);
+        assert_eq!(normal, [0.0, 1.0, 0.0], "flat mode ignores tilt");
+    }
+
+    #[test]
+    fn gap_vertex_data_computed_normal() {
+        let verts = [
+            Vec3::new(0.0, 0.0, 0.0),
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        ];
+        let (_, normal) = gap_vertex_data(&verts, false);
         let n = Vec3::from_array(normal);
         assert!(
-            (n - Vec3::NEG_Y).length() < 1e-6,
-            "expected -Y normal, got {n}"
+            (n - Vec3::Y).length() < 1e-6,
+            "flat XZ tri → Y-up even computed"
         );
     }
 
     #[test]
-    fn gap_vertex_data_degenerate() {
+    fn gap_vertex_data_computed_tilted() {
         let verts = [
             Vec3::ZERO,
-            Vec3::new(1.0, 0.0, 0.0),
-            Vec3::new(2.0, 0.0, 0.0),
+            Vec3::new(1.0, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
         ];
-        let (_, normal) = gap_vertex_data(&verts);
-        assert_eq!(normal, [0.0, 0.0, 0.0], "collinear points → zero normal");
+        let (_, normal) = gap_vertex_data(&verts, false);
+        let n = Vec3::from_array(normal);
+        assert!(n.y > 0.0, "computed normal should face up");
+        assert!(n.y < 1.0, "tilted surface → non-vertical normal");
     }
 
     // ── idw_interpolate_height ───────────────────────────────────────
