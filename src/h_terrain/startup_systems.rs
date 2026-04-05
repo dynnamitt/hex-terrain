@@ -12,11 +12,10 @@ use mesh_gradient::BlendCfg;
 use super::HTerrainConfig;
 use super::entities::{Corner, HCell, HGrid, HexFace, Quad, Tri};
 use super::gaps;
-use super::h_grid_layout::HGridLayout;
 use super::materials::TerrainMaterials;
-use super::math;
 use super::mineral::{HIGHLIGHT_EMISSIVE, HIGHLIGHT_MIX, Mineral};
 use crate::DebugFlag;
+use hex_grid::{edge_cuboid_transform, gap_filler};
 
 /// Spawns the [`HGrid`] entity with [`HCell`] children, [`Corner`] grandchildren,
 /// and Quad/Tri gap geometry with distributed emitter markers.
@@ -43,7 +42,7 @@ pub fn generate_h_grid(
     });
 
     let g = &cfg.grid;
-    let terrain = HGridLayout::from_settings(g);
+    let terrain = g.build_layout();
 
     let edge_thickness = 0.02;
     let fov = TerrainMaterials::new(&mut materials, &mut meshes, &mut images);
@@ -132,8 +131,7 @@ pub fn generate_h_grid(
                 let uc_next = terrain.unit_corner((i + 1) % 6);
                 let next_offset = Vec3::new(uc_next.x * radius, 0.0, uc_next.y * radius);
                 let edge_vec = next_offset - local_offset;
-                let (midpoint, length, rotation) =
-                    math::edge_cuboid_transform(Vec3::ZERO, edge_vec);
+                let (midpoint, length, rotation) = edge_cuboid_transform(Vec3::ZERO, edge_vec);
                 let edge_mesh = meshes.add(Cuboid::new(length, edge_thickness, edge_thickness));
 
                 corner.with_child((
@@ -219,7 +217,7 @@ pub fn verify_gap_counts(
     cfg: Res<HTerrainConfig>,
 ) {
     let hexes: Vec<Hex> = shapes::hexagon(Hex::ZERO, cfg.grid.radius).collect();
-    let (expected_quads, expected_tris) = math::gap_filler(&hexes);
+    let (expected_quads, expected_tris) = gap_filler(&hexes);
     let actual_quads = quads.iter().count();
     let actual_tris = tris.iter().count();
 

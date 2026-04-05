@@ -17,8 +17,8 @@ use super::entities::{
     Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
 use super::h_grid_layout::HGridLayout;
-use super::math;
 use super::mineral::Mineral;
+use hex_grid::{edge_cuboid_transform, gap_vertex_data, quad_corner_indices};
 
 const EDGE_THICKNESS: f32 = 0.03;
 pub(super) const DBG_NORMAL_LEN: f32 = 0.3;
@@ -151,7 +151,7 @@ pub(super) fn spawn_quad(
     for (from, to) in edges {
         let local_from = from - origin;
         let local_to = to - origin;
-        let (midpoint, length, rotation) = math::edge_cuboid_transform(local_from, local_to);
+        let (midpoint, length, rotation) = edge_cuboid_transform(local_from, local_to);
         let edge_entity = commands
             .spawn((
                 QuadEdge,
@@ -262,34 +262,13 @@ pub(super) fn spawn_tri(
     Some(())
 }
 
-/// Maps an even edge index (0, 2, or 4) to the four corner indices that
-/// form the quad gap across that edge.
-///
-/// Returns `(v0, v1, n0, n1)` where `v0`/`v1` are vertex indices on the
-/// owning hex and `n0`/`n1` are vertex indices on the neighbor. The winding
-/// is chosen so that `v0` is the [`QuadOwner`] corner and `v1` is the
-/// [`QuadTail`], while `n0`/`n1` map to [`QuadPos1Emitter`]/[`QuadPos2Emitter`].
-fn quad_corner_indices(edge_index: u8) -> (u8, u8, u8, u8) {
-    let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
-    let vertex_dirs = dir.vertex_directions();
-    let v0_idx = vertex_dirs[0].index();
-    let v1_idx = vertex_dirs[1].index();
-
-    let opp_dir = dir.const_neg();
-    let opp_vertex_dirs = opp_dir.vertex_directions();
-    let n0_idx = opp_vertex_dirs[1].index();
-    let n1_idx = opp_vertex_dirs[0].index();
-
-    (v0_idx, v1_idx, n0_idx, n1_idx)
-}
-
 /// Constructs a triangle (3 verts) or quad (4 verts) [`Mesh`] from world-space
 /// positions, translated into the first vertex's local space.
 ///
 /// `MAIN_WORLD` asset usage is set so the mesh is available for
 /// [`MeshRayCast`](bevy::picking::mesh_picking::ray_cast::MeshRayCast) hits.
 fn build_gap_mesh(world_verts: &[Vec3], flat_normals: bool) -> Mesh {
-    let (positions, normal) = math::gap_vertex_data(world_verts, flat_normals);
+    let (positions, normal) = gap_vertex_data(world_verts, flat_normals);
     let normals = vec![normal; positions.len()];
 
     let (uvs, indices): (Vec<[f32; 2]>, Vec<u16>) = if world_verts.len() == 4 {
@@ -324,7 +303,7 @@ fn spawn_normal_dbg(
     let origin = world_verts[0];
     let center: Vec3 =
         world_verts.iter().map(|&v| v - origin).sum::<Vec3>() / world_verts.len() as f32;
-    let (_, normal_arr) = math::gap_vertex_data(world_verts, ctx.flat_normals);
+    let (_, normal_arr) = gap_vertex_data(world_verts, ctx.flat_normals);
     let normal = Vec3::from_array(normal_arr);
     let rotation = Quat::from_rotation_arc(Vec3::Y, normal);
     let pos = center + normal * (DBG_NORMAL_LEN / 2.0);
@@ -356,7 +335,7 @@ impl GapMeshAccess<'_, '_> {
     ///
     /// Reads the mesh's current positions (in owner-corner-local space),
     /// converts to world space, sets `world_verts[vertex_index].y = new_y`,
-    /// then recomputes local positions and normals via [`math::gap_vertex_data`].
+    /// then recomputes local positions and normals via [`gap_vertex_data`].
     /// Also repositions any [`QuadEdge`] children to match the updated geometry.
     ///
     /// Returns `None` if any entity or asset lookup fails.
@@ -412,7 +391,7 @@ impl GapMeshAccess<'_, '_> {
     /// and writes them back to the gap entity's mesh.
     fn write_gap_geometry(&mut self, gap: Entity, world_verts: &[Vec3]) {
         let flat = self.cfg.grid.flat_gap_normals;
-        let (new_positions, normal) = math::gap_vertex_data(world_verts, flat);
+        let (new_positions, normal) = gap_vertex_data(world_verts, flat);
         let normals = vec![normal; new_positions.len()];
         let Some(handle) = self.mesh_handles.get(gap).ok().map(|h| h.0.clone()) else {
             return;
@@ -453,7 +432,7 @@ impl GapMeshAccess<'_, '_> {
             let Some(&edge_entity) = edge_entities.get(i) else {
                 break;
             };
-            let (midpoint, length, rotation) = math::edge_cuboid_transform(*from, *to);
+            let (midpoint, length, rotation) = edge_cuboid_transform(*from, *to);
 
             if let Ok(mut tf) = self.edge_transforms.get_mut(edge_entity) {
                 *tf = Transform::from_translation(midpoint).with_rotation(rotation);
@@ -603,7 +582,7 @@ mod tests {
         let pairs = [(p[0], p[3]), (p[1], p[2]), (p[0], p[1]), (p[3], p[2])];
         let mut edges = [Entity::PLACEHOLDER; 4];
         for (i, (from, to)) in pairs.iter().enumerate() {
-            let (midpoint, length, rotation) = math::edge_cuboid_transform(*from, *to);
+            let (midpoint, length, rotation) = edge_cuboid_transform(*from, *to);
             let mesh = app
                 .world_mut()
                 .resource_mut::<Assets<Mesh>>()
@@ -645,7 +624,7 @@ mod tests {
             });
 
         let expected_world = [v0, Vec3::new(v1.x, new_y, v1.z), v2];
-        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world, false);
+        let (expected_positions, expected_normal) = gap_vertex_data(&expected_world, false);
 
         assert_eq!(read_positions(&app, gap), expected_positions);
         assert_eq!(read_normals(&app, gap), vec![expected_normal; 3]);
@@ -669,7 +648,7 @@ mod tests {
 
         // Vertex 1 Y shifted by delta; others unchanged
         let expected_world = [v0, Vec3::new(v1.x, delta, v1.z), v2];
-        let (expected_positions, expected_normal) = math::gap_vertex_data(&expected_world, false);
+        let (expected_positions, expected_normal) = gap_vertex_data(&expected_world, false);
 
         assert_eq!(read_positions(&app, gap), expected_positions);
         assert_eq!(read_normals(&app, gap), vec![expected_normal; 3]);
@@ -712,8 +691,7 @@ mod tests {
 
         // Verify the new transform matches edge_cuboid_transform for updated verts
         let new_p1 = Vec3::new(2.0, delta, 0.0);
-        let (expected_mid, expected_len, expected_rot) =
-            math::edge_cuboid_transform(Vec3::ZERO, new_p1);
+        let (expected_mid, expected_len, expected_rot) = edge_cuboid_transform(Vec3::ZERO, new_p1);
         assert!(
             (updated_tf.translation - expected_mid).length() < 1e-5,
             "edge midpoint: expected {expected_mid}, got {}",

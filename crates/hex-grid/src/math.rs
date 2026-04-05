@@ -1,9 +1,8 @@
-//! Pure computation helpers for the h_terrain subsystem.
+//! Pure computation helpers for hex-grid geometry.
 //!
-//! All functions are free of Bevy ECS dependencies and operate on plain
-//! numeric / `Vec3` inputs.
+//! All functions operate on plain numeric / `glam` inputs with no ECS dependencies.
 
-use bevy::prelude::*;
+use glam::{Quat, Vec2, Vec3};
 use hexx::{EdgeDirection, GridVertex, Hex, VertexDirection};
 
 /// Maps a noise value from the standard `[-1, 1]` range into `[min, max]`.
@@ -12,27 +11,28 @@ use hexx::{EdgeDirection, GridVertex, Hex, VertexDirection};
 /// This linearly rescales to an arbitrary output range.
 ///
 /// # Examples
-/// ```ignore
+/// ```
+/// # use hex_grid::math::map_noise_to_range;
 /// assert_eq!(map_noise_to_range(-1.0, 0.0, 10.0), 0.0);
 /// assert_eq!(map_noise_to_range( 1.0, 0.0, 10.0), 10.0);
 /// assert_eq!(map_noise_to_range( 0.0, 2.0, 6.0),  4.0);
 /// ```
-pub(crate) fn map_noise_to_range(noise_val: f64, min: f32, max: f32) -> f32 {
+pub fn map_noise_to_range(noise_val: f64, min: f32, max: f32) -> f32 {
     min + ((noise_val as f32 + 1.0) / 2.0) * (max - min)
 }
 
 /// Converts world-space gap vertices to origin-local positions and a normal.
 ///
-/// When `flat` is true, returns a fixed Y-up normal matching [`PlaneMeshBuilder`]
-/// hex faces — keeps lighting consistent regardless of terrain height variation.
-/// When false, computes the actual surface normal via cross product.
-pub(super) fn gap_vertex_data(world_verts: &[Vec3], flat: bool) -> (Vec<[f32; 3]>, [f32; 3]) {
+/// When `flat` is true, returns a fixed Y-up normal matching hex face planes —
+/// keeps lighting consistent regardless of terrain height variation.
+/// When false, computes the actual surface normal via cross product (negated
+/// because vertex winding produces a downward normal but gaps face up).
+pub fn gap_vertex_data(world_verts: &[Vec3], flat: bool) -> (Vec<[f32; 3]>, [f32; 3]) {
     let origin = world_verts[0];
     let local: Vec<Vec3> = world_verts.iter().map(|&v| v - origin).collect();
     let normal = if flat {
         Vec3::Y
     } else {
-        // Negate: vertex winding produces a downward normal but gaps face up.
         let cross = (local[1] - local[0]).cross(local[2] - local[0]);
         -cross.normalize_or_zero()
     };
@@ -41,9 +41,9 @@ pub(super) fn gap_vertex_data(world_verts: &[Vec3], flat: bool) -> (Vec<[f32; 3]
 }
 
 /// Count total (quads, tris) for a grid using the same ownership rules
-/// as `generate_h_grid`: quads on even edges [0,2,4] where neighbor exists,
-/// tris on vertices [0,1] with canonical ownership and all 3 coords in grid.
-pub(crate) fn gap_filler(grid: &[Hex]) -> (usize, usize) {
+/// as hex-grid generation: quads on even edges \[0,2,4\] where neighbor exists,
+/// tris on vertices \[0,1\] with canonical ownership and all 3 coords in grid.
+pub fn gap_filler(grid: &[Hex]) -> (usize, usize) {
     let quads = grid
         .iter()
         .flat_map(|hex| [0, 2, 4].map(|i| hex.neighbor(EdgeDirection::ALL_DIRECTIONS[i])))
@@ -73,7 +73,7 @@ const IDW_SNAP_THRESHOLD: f32 = 0.001;
 
 /// Inverse-distance-weighted height interpolation from 3D vertices projected to XZ.
 /// Returns `None` if `vertices` is empty; caller supplies fallback.
-pub(crate) fn idw_interpolate_height(pos: Vec2, vertices: &[Vec3]) -> Option<f32> {
+pub fn idw_interpolate_height(pos: Vec2, vertices: &[Vec3]) -> Option<f32> {
     let mut weighted_sum = 0.0;
     let mut weight_total = 0.0;
 
@@ -110,6 +110,26 @@ pub fn edge_cuboid_transform(from: Vec3, to: Vec3) -> (Vec3, f32, Quat) {
     (midpoint, length, rotation)
 }
 
+/// Maps an even edge index (0, 2, or 4) to the four corner indices that
+/// form the quad gap across that edge.
+///
+/// Returns `(v0, v1, n0, n1)` where `v0`/`v1` are vertex indices on the
+/// owning hex and `n0`/`n1` are vertex indices on the neighbor. The winding
+/// matches the even-edge ownership rule used by [`gap_filler`].
+pub fn quad_corner_indices(edge_index: u8) -> (u8, u8, u8, u8) {
+    let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
+    let vertex_dirs = dir.vertex_directions();
+    let v0_idx = vertex_dirs[0].index();
+    let v1_idx = vertex_dirs[1].index();
+
+    let opp_dir = dir.const_neg();
+    let opp_vertex_dirs = opp_dir.vertex_directions();
+    let n0_idx = opp_vertex_dirs[1].index();
+    let n1_idx = opp_vertex_dirs[0].index();
+
+    (v0_idx, v1_idx, n0_idx, n1_idx)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -137,10 +157,8 @@ mod tests {
     fn total_gap_counts_radius2() {
         let grid: Vec<Hex> = shapes::hexagon(Hex::ZERO, 2).collect();
         let (quads, tris) = gap_filler(&grid);
-        // Manually verified: 19 hexes, 42 shared even-edges, 24 complete vertex junctions
         assert!(quads > 0, "radius-2 should have quads");
         assert!(tris > 0, "radius-2 should have tris");
-        // Scaling check: radius-1 has (12, 6); radius-2 must have strictly more
         assert!(
             quads > 12,
             "radius-2 quads ({quads}) must exceed radius-1 (12)"
@@ -289,7 +307,6 @@ mod tests {
         let v1 = Vec3::new(2.0, 10.0, 0.0);
         let mid = Vec2::new(1.0, 0.0);
         let result = idw_interpolate_height(mid, &[v0, v1]).unwrap();
-        // Equidistant from both → average of heights
         assert!(
             (result - 5.0).abs() < 1e-4,
             "midpoint should be ~5.0, got {result}"
@@ -299,7 +316,6 @@ mod tests {
     #[test]
     fn idw_snap_within_threshold() {
         let v = Vec3::new(3.0, 42.0, 4.0);
-        // Query very close but not exactly at vertex XZ
         let pos = Vec2::new(3.0 + 1e-4, 4.0);
         let result = idw_interpolate_height(pos, &[v]);
         assert_eq!(
@@ -316,7 +332,6 @@ mod tests {
         let (mid, len, rot) = edge_cuboid_transform(Vec3::ZERO, Vec3::new(4.0, 0.0, 0.0));
         assert!((mid - Vec3::new(2.0, 0.0, 0.0)).length() < 1e-6);
         assert!((len - 4.0).abs() < 1e-6);
-        // X→X rotation is identity
         let angle = rot.angle_between(Quat::IDENTITY);
         assert!(
             angle < 1e-4,
@@ -329,7 +344,6 @@ mod tests {
         let (mid, len, rot) = edge_cuboid_transform(Vec3::ZERO, Vec3::new(0.0, 0.0, 3.0));
         assert!((mid - Vec3::new(0.0, 0.0, 1.5)).length() < 1e-6);
         assert!((len - 3.0).abs() < 1e-6);
-        // X→Z is a 90° rotation around Y
         let expected = Quat::from_rotation_arc(Vec3::X, Vec3::Z);
         let angle = rot.angle_between(expected);
         assert!(

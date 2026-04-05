@@ -1,6 +1,4 @@
 //! Cross-module computation helpers.
-//!
-//! Terrain-specific math lives in `h_terrain::math`.
 
 /// Cubic ease-out curve: fast start, gentle deceleration.
 ///

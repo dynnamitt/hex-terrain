@@ -1,0 +1,15 @@
+[package]
+name = "hex-grid"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glam = "0.30"
+hexx = "0.24"
+noise = "0.9"
+
+[lints.rust]
+unused = { level = "deny" }
+
+[lints.clippy]
+all = { level = "deny" }

@@ -199,6 +199,7 @@ pub(super) struct FovChanges<'w, 's> {
 /// Computes per-entity color endpoints based on entity type:
 /// - HexFace / Quad / Tri: mineral color → mineral highlight
 /// - QuadEdge: muted cyan → bright green bloom
+#[allow(clippy::too_many_arguments)]
 pub(super) fn start_fov_transitions(
     mut fov: FovChanges,
     cfg: Res<HTerrainConfig>,
@@ -227,12 +228,10 @@ pub(super) fn start_fov_transitions(
                     }
                 }
             }
-        } else if alt {
-            if let Ok(children) = fov.cells.get(entity) {
-                for child in children.iter() {
-                    if fov.hex_faces.contains(child) {
-                        targets.push((child, false));
-                    }
+        } else if alt && let Ok(children) = fov.cells.get(entity) {
+            for child in children.iter() {
+                if fov.hex_faces.contains(child) {
+                    targets.push((child, false));
                 }
             }
         }
