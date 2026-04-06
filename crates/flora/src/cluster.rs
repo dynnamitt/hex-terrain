@@ -21,7 +21,7 @@ pub fn shimeji_cluster(
     cfg: &FloraCfg,
     pos: Vec3,
     num: u8,
-) -> Vec<Entity> {
+) -> (Entity, Vec<Entity>) {
     let num = num.clamp(1, 3);
     let mut roots = Vec::with_capacity(num as usize);
 
@@ -53,7 +53,7 @@ pub fn shimeji_cluster(
         roots.push(spawn_one(commands, assets, cfg, cluster, tf));
     }
 
-    roots
+    (cluster, roots)
 }
 
 /// Spawn one mushroom as child of `parent` with local `tf`.

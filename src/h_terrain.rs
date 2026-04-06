@@ -3,6 +3,7 @@
 pub(crate) mod biome;
 pub(crate) mod biomes;
 mod entities;
+mod flora_spawn;
 mod gaps;
 mod h_grid_layout;
 pub(crate) mod materials;
@@ -84,6 +85,8 @@ pub struct HGridSettings {
     pub radius_noise_seed: u32,
     /// Seed for deterministic mineral assignment per hex.
     pub mineral_seed: u32,
+    /// Seed for deterministic flora spawn rolls per hex.
+    pub flora_seed: u32,
     /// Number of octaves for height noise.
     pub height_noise_octaves: usize,
     /// Number of octaves for radius noise.
@@ -131,6 +134,7 @@ impl Default for HTerrainConfig {
                 height_noise_seed: 43,
                 radius_noise_seed: 137,
                 mineral_seed: 7919,
+                flora_seed: 1979,
                 height_noise_octaves: 4,
                 radius_noise_octaves: 3,
                 height_noise_scale: 50.0,

@@ -29,7 +29,7 @@ let cfg = FloraCfg::default();
 let assets = FloraMaterials::new(&mut materials, &mut meshes, &cfg);
 
 // Spawn clusters (1-3 mushrooms each)
-let entities = shimeji_cluster(&mut commands, &assets, &cfg, pos, 2);
+let (cluster, roots) = shimeji_cluster(&mut commands, &assets, &cfg, pos, 2);
 ```
 
 ### Cluster sizes

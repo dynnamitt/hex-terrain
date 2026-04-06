@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use hexx::{Hex, HexLayout, PlaneMeshBuilder, shapes};
 
+use flora::{FloraCfg, FloraMaterials};
 use mesh_gradient::BlendCfg;
 
 use super::HTerrainConfig;
@@ -32,6 +33,8 @@ pub fn generate_h_grid(
 
     let edge_thickness = 0.02;
     let fov = TerrainMaterials::new(&mut materials, &mut meshes, &mut images);
+    let flora_cfg = FloraCfg::default();
+    let flora_mat = FloraMaterials::new(&mut materials, &mut meshes, &flora_cfg);
     let debug_assets = debug.0.then(|| {
         let sphere_mesh = meshes.add(Sphere::new(0.08));
         let material = TerrainMaterials::debug_material(&mut materials);
@@ -181,6 +184,16 @@ pub fn generate_h_grid(
             }
         }
     }
+
+    // ── Pass 3: Flora clusters on eligible hexes ─────────────────
+    super::flora_spawn::spawn_flora(
+        &mut commands,
+        &flora_mat,
+        &flora_cfg,
+        &hex_minerals,
+        &hex_entities,
+        g.flora_seed,
+    );
 
     commands.entity(grid_entity).insert(HGrid {
         terrain,
