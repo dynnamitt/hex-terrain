@@ -106,8 +106,8 @@ Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ...
 - `Mineral` — 8-variant enum (Granite, Basalt, Slate, Sandstone, Obsidian, Marble, Quartz, Copper). Each has `color()` (sRGB), `highlight_color()` (mixed toward white by `HIGHLIGHT_MIX`), `material()`, `highlight_material()` (with `HIGHLIGHT_EMISSIVE` glow). Deterministic per-hex via `from_hex(hex, seed)` using scarcity-weighted hashing.
 
 ### Lighting
-- **Atmosphere** (native only) — `Atmosphere::earthlike(medium)` on the Player camera, procedural Hillaire 2020 sky. `ScatteringMedium::earthlike(256, 256)` provides Rayleigh + Mie scattering terms. Requires compute shaders; `#[cfg]`-gated out on WASM.
-- **AtmosphereEnvironmentMapLight** (native only) — IBL generated from the atmosphere sky dome, soft omnidirectional fill light on the camera entity (256×256 cubemap).
+- **Atmosphere** (native only) — `Atmosphere::earthlike(medium)` on the Player camera, procedural Hillaire 2020 sky. `ScatteringMedium::earthlike(128, 128)` provides Rayleigh + Mie scattering terms. Requires compute shaders; `#[cfg]`-gated out on WASM.
+- **AtmosphereEnvironmentMapLight** (native only) — IBL generated from the atmosphere sky dome, soft omnidirectional fill light on the camera entity (128×128 cubemap).
 - **AmbientLight** (WASM only) — fallback fill light (brightness 500, white) replacing atmosphere IBL on WebGL2 where compute shaders are unavailable.
 - **DirectionalLight** — sun (illuminance 2000, shadows enabled), spawned in `setup_scene_lighting`
 - **Bloom** — additive, intensity 0.3 (`Bloom::NATURAL` base), on Camera3d. Only catches emissive materials.
@@ -119,10 +119,10 @@ Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ...
 ```
 HGrid (Component + Transform + Visibility)
   └── HCell (per hex, positioned at center + noise height)
-        ├── HexFace (hex face mesh: PlaneMeshBuilder, scaled by radius)
+        ├── HexFace (hex face mesh: shared unit PlaneMeshBuilder, scaled by radius)
         ├── Corner ×6 (pivot-point children at vertex offsets)
         │     ├── Quad (gap mesh child of QuadOwner corners, even edges)
-        │     │     └── QuadEdge ×4 (emissive cyan cuboid edge lines)
+        │     │     └── QuadEdge ×4 (shared unit cuboid, length via scale.x)
         │     └── Tri (gap mesh child of TriOwner corners, vertices 0,1)
 
 Player (Camera3d + Hdr + Bloom + Atmosphere* + AtmosphereEnvironmentMapLight* + AnimationPlayer + AnimationGraphHandle)
@@ -154,10 +154,12 @@ LaserRay (root entity, world-space positioned cuboid, Visibility::Hidden until f
 - `noise` 0.9 — Fbm<Perlin> terrain generation
 - `mesh-gradient` — workspace member (`crates/mesh-gradient`), procedural gradient materials for gap blending between minerals. Exports `BlendCfg`, `TriFalloff`, `blend_quad`, `blend_tri`, `highlight`.
 - `clap` 4 — CLI argument parsing (optional, native only via `dep:clap`)
-- `bevy-inspector-egui` 0.36 + `bevy_egui` 0.39 — dev inspection UI
+- `bevy-inspector-egui` 0.36 (optional, `inspector` feature) + `bevy_egui` 0.39 — dev inspection UI
 
 ### Feature Flags
-- `native` (default) — `clap`, `bevy/x11`, `bevy/multi_threaded`, `bevy/bevy_remote`
+- `native` (default) — `clap`, `bevy/x11`, `bevy/multi_threaded`
+- `remote` — `bevy/bevy_remote` (BRP HTTP server for MCP debugger; not in default to save ~3-8 MB)
+- `inspector` — `bevy-inspector-egui` (egui world inspector; not in default to save ~2-5 MB)
 - `web` — `bevy/webgl2` for WASM builds
 
 ## Bevy 0.18 Specifics
@@ -201,6 +203,12 @@ Group related `Res<T>` params into a struct (e.g. `DroneInput`, `FovChanges`, `S
 
 ### ECS change detection over `Local` bookkeeping
 Prefer Bevy's built-in change detection (`Ref<T>::is_changed()`, `Mut<T>::is_changed()`) over `Local<bool>` / `Local<Option<T>>` for tracking state transitions between frames. When a prior system already mutates a component (e.g. `track_player_hex` promotes `FlowerState`), downstream systems can detect that via `is_changed()` — no manual diffing needed. For state-transition edge cases (system wasn't running when the change happened), use `OnEnter` + `set_changed()` to seed detection.
+
+### Mesh asset sharing strategy
+- **HexFace**: Single shared unit hex mesh, per-entity `Transform::scale(radius, 1, radius)`. All ~1261 entities reference one `Handle<Mesh>`.
+- **QuadEdge**: Single shared unit cuboid (`1.0 × EDGE_THICKNESS × EDGE_THICKNESS`), per-entity `Transform.scale.x = length`. All ~14,650 edges reference one `Handle<Mesh>`. Bevy batches into ~1 draw call.
+- **Quad/Tri gaps**: Unique mesh per entity (vertex positions vary with noise heights). Cannot share mesh handles. Require `MAIN_WORLD` for both raycasting (`update_ground_level`) and runtime vertex modification (`GapMeshAccess`).
+- **Runtime edge updates**: `reposition_edges()` sets `Transform { translation, rotation, scale }` — no mesh asset allocation. Prior to this optimization it replaced the entire `Mesh` asset per edge per tick.
 
 ### Corner marker uniqueness (V2 gap geometry)
 
@@ -274,7 +282,7 @@ CI generates coverage via **cargo-tarpaulin** and uploads to **Codecov**. Run lo
 
 ## MCP Debugger
 
-`RemotePlugin` is enabled (native only). Install `bevy_debugger_mcp` (`cargo install bevy_debugger_mcp`) and configure in `~/.claude/claude_code_config.json` to inspect ECS state at runtime.
+`RemotePlugin` is behind the `remote` feature flag (`cargo run --features remote`). Install `bevy_debugger_mcp` (`cargo install bevy_debugger_mcp`) and configure in `~/.claude/claude_code_config.json` to inspect ECS state at runtime.
 
 BRP serialization notes (Bevy 0.18):
 - Transform `translation`: `[x, y, z]` array (not `{x, y, z}` object)
