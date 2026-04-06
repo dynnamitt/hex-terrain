@@ -12,10 +12,11 @@ pub mod math;
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::app::AppExit;
 use bevy::prelude::*;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "remote")]
 use bevy::remote::{RemotePlugin, http::RemoteHttpPlugin};
 use bevy::window::{CursorGrabMode, CursorOptions};
 use bevy_egui::egui;
+#[cfg(feature = "inspector")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 #[cfg(not(target_arch = "wasm32"))]
 use clap::Parser;
@@ -121,7 +122,7 @@ fn main() {
     .insert_resource(DebugFlag(debug))
     .add_plugins(bevy_egui::EguiPlugin::default());
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "remote")]
     app.add_plugins((RemotePlugin::default(), RemoteHttpPlugin::default()));
 
     let mut terrain_cfg = h_terrain::HTerrainConfig::default();
@@ -138,8 +139,9 @@ fn main() {
     })
     .add_plugins(intro::IntroPlugin(intro_cfg))
     .add_systems(Update, toggle_inspector)
-    .add_systems(Update, draw_fps.run_if(|f: Res<DebugFlag>| f.0))
-    .add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Inspecting)));
+    .add_systems(Update, draw_fps.run_if(|f: Res<DebugFlag>| f.0));
+    #[cfg(feature = "inspector")]
+    app.add_plugins(WorldInspectorPlugin::new().run_if(in_state(GameState::Inspecting)));
 
     #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, exit_on_esc);

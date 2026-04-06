@@ -235,11 +235,11 @@ pub fn setup_scene_lighting(
 ) {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let medium = mediums.add(ScatteringMedium::earthlike(256, 256));
+        let medium = mediums.add(ScatteringMedium::earthlike(128, 128));
         commands.entity(*player).insert((
             Atmosphere::earthlike(medium),
             AtmosphereEnvironmentMapLight {
-                size: UVec2::splat(256),
+                size: UVec2::splat(128),
                 ..default()
             },
         ));

@@ -150,6 +150,7 @@ pub fn generate_h_grid(
             ));
             (mat, mesh)
         });
+        let edge_mesh = meshes.add(Cuboid::new(1.0, gaps::EDGE_THICKNESS, gaps::EDGE_THICKNESS));
         let mut ctx = gaps::GapSpawnCtx {
             materials: &mut materials,
             meshes: &mut meshes,
@@ -157,6 +158,7 @@ pub fn generate_h_grid(
             mineral_handles: &mineral_handles,
             highlight_handles: &highlight_handles,
             edge_material: &fov.edge,
+            edge_mesh: &edge_mesh,
             blend_cfg: &blend_cfg,
             highlight_mix: HIGHLIGHT_MIX,
             highlight_emissive: HIGHLIGHT_EMISSIVE,
