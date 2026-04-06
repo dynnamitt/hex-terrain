@@ -1,6 +1,7 @@
 //! Height-based terrain: pivot-point grid with per-hex corners.
 
-pub mod biome;
+pub(crate) mod biome;
+pub(crate) mod biomes;
 mod entities;
 mod gaps;
 mod h_grid_layout;

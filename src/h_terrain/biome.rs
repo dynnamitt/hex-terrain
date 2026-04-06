@@ -57,22 +57,16 @@ impl Biome {
     ///
     /// Delegates to [`Mineral::flora_freq`] — the biome controls *which*
     /// minerals appear, each mineral carries its own flora propensity.
-    #[allow(dead_code)] // pub API for flora spawn integration
+    #[allow(dead_code)] // planned for biome-driven flora spawning
     pub fn flora_freq(&self, mineral: Mineral) -> f32 {
         mineral.flora_freq()
     }
-
-    /// Iterate over minerals present in this biome.
-    #[allow(dead_code)] // pub API for flora spawn integration
-    pub fn minerals(&self) -> impl Iterator<Item = Mineral> + '_ {
-        self.entries.iter().map(|e| e.mineral)
-    }
 }
 
-/// Default biome: all 8 minerals at their original scarcity weights.
+/// Default biome: delegates to [`super::biomes::standard`].
 impl Default for Biome {
     fn default() -> Self {
-        Self::new(&Mineral::ALL.map(|m| (m, m.scarcity())))
+        super::biomes::standard()
     }
 }
 
@@ -81,19 +75,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_matches_from_hex() {
+    fn default_biome_covers_all_minerals() {
         let biome = Biome::default();
-        // Default biome should produce the same result as Mineral::from_hex
-        for i in 0..100 {
-            let hex = Hex::new(i, i * 3);
-            let seed = 7919;
-            assert_eq!(
-                biome.pick(hex, seed),
-                Mineral::from_hex(hex, seed),
-                "mismatch at hex ({i}, {})",
-                i * 3
-            );
-        }
+        let minerals: std::collections::HashSet<Mineral> = (0..500)
+            .map(|i| biome.pick(Hex::new(i, i * 3), 7919))
+            .collect();
+        assert_eq!(
+            minerals.len(),
+            Mineral::COUNT,
+            "default biome should produce all 8 minerals"
+        );
     }
 
     #[test]
