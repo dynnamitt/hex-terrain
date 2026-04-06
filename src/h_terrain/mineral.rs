@@ -24,7 +24,6 @@ struct Props {
     #[expect(dead_code, reason = "retained for future normal-mapped geometry")]
     metallic: f32,
     scarcity: f32,
-    #[allow(dead_code)] // read via Mineral::flora_freq → Biome::flora_freq
     flora_freq: f32,
 }
 
@@ -130,7 +129,6 @@ impl Mineral {
     }
 
     /// Flora spawn probability for this mineral (0.0 = none, 1.0 = max).
-    #[allow(dead_code)] // pub API for biome-driven flora spawning
     pub fn flora_freq(self) -> f32 {
         self.props().flora_freq
     }
@@ -168,25 +166,9 @@ impl Mineral {
             ..default()
         }
     }
-
-    /// Deterministic mineral selection from hex coordinates + seed.
-    #[allow(dead_code)] // replaced by Biome::pick in generate_h_grid, kept for tests
-    pub fn from_hex(hex: Hex, seed: u32) -> Self {
-        let h = hash_hex(hex, seed);
-        let total: f32 = Self::ALL.iter().map(|m| m.scarcity()).sum();
-        let val = (h % 10000) as f32 / 10000.0 * total;
-        let mut cum = 0.0;
-        for &m in &Self::ALL {
-            cum += m.scarcity();
-            if val < cum {
-                return m;
-            }
-        }
-        *Self::ALL.last().unwrap()
-    }
 }
 
-pub(crate) fn hash_hex(hex: Hex, seed: u32) -> u32 {
+pub(super) fn hash_hex(hex: Hex, seed: u32) -> u32 {
     let mut h = (hex.x as u32)
         .wrapping_mul(374761393)
         .wrapping_add((hex.y as u32).wrapping_mul(668265263))
@@ -216,17 +198,17 @@ mod tests {
     }
 
     #[test]
-    fn from_hex_deterministic() {
-        let a = Mineral::from_hex(Hex::ZERO, 42);
-        let b = Mineral::from_hex(Hex::ZERO, 42);
+    fn biome_pick_deterministic() {
+        let biome = super::super::biome::Biome::default();
+        let a = biome.pick(Hex::ZERO, 42);
+        let b = biome.pick(Hex::ZERO, 42);
         assert_eq!(a, b);
     }
 
     #[test]
-    fn from_hex_produces_variety() {
-        let minerals: Vec<Mineral> = (0..50)
-            .map(|i| Mineral::from_hex(Hex::new(i, 0), 42))
-            .collect();
+    fn biome_pick_produces_variety() {
+        let biome = super::super::biome::Biome::default();
+        let minerals: Vec<Mineral> = (0..50).map(|i| biome.pick(Hex::new(i, 0), 42)).collect();
         let unique: std::collections::HashSet<_> = minerals.into_iter().collect();
         assert!(unique.len() > 1, "should produce multiple mineral types");
     }
