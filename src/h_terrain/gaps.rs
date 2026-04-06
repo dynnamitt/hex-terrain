@@ -20,7 +20,7 @@ use super::h_grid_layout::HGridLayout;
 use super::mineral::Mineral;
 use hex_grid::{edge_cuboid_transform, gap_vertex_data, quad_corner_indices};
 
-const EDGE_THICKNESS: f32 = 0.03;
+pub(super) const EDGE_THICKNESS: f32 = 0.03;
 pub(super) const DBG_NORMAL_LEN: f32 = 0.3;
 pub(super) const DBG_NORMAL_THICKNESS: f32 = 0.02;
 
@@ -39,6 +39,7 @@ pub(super) struct GapSpawnCtx<'a> {
     pub mineral_handles: &'a [Handle<StandardMaterial>; Mineral::COUNT],
     pub highlight_handles: &'a [Handle<StandardMaterial>; Mineral::COUNT],
     pub edge_material: &'a Handle<StandardMaterial>,
+    pub edge_mesh: &'a Handle<Mesh>,
     pub blend_cfg: &'a BlendCfg,
     pub highlight_mix: f32,
     pub highlight_emissive: LinearRgba,
@@ -155,12 +156,13 @@ pub(super) fn spawn_quad(
         let edge_entity = commands
             .spawn((
                 QuadEdge,
-                Mesh3d(
-                    ctx.meshes
-                        .add(Cuboid::new(length, EDGE_THICKNESS, EDGE_THICKNESS)),
-                ),
+                Mesh3d(ctx.edge_mesh.clone()),
                 MeshMaterial3d(ctx.edge_material.clone()),
-                Transform::from_translation(midpoint).with_rotation(rotation),
+                Transform {
+                    translation: midpoint,
+                    rotation,
+                    scale: Vec3::new(length, 1.0, 1.0),
+                },
             ))
             .id();
         commands.entity(mesh_entity).add_child(edge_entity);
@@ -435,13 +437,11 @@ impl GapMeshAccess<'_, '_> {
             let (midpoint, length, rotation) = edge_cuboid_transform(*from, *to);
 
             if let Ok(mut tf) = self.edge_transforms.get_mut(edge_entity) {
-                *tf = Transform::from_translation(midpoint).with_rotation(rotation);
-            }
-
-            if let Ok(mesh3d) = self.mesh_handles.get(edge_entity)
-                && let Some(edge_mesh) = self.meshes.get_mut(&mesh3d.0)
-            {
-                *edge_mesh = Cuboid::new(length, EDGE_THICKNESS, EDGE_THICKNESS).into();
+                *tf = Transform {
+                    translation: midpoint,
+                    rotation,
+                    scale: Vec3::new(length, 1.0, 1.0),
+                };
             }
         }
     }
@@ -580,19 +580,23 @@ mod tests {
     fn spawn_quad_edges(app: &mut App, gap: Entity, positions: &[[f32; 3]; 4]) -> [Entity; 4] {
         let p: Vec<Vec3> = positions.iter().map(|p| Vec3::from_array(*p)).collect();
         let pairs = [(p[0], p[3]), (p[1], p[2]), (p[0], p[1]), (p[3], p[2])];
+        let unit_mesh = app
+            .world_mut()
+            .resource_mut::<Assets<Mesh>>()
+            .add(Cuboid::new(1.0, EDGE_THICKNESS, EDGE_THICKNESS));
         let mut edges = [Entity::PLACEHOLDER; 4];
         for (i, (from, to)) in pairs.iter().enumerate() {
             let (midpoint, length, rotation) = edge_cuboid_transform(*from, *to);
-            let mesh = app
-                .world_mut()
-                .resource_mut::<Assets<Mesh>>()
-                .add(Cuboid::new(length, EDGE_THICKNESS, EDGE_THICKNESS));
             let edge = app
                 .world_mut()
                 .spawn((
                     QuadEdge,
-                    Mesh3d(mesh),
-                    Transform::from_translation(midpoint).with_rotation(rotation),
+                    Mesh3d(unit_mesh.clone()),
+                    Transform {
+                        translation: midpoint,
+                        rotation,
+                        scale: Vec3::new(length, 1.0, 1.0),
+                    },
                 ))
                 .id();
             app.world_mut().entity_mut(gap).add_child(edge);
@@ -702,24 +706,11 @@ mod tests {
             "edge rotation should match"
         );
 
-        // Edge mesh should be a cuboid with the new length
-        let meshes = app.world().resource::<Assets<Mesh>>();
-        let edge_handle = &app.world().get::<Mesh3d>(edge_entities[2]).unwrap().0;
-        let edge_mesh = meshes.get(edge_handle).unwrap();
-        let edge_positions = edge_mesh
-            .attribute(Mesh::ATTRIBUTE_POSITION)
-            .unwrap()
-            .as_float3()
-            .unwrap();
-        // Cuboid half-extents: x = length/2, y = thickness/2, z = thickness/2
-        let max_x = edge_positions
-            .iter()
-            .map(|p| p[0].abs())
-            .fold(0.0f32, f32::max);
+        // Edge length is encoded in transform.scale.x (unit cuboid shared mesh)
         assert!(
-            (max_x - expected_len / 2.0).abs() < 1e-4,
-            "edge mesh half-length: expected {}, got {max_x}",
-            expected_len / 2.0
+            (updated_tf.scale.x - expected_len).abs() < 1e-4,
+            "edge scale.x: expected {expected_len}, got {}",
+            updated_tf.scale.x
         );
     }
 
