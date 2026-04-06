@@ -24,56 +24,74 @@ struct Props {
     #[expect(dead_code, reason = "retained for future normal-mapped geometry")]
     metallic: f32,
     scarcity: f32,
+    #[allow(dead_code)] // read via Mineral::flora_freq → Biome::flora_freq
+    flora_freq: f32,
 }
 
 const PROPS: [Props; Mineral::COUNT] = [
+    // Granite — common rough stone
     Props {
         color: [0.45, 0.42, 0.38],
         roughness: 0.8,
         metallic: 0.1,
         scarcity: 30.0,
+        flora_freq: 0.0,
     },
+    // Basalt — dark volcanic
     Props {
         color: [0.25, 0.27, 0.30],
         roughness: 0.85,
         metallic: 0.05,
         scarcity: 25.0,
+        flora_freq: 0.0,
     },
+    // Slate — blue-grey layered
     Props {
         color: [0.35, 0.38, 0.45],
         roughness: 0.6,
         metallic: 0.15,
         scarcity: 20.0,
+        flora_freq: 0.0,
     },
+    // Sandstone — warm, porous, supports sparse flora
     Props {
         color: [0.60, 0.50, 0.30],
         roughness: 0.9,
         metallic: 0.0,
         scarcity: 20.0,
+        flora_freq: 0.05,
     },
+    // Obsidian — glassy volcanic
     Props {
         color: [0.10, 0.10, 0.12],
         roughness: 0.15,
         metallic: 0.5,
         scarcity: 5.0,
+        flora_freq: 0.0,
     },
+    // Marble — polished light stone
     Props {
         color: [0.75, 0.73, 0.70],
         roughness: 0.3,
         metallic: 0.1,
         scarcity: 5.0,
+        flora_freq: 0.0,
     },
+    // Quartz — semi-translucent crystal
     Props {
         color: [0.65, 0.55, 0.60],
         roughness: 0.4,
         metallic: 0.3,
         scarcity: 3.0,
+        flora_freq: 0.0,
     },
+    // Copper — metallic ore
     Props {
         color: [0.60, 0.35, 0.15],
         roughness: 0.5,
         metallic: 0.7,
         scarcity: 2.0,
+        flora_freq: 0.0,
     },
 ];
 
@@ -111,6 +129,12 @@ impl Mineral {
         self.props().scarcity
     }
 
+    /// Flora spawn probability for this mineral (0.0 = none, 1.0 = max).
+    #[allow(dead_code)] // pub API for biome-driven flora spawning
+    pub fn flora_freq(self) -> f32 {
+        self.props().flora_freq
+    }
+
     pub fn color(self) -> Color {
         let [r, g, b] = self.props().color;
         Color::srgb(r, g, b)
@@ -146,6 +170,7 @@ impl Mineral {
     }
 
     /// Deterministic mineral selection from hex coordinates + seed.
+    #[allow(dead_code)] // replaced by Biome::pick in generate_h_grid, kept for tests
     pub fn from_hex(hex: Hex, seed: u32) -> Self {
         let h = hash_hex(hex, seed);
         let total: f32 = Self::ALL.iter().map(|m| m.scarcity()).sum();
@@ -161,7 +186,7 @@ impl Mineral {
     }
 }
 
-fn hash_hex(hex: Hex, seed: u32) -> u32 {
+pub(crate) fn hash_hex(hex: Hex, seed: u32) -> u32 {
     let mut h = (hex.x as u32)
         .wrapping_mul(374761393)
         .wrapping_add((hex.y as u32).wrapping_mul(668265263))

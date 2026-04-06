@@ -1,5 +1,6 @@
 //! Height-based terrain: pivot-point grid with per-hex corners.
 
+pub mod biome;
 mod entities;
 mod gaps;
 mod h_grid_layout;
@@ -57,6 +58,9 @@ impl Default for LaserStrength {
 pub struct HTerrainConfig {
     /// Grid generation settings.
     pub grid: HGridSettings,
+    /// Mineral distribution controlling which minerals appear and at what weight.
+    #[reflect(ignore)]
+    pub biome: biome::Biome,
     /// Duration of the fov highlight fade in seconds.
     pub fov_transition_secs: f32,
     /// Swap HexFace/Quad/Tri materials on FoV entry (highlight colors).
@@ -135,6 +139,7 @@ impl Default for HTerrainConfig {
                 max_hex_radius: 2.6,
                 flat_gap_normals: false,
             },
+            biome: biome::Biome::default(),
             fov_transition_secs: 0.5,
             alt_material_for_in_fov: false,
         }
