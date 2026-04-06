@@ -31,6 +31,7 @@ fn test_config() -> HTerrainConfig {
             max_hex_radius: 2.6,
             flat_gap_normals: true,
         },
+        biome: super::biome::Biome::default(),
         fov_transition_secs: 0.3,
         alt_material_for_in_fov: true,
     }
