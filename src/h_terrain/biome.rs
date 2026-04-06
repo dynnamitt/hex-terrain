@@ -57,7 +57,7 @@ impl Biome {
     ///
     /// Delegates to [`Mineral::flora_freq`] — the biome controls *which*
     /// minerals appear, each mineral carries its own flora propensity.
-    #[allow(dead_code)] // planned for biome-driven flora spawning
+    #[allow(dead_code)] // used in tests; production code calls Mineral::flora_freq() directly
     pub fn flora_freq(&self, mineral: Mineral) -> f32 {
         mineral.flora_freq()
     }
