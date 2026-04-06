@@ -36,6 +36,10 @@ struct Cli {
     /// Use flat Y-up normals on gap meshes instead of computed surface normals.
     #[arg(long)]
     flat_gap_normals: bool,
+
+    /// Biome preset: standard (default), rocky, mesa.
+    #[arg(long, default_value = "standard")]
+    biome: String,
 }
 /// Application-wide game state, used for system scheduling.
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash, Reflect)]
@@ -81,12 +85,18 @@ pub struct PlayerMoved(pub bool);
 
 fn main() {
     #[cfg(not(target_arch = "wasm32"))]
-    let (debug, intro_duration_override, flat_gap_normals) = {
+    let (debug, intro_duration_override, flat_gap_normals, biome_name) = {
         let cli = Cli::parse();
-        (cli.debug, cli.intro_duration, cli.flat_gap_normals)
+        (
+            cli.debug,
+            cli.intro_duration,
+            cli.flat_gap_normals,
+            cli.biome,
+        )
     };
     #[cfg(target_arch = "wasm32")]
-    let (debug, intro_duration_override, flat_gap_normals) = (false, None::<f32>, false);
+    let (debug, intro_duration_override, flat_gap_normals, biome_name) =
+        (false, None::<f32>, false, "standard".to_string());
 
     let mut intro_cfg = intro::IntroConfig::default();
     if let Some(d) = intro_duration_override {
@@ -125,8 +135,18 @@ fn main() {
     #[cfg(feature = "remote")]
     app.add_plugins((RemotePlugin::default(), RemoteHttpPlugin::default()));
 
+    let biome = match biome_name.as_str() {
+        "standard" => h_terrain::biomes::standard(),
+        "rocky" => h_terrain::biomes::rocky(),
+        "mesa" => h_terrain::biomes::mesa(),
+        other => {
+            eprintln!("unknown biome '{other}', using standard");
+            h_terrain::biomes::standard()
+        }
+    };
     let mut terrain_cfg = h_terrain::HTerrainConfig::default();
     terrain_cfg.grid.flat_gap_normals = flat_gap_normals;
+    terrain_cfg.biome = biome;
     app.add_plugins(h_terrain::HTerrainPlugin {
         config: terrain_cfg,
         after_player_movement: Some(drone::systems::fly.into_system_set().intern()),
