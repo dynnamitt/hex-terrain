@@ -242,6 +242,16 @@ The project compiles to WebAssembly with `make wasm`. Platform differences:
 
 The Pages workflow (`.github/workflows/pages.yml`) triggers on version-tag pushes (`v*.*.*`) and deploys the WASM build to `gh-pages/<version>/`. A guard step verifies the tagged commit is on `main` — tags pushed from feature branches are rejected. Manual deploys via `workflow_dispatch` bypass this check.
 
+## Git Workflow
+
+**Never merge directly to main.** All changes reach `main` via pull request — push the feature branch, create a PR with `gh pr create`, and merge through GitHub. No local `git merge ... main` + `git push`.
+
+Updating a feature branch with latest main is fine and encouraged:
+```bash
+git rebase main           # replay branch on top of main (preferred, linear history)
+git merge main            # merge main into branch (creates merge commit)
+```
+
 ## Formatting
 
 No project-specific formatter configured. Standard `cargo fmt`.
