@@ -8,7 +8,9 @@ edition = "2024"
 
 [features]
 default = ["native"]
-native = ["dep:clap", "bevy/x11", "bevy/multi_threaded", "bevy/bevy_remote"]
+native = ["dep:clap", "bevy/x11", "bevy/multi_threaded"]
+remote = ["bevy/bevy_remote"]
+inspector = ["dep:bevy-inspector-egui"]
 web = ["bevy/webgl2"]
 
 [dependencies.bevy]
@@ -48,7 +50,7 @@ default-features = false
 [dependencies]
 noise = "0.9"
 clap = { version = "4", features = ["derive"], optional = true }
-bevy-inspector-egui = "0.36"
+bevy-inspector-egui = { version = "0.36", optional = true }
 bevy_egui = "0.39"
 hexx = { version = "0.24.0", features = ["bevy"] }
 mesh-gradient = { path = "crates/mesh-gradient" }
