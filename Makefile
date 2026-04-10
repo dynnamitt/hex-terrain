@@ -43,6 +43,7 @@ wasm:
 		|| { echo "wasm-bindgen not found — installing and retrying..."; \
 		     cargo install wasm-bindgen-cli && wasm-bindgen --out-dir $(WASM_OUT) --target web \
 		     target/wasm32-unknown-unknown/release/hex-terrain.wasm; }
+	cp -r assets $(WASM_OUT)/
 	cp web/index.html $(WASM_OUT)/
 	sed -i 's/__VERSION__/$(VERSION)/' $(WASM_OUT)/index.html
 
