@@ -21,7 +21,8 @@ make test                          # unit tests (cargo test)
 make coverage                      # tarpaulin HTML coverage report
 make coverage-xml                  # tarpaulin XML (CI/Codecov)
 make inject-updates TAG=v0.0.1    # inject UPDATES.md notes into web/index.html
-make wasm                          # WASM build + wasm-bindgen + copy web/index.html
+make wasm                          # WASM build + wasm-bindgen (auto-installs deps on failure)
+make wasm-deps                     # Install wasm32 target + wasm-bindgen-cli
 make serve                         # wasm + python3 HTTP server on :8080
 make clean                         # cargo clean
 cargo run                          # default: intro → arming → free-fly
