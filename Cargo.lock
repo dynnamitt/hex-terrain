@@ -2936,7 +2936,7 @@ dependencies = [
 
 [[package]]
 name = "hex-terrain"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",

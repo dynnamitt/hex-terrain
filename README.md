@@ -6,6 +6,34 @@
 
 ![hex-grid preview](https://dynnamitt.github.io/hex-terrain/svg/hex-grid.svg)
 
+## Usage
+
+```bash
+cargo run                              # default: intro → arming → free-fly
+cargo run -- --biome mesa-lush         # biome preset (standard/rocky/mesa/mesa-lush)
+cargo run -- --debug                   # FPS overlay + gap count verification
+cargo run -- --intro-duration 3        # shorter intro tilt-up
+make wasm && make serve                # WASM build on localhost:8080
+```
+
+### Controls
+
+| Input | Action |
+|---|---|
+| WASD | Move |
+| Mouse | Look |
+| Q / E | Lower / raise altitude |
+| Scroll | Adjust altitude |
+| Space / LMB | Fire laser (mine ore) |
+| Escape | Quit |
+
+### Feature flags
+
+```bash
+cargo run --features remote            # BRP HTTP server for MCP debugger
+cargo run --features inspector         # egui world inspector
+```
+
 ## Startup system ordering
 
 ```mermaid
