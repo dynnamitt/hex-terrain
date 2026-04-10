@@ -490,17 +490,17 @@ pub fn fire_laser(
     let (ray_tf, ray_vis) = &mut *ray_q;
 
     if !firing {
-        if let Ok((_, mat_handle)) = fx.hex.single() {
-            if let Some(mat) = fx.fov_assets.get_mut(&mat_handle.0) {
-                mat.extension.data.y = 1.0;
-                mat.extension.data.w = terrain_cfg.aim_star_rotate_pace;
-                mat.extension.aim_params = Vec4::new(
-                    terrain_cfg.aim_star_radius,
-                    terrain_cfg.aim_star_inner_cut,
-                    terrain_cfg.aim_star_thickness,
-                    0.0,
-                );
-            }
+        if let Ok((_, mat_handle)) = fx.hex.single()
+            && let Some(mat) = fx.fov_assets.get_mut(&mat_handle.0)
+        {
+            mat.extension.data.y = 1.0;
+            mat.extension.data.w = terrain_cfg.aim_star_rotate_pace;
+            mat.extension.aim_params = Vec4::new(
+                terrain_cfg.aim_star_radius,
+                terrain_cfg.aim_star_inner_cut,
+                terrain_cfg.aim_star_thickness,
+                0.0,
+            );
         }
         *ray_vis.as_mut() = Visibility::Hidden;
         return;

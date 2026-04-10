@@ -147,10 +147,10 @@ pub(super) fn start_fov_transitions(
         }
 
         // QuadEdge: clone shared material so animation doesn't affect all edges
-        if let Ok(mut mat) = edge_materials.get_mut(entity) {
-            if let Some(current) = mat_assets.get(&mat.0).cloned() {
-                mat.0 = mat_assets.add(current);
-            }
+        if let Ok(mut mat) = edge_materials.get_mut(entity)
+            && let Some(current) = mat_assets.get(&mat.0).cloned()
+        {
+            mat.0 = mat_assets.add(current);
         }
 
         // Face entities entering FoV: swap StandardMaterial → FovMaterial
@@ -309,12 +309,12 @@ pub(super) fn track_in_sight(mut sight: SightParams, mut commands: Commands) {
 
     // Teardown old target
     if let Some(old) = old_target {
-        if let Ok(mat_handle) = sight.face_mats.get(old) {
-            if let Some(mat) = sight.fov_assets.get_mut(&mat_handle.0) {
-                mat.extension.data.y = 0.0;
-                mat.extension.data.w = 0.0;
-                mat.extension.aim_params = Vec4::ZERO;
-            }
+        if let Ok(mat_handle) = sight.face_mats.get(old)
+            && let Some(mat) = sight.fov_assets.get_mut(&mat_handle.0)
+        {
+            mat.extension.data.y = 0.0;
+            mat.extension.data.w = 0.0;
+            mat.extension.aim_params = Vec4::ZERO;
         }
         commands.entity(old).remove::<InSight>();
     }
@@ -322,17 +322,17 @@ pub(super) fn track_in_sight(mut sight: SightParams, mut commands: Commands) {
     // Apply to new target
     if let Some(new) = new_target {
         let cfg = &sight.cfg;
-        if let Ok(mat_handle) = sight.face_mats.get(new) {
-            if let Some(mat) = sight.fov_assets.get_mut(&mat_handle.0) {
-                mat.extension.data.y = 1.0;
-                mat.extension.data.w = cfg.aim_star_rotate_pace;
-                mat.extension.aim_params = Vec4::new(
-                    cfg.aim_star_radius,
-                    cfg.aim_star_inner_cut,
-                    cfg.aim_star_thickness,
-                    0.0,
-                );
-            }
+        if let Ok(mat_handle) = sight.face_mats.get(new)
+            && let Some(mat) = sight.fov_assets.get_mut(&mat_handle.0)
+        {
+            mat.extension.data.y = 1.0;
+            mat.extension.data.w = cfg.aim_star_rotate_pace;
+            mat.extension.aim_params = Vec4::new(
+                cfg.aim_star_radius,
+                cfg.aim_star_inner_cut,
+                cfg.aim_star_thickness,
+                0.0,
+            );
         }
         commands.entity(new).insert(InSight);
     }
@@ -346,13 +346,11 @@ fn find_aimed_hex_face(sight: &mut SightParams) -> Option<Entity> {
     let filter = |e| sight.hex_faces.contains(e);
     let settings = MeshRayCastSettings::default().with_filter(&filter);
     let hits = sight.raycast.cast_ray(ray, &settings);
-    for &(face, _) in hits {
-        let in_fov = sight
-            .parents
-            .get(face)
-            .ok()
-            .is_some_and(|parent| sight.in_fov.contains(parent.get()));
-        return in_fov.then_some(face);
-    }
-    None
+    let &(face, _) = hits.first()?;
+    sight
+        .parents
+        .get(face)
+        .ok()
+        .is_some_and(|parent| sight.in_fov.contains(parent.get()))
+        .then_some(face)
 }

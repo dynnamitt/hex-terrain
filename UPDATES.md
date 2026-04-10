@@ -1,5 +1,13 @@
 # Updates
 
+## v0.0.7
+
+- Shimeji mushroom clusters sprout on hex faces — procedural 6-sided stems with domed caps via new `flora` crate
+- FoV overlay rewritten as WGSL shader (ExtendedMaterial) — shape-matching band patterns, cyan glow, and shader-drawn aim star replace per-entity material swaps
+- Lazy FovMaterial — only hexes in the FoV ring run the custom shader, rest stay on plain StandardMaterial
+- Biome system with `--biome` CLI flag — standard, rocky, mesa, and mesa-lush presets control mineral distribution and flora frequency
+- Feature-gated `remote` and `inspector` to trim default binary size
+
 ## v0.0.6
 
 - Procedural atmosphere sky replaces flat twilight background — Hillaire 2020 scattering with IBL fill eliminates pale gap artifacts on camera rotation
