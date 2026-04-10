@@ -31,6 +31,17 @@ pub fn mesa() -> Biome {
     ])
 }
 
+/// Lush mesa: sand-heavy variant with more flora-eligible terrain.
+pub fn mesa_lush() -> Biome {
+    Biome::new(&[
+        (Mineral::Sandstone, 50.0),
+        (Mineral::Marble, 15.0),
+        (Mineral::Granite, 10.0),
+        (Mineral::Copper, 6.0),
+        (Mineral::Quartz, 3.0),
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use hexx::Hex;
@@ -73,6 +84,21 @@ mod tests {
     fn mesa_subset() {
         covers_only(
             &mesa(),
+            &[
+                Mineral::Sandstone,
+                Mineral::Marble,
+                Mineral::Granite,
+                Mineral::Copper,
+                Mineral::Quartz,
+            ],
+            42,
+        );
+    }
+
+    #[test]
+    fn mesa_lush_subset() {
+        covers_only(
+            &mesa_lush(),
             &[
                 Mineral::Sandstone,
                 Mineral::Marble,

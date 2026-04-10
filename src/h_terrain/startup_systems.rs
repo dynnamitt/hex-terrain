@@ -193,6 +193,7 @@ pub fn generate_h_grid(
         &flora_cfg,
         &hex_minerals,
         &hex_entities,
+        &terrain,
         g.flora_seed,
     );
 

@@ -37,7 +37,7 @@ struct Cli {
     #[arg(long)]
     flat_gap_normals: bool,
 
-    /// Biome preset: standard (default), rocky, mesa.
+    /// Biome preset: standard (default), rocky, mesa, mesa-lush.
     #[arg(long, default_value = "standard")]
     biome: String,
 }
@@ -139,6 +139,7 @@ fn main() {
         "standard" => h_terrain::biomes::standard(),
         "rocky" => h_terrain::biomes::rocky(),
         "mesa" => h_terrain::biomes::mesa(),
+        "mesa-lush" => h_terrain::biomes::mesa_lush(),
         other => {
             eprintln!("unknown biome '{other}', using standard");
             h_terrain::biomes::standard()

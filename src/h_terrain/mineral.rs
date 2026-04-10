@@ -33,7 +33,7 @@ const PROPS: [Props; Mineral::COUNT] = [
         roughness: 0.8,
         metallic: 0.1,
         scarcity: 30.0,
-        flora_freq: 0.0,
+        flora_freq: 0.12,
     },
     // Basalt — dark volcanic
     Props {
@@ -41,7 +41,7 @@ const PROPS: [Props; Mineral::COUNT] = [
         roughness: 0.85,
         metallic: 0.05,
         scarcity: 25.0,
-        flora_freq: 0.0,
+        flora_freq: 0.12,
     },
     // Slate — blue-grey layered
     Props {
@@ -57,7 +57,7 @@ const PROPS: [Props; Mineral::COUNT] = [
         roughness: 0.9,
         metallic: 0.0,
         scarcity: 20.0,
-        flora_freq: 0.05,
+        flora_freq: 0.08,
     },
     // Obsidian — glassy volcanic
     Props {
