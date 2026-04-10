@@ -1,14 +1,18 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-10T09:59:40.753Z
-> Files: 63 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-10T15:30:47.405Z
+> Files: 66 tracked | Anatomy hits: 0 | Misses: 0
+
+## ../../../../../home/kdm/.claude/plans/
+
+- `humming-toasting-lagoon.md` — Plan: Extract Shader Magic Numbers to Config/Constants (~1644 tok)
 
 ## ./
 
 - `.gitignore` — Git ignore rules (~12 tok)
 - `.mcp.json` (~30 tok)
 - `Cargo.toml` — Rust package manifest (~439 tok)
-- `CLAUDE.md` — OpenWolf (~5357 tok)
+- `CLAUDE.md` — OpenWolf (~5495 tok)
 - `LICENSE` — Project license (~9374 tok)
 - `Makefile` — Make build targets (~336 tok)
 - `PLAN.md` — Plan: Hex Terrain Viewer (Bevy 0.18) (~3269 tok)
@@ -57,6 +61,10 @@
 
 - `shimeji.glb` (~2964 tok)
 
+## assets/shaders/
+
+- `fov_overlay.wgsl` — import bevy_pbr::{ (~1616 tok)
+
 ## crates/flora/
 
 - `Cargo.toml` — Rust package manifest (~97 tok)
@@ -94,36 +102,37 @@
 
 ## crates/mesh-gradient/src/
 
-- `lib.rs` — Procedural gradient materials for gap meshes between hex tiles. (~3774 tok)
+- `lib.rs` — Procedural gradient materials for gap meshes between hex tiles. (~3331 tok)
 
 ## src/
 
 - `drone.rs` — First-person drone controller. (~1492 tok)
-- `h_terrain.rs` — Height-based terrain: pivot-point grid with per-hex corners. (~2448 tok)
+- `h_terrain.rs` — Height-based terrain: pivot-point grid with per-hex corners. (~2498 tok)
 - `intro.rs` — Intro camera sequence played at startup. (~405 tok)
 - `main.rs` — Hex terrain viewer with neon edge lighting. (~2105 tok)
 - `math.rs` — Cross-module computation helpers. (~676 tok)
 
 ## src/drone/
 
-- `entities.rs` — Marker component for the player-controlled drone entity. (~676 tok)
+- `entities.rs` — Marker component for the player-controlled drone entity. (~574 tok)
 - `materials.rs` — [derive(Resource)] (~214 tok)
-- `systems.rs` — [cfg(not(target_arch = "wasm32"))] (~5495 tok)
-- `tests.rs` — ECS integration tests for drone startup and runtime systems. (~4742 tok)
+- `systems.rs` — [cfg(not(target_arch = "wasm32"))] (~5307 tok)
+- `tests.rs` — ECS integration tests for drone startup and runtime systems. (~4444 tok)
 
 ## src/h_terrain/
 
 - `biome.rs` — Biome: configurable mineral distribution for terrain generation. (~1020 tok)
 - `biomes.rs` — Named biome presets built from the current mineral set. (~615 tok)
-- `entities.rs` — Entity types for height-based terrain. (~1837 tok)
+- `entities.rs` — Entity types for height-based terrain. (~1451 tok)
 - `flora_spawn.rs` — Flora cluster spawning during terrain generation. (~524 tok)
-- `gaps.rs` — Quad and Tri gap geometry: spawning, mesh construction, index math. (~7980 tok)
+- `fov_overlay.rs` — FoV shader overlay material extension. (~421 tok)
+- `gaps.rs` — Quad and Tri gap geometry: spawning, mesh construction, index math. (~7384 tok)
 - `h_grid_layout.rs` — Re-exports [`hex_grid::HGridLayout`] and bridges from h_terrain's [`HGridSettings`]. (~101 tok)
-- `materials.rs` — Centralized material definitions and FoV material systems for height-based terrain. (~4769 tok)
-- `mineral.rs` — Mineral types with per-variant visual properties and scarcity weights. (~1670 tok)
-- `startup_systems.rs` — Startup systems for height-based terrain. (~2526 tok)
+- `materials.rs` — Centralized material definitions and FoV material systems for height-based terrain. (~2975 tok)
+- `mineral.rs` — Mineral types with per-variant visual properties and scarcity weights. (~1223 tok)
+- `startup_systems.rs` — Startup systems for height-based terrain. (~2339 tok)
 - `systems.rs` — Runtime systems for height-based terrain. (~2363 tok)
-- `tests.rs` — ECS integration tests for h_terrain startup and runtime systems. (~3908 tok)
+- `tests.rs` — ECS integration tests for h_terrain startup and runtime systems. (~3741 tok)
 
 ## web/
 

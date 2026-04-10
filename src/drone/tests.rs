@@ -11,9 +11,9 @@ use bevy::time::TimeUpdateStrategy;
 use super::DroneConfig;
 use super::entities::{CursorRecentered, Elbow, LaserPipe, LaserRay, Player};
 use super::systems;
-use crate::h_terrain::InSight;
 use crate::h_terrain::fov_overlay::FovMaterial;
 use crate::h_terrain::materials::TerrainMaterials;
+use crate::h_terrain::{HTerrainConfig, InSight};
 use crate::intro::IntroConfig;
 use crate::{GameState, GroundLevel, PlayerMoved, PlayerPos};
 
@@ -33,6 +33,7 @@ fn test_app() -> App {
         .init_asset::<FovMaterial>()
         .init_asset::<Image>()
         .insert_resource(DroneConfig::default())
+        .insert_resource(HTerrainConfig::default())
         .insert_resource(IntroConfig {
             // Short durations so we can tick through quickly
             tilt_up_duration: 0.1,
@@ -55,10 +56,8 @@ fn test_app() -> App {
 
     app.add_systems(
         Startup,
-        |mut cmd: Commands,
-         mut mats: ResMut<Assets<StandardMaterial>>,
-         mut meshes: ResMut<Assets<Mesh>>| {
-            cmd.insert_resource(TerrainMaterials::new(&mut mats, &mut meshes));
+        |mut cmd: Commands, mut mats: ResMut<Assets<StandardMaterial>>| {
+            cmd.insert_resource(TerrainMaterials::new(&mut mats));
         },
     );
     app.add_systems(Startup, systems::create_drone_materials);

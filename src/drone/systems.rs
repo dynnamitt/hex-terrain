@@ -23,7 +23,7 @@ use super::entities::{
     ArmingComplete, DroneInput, Elbow, IntroComplete, LaserFx, LaserPipe, LaserRay, Player,
 };
 use super::materials::DroneMaterials;
-use crate::h_terrain::{InSight, edge_cuboid_transform};
+use crate::h_terrain::{HTerrainConfig, InSight, edge_cuboid_transform};
 use crate::intro::IntroConfig;
 use crate::math;
 
@@ -476,7 +476,7 @@ pub fn aim_pipe(
 }
 
 /// Shows a red laser ray from the pipe tip to the aimed hex face on Space or Left Click.
-/// Swaps aim-star materials to yellow glow while firing.
+/// Sets `aim_mode` uniform to firing (2) or aim (1) on the targeted face.
 pub fn fire_laser(
     pipe_q: Single<&GlobalTransform, With<LaserPipe>>,
     mut ray_q: Single<(&mut Transform, &mut Visibility), With<LaserRay>>,
@@ -484,18 +484,22 @@ pub fn fire_laser(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     cfg: Res<DroneConfig>,
+    terrain_cfg: Res<HTerrainConfig>,
 ) {
     let firing = keys.pressed(KeyCode::Space) || mouse.pressed(MouseButton::Left);
     let (ray_tf, ray_vis) = &mut *ray_q;
 
     if !firing {
-        for mut mat in &mut fx.stars {
-            mat.0 = fx.mats.aim_star.clone();
-        }
-        // Reset aim_mode from firing (2) back to aim (1)
         if let Ok((_, mat_handle)) = fx.hex.single() {
             if let Some(mat) = fx.fov_assets.get_mut(&mat_handle.0) {
                 mat.extension.data.y = 1.0;
+                mat.extension.data.w = terrain_cfg.aim_star_rotate_pace;
+                mat.extension.aim_params = Vec4::new(
+                    terrain_cfg.aim_star_radius,
+                    terrain_cfg.aim_star_inner_cut,
+                    terrain_cfg.aim_star_thickness,
+                    0.0,
+                );
             }
         }
         *ray_vis.as_mut() = Visibility::Hidden;
@@ -507,12 +511,16 @@ pub fn fire_laser(
         return;
     };
 
-    for mut mat in &mut fx.stars {
-        mat.0 = fx.mats.aim_star_firing.clone();
-    }
-    // Set aim_mode to firing (2)
     if let Some(mat) = fx.fov_assets.get_mut(&mat_handle.0) {
         mat.extension.data.y = 2.0;
+        mat.extension.data.w =
+            terrain_cfg.aim_star_rotate_pace * terrain_cfg.aim_star_fire_pace_factor;
+        mat.extension.aim_params = Vec4::new(
+            terrain_cfg.aim_star_fire_radius,
+            terrain_cfg.aim_star_fire_inner_cut,
+            terrain_cfg.aim_star_thickness,
+            0.0,
+        );
     }
 
     let tip = pipe_q.transform_point(Vec3::NEG_Y * (cfg.pipe_length / 4.0));

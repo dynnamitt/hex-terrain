@@ -170,7 +170,3 @@ pub struct FovTransition {
 /// Marker on the single hex face the camera is looking directly at.
 #[derive(Component, Reflect)]
 pub struct InSight;
-
-/// Marker on aim-star line entities spawned on the [`InSight`] hex face.
-#[derive(Component, Reflect)]
-pub struct AimStar;

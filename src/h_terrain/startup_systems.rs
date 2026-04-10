@@ -34,7 +34,7 @@ pub fn generate_h_grid(
     let terrain = g.build_layout();
 
     let edge_thickness = 0.02;
-    let fov = TerrainMaterials::new(&mut materials, &mut meshes);
+    let fov = TerrainMaterials::new(&mut materials);
     let flora_cfg = FloraCfg::default();
     let flora_mat = FloraMaterials::new(&mut materials, &mut meshes, &flora_cfg);
     let debug_assets = debug.0.then(|| {

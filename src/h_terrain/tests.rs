@@ -35,6 +35,13 @@ fn test_config() -> HTerrainConfig {
         },
         biome: super::biome::Biome::default(),
         fov_transition_secs: 0.3,
+        aim_star_rotate_pace: 1.0,
+        aim_star_fire_pace_factor: 4.0,
+        aim_star_radius: 0.35,
+        aim_star_fire_radius: 0.37,
+        aim_star_inner_cut: 0.08,
+        aim_star_fire_inner_cut: 0.12,
+        aim_star_thickness: 0.12,
     }
 }
 

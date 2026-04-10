@@ -21,7 +21,7 @@ use bevy::prelude::*;
 use crate::{DebugFlag, GameState};
 use fov_overlay::FovMaterial;
 
-pub use entities::{AimStar, InSight};
+pub use entities::InSight;
 pub use hex_grid::edge_cuboid_transform;
 
 /// Pipeline ordering for h_terrain update systems.
@@ -68,6 +68,20 @@ pub struct HTerrainConfig {
     pub biome: biome::Biome,
     /// Duration of the fov highlight fade in seconds.
     pub fov_transition_secs: f32,
+    /// Aim-star rotation speed in radians per second (counter-clockwise).
+    pub aim_star_rotate_pace: f32,
+    /// Multiplier applied to `aim_star_rotate_pace` while firing.
+    pub aim_star_fire_pace_factor: f32,
+    /// Aim-star outer radius in UV space (aim mode).
+    pub aim_star_radius: f32,
+    /// Aim-star outer radius in UV space (fire mode).
+    pub aim_star_fire_radius: f32,
+    /// Aim-star center void radius (aim mode).
+    pub aim_star_inner_cut: f32,
+    /// Aim-star center void radius (fire mode).
+    pub aim_star_fire_inner_cut: f32,
+    /// Aim-star line thickness.
+    pub aim_star_thickness: f32,
 }
 
 /// Grid layout and noise parameters.
@@ -146,6 +160,13 @@ impl Default for HTerrainConfig {
             },
             biome: biome::Biome::default(),
             fov_transition_secs: 0.5,
+            aim_star_rotate_pace: 1.0,
+            aim_star_fire_pace_factor: 4.0,
+            aim_star_radius: 0.35,
+            aim_star_fire_radius: 0.37,
+            aim_star_inner_cut: 0.08,
+            aim_star_fire_inner_cut: 0.12,
+            aim_star_thickness: 0.12,
         }
     }
 }
@@ -182,7 +203,6 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::HexFace>()
             .register_type::<entities::FovTransition>()
             .register_type::<entities::InSight>()
-            .register_type::<entities::AimStar>()
             .register_type::<mineral::Mineral>()
             .insert_resource(self.config.clone())
             .configure_sets(

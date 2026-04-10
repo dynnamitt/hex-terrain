@@ -56,17 +56,19 @@ src/
                                # radial_gradient (procedural stepped-band texture),
                                # FovChanges/SightParams SystemParam bundles,
                                # start_fov_transitions, animate_fov_transitions, track_in_sight
+    h_terrain/fov_overlay      # FovOverlay (MaterialExtension, two uniforms: data + aim_params),
+                               # FovMaterial = ExtendedMaterial<StandardMaterial, FovOverlay>
     h_terrain/entities         # HGrid, HCell, HexFace, Corner, Quad, QuadEdge, Tri,
                                # QuadOwner, QuadPos1Emitter, QuadPos2Emitter, QuadTail,
                                # TriOwner, TriPos1Emitter, TriPos2Emitter,
-                               # GapHighlight, InFov, FovTransition, InSight, PreSightMaterial
+                               # GapHighlight, InFov, FovTransition, InSight
     h_terrain/startup_systems  # generate_h_grid, seed_ground_level, verify_gap_counts
     h_terrain/systems          # update_ground_level, track_player_fov, extract_ore,
                                # GapLookup/OreExtraction SystemParam bundles
     h_terrain/tests            # ECS integration tests (cfg(test))
   drone.rs             # DroneConfig, DronePlugin
     drone/entities     # Player, Elbow, LaserPipe, LaserRay, ArmingComplete,
-                       # IntroComplete, CursorRecentered, LaserFx, DroneInput
+                       # IntroComplete, CursorRecentered, LaserFx (FovMaterial queries), DroneInput
     drone/materials    # DroneMaterials resource (pipe, laser_ray)
     drone/systems      # create_drone_materials, spawn_drone, link_elbow_animation, setup_scene_lighting,
                        # start_arming, fly, aim_pipe, draw_crosshair, fire_laser,
@@ -82,14 +84,14 @@ crates/
 ### Config Resources
 Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ... }`).
 
-- `HTerrainConfig` — `HGridSettings` (radius, fov_reach, spacing, noise seeds/octaves/scales, height/radius ranges, mineral_seed) + `fov_transition_secs`
+- `HTerrainConfig` — `HGridSettings` (radius, fov_reach, spacing, noise seeds/octaves/scales, height/radius ranges, mineral_seed) + `fov_transition_secs` + aim-star tuning (rotate pace, fire pace factor, radius/fire_radius, inner_cut/fire_inner_cut, thickness)
 - `LaserStrength` — mining resource: `level` (upgrade tier), `extract_height` (Y units per tick), `extraction_time` (seconds between ticks)
 - `DroneConfig` — move speed, mouse sensitivity, lowest_offset, height lerp, bloom intensity, pipe geometry (offset/length/radius), laser_thickness, arm_duration
 - `IntroConfig` — tilt-up/down durations, highlight delay, tilt-down angle
 
 ### SystemParam Bundles
 - `DroneInput` — bundles all `fly()` inputs (time, keys, mouse, scroll, recentered, config, ground, player, moved)
-- `LaserFx` — bundles aim-star and hex-face material queries + TerrainMaterials for `fire_laser` visual effects
+- `LaserFx` — bundles hex-face FovMaterial queries for `fire_laser` visual effects (aim_mode + aim_params uniforms)
 - `FovChanges` — bundles InFov change-detection queries and cell→HexFace/gap navigation
 - `SightParams` — bundles camera raycast, hex face queries, and InSight state for `track_in_sight`
 - `GapMeshAccess` — bundles mesh/transform queries for runtime gap vertex updates (realign, shift, edge reposition)
@@ -103,13 +105,13 @@ Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ...
 - `GameState` — States enum: `Intro`, `Arming`, `Running`, `Inspecting`
 - `DebugFlag` — CLI `--debug` flag; enables FPS overlay and `verify_gap_counts`
 - `LaserStrength` — mining config: extract rate and tick interval (init_resource in HTerrainPlugin)
-- `TerrainMaterials` — material handles for edges, aim, and fire effects (7 handles + 1 mesh). Hex/gap face materials are per-`Mineral`, created at startup, not stored here.
+- `TerrainMaterials` — material handles for edge and edge-highlight (2 handles). Hex/gap face materials are per-`Mineral` `FovMaterial`, created at startup, not stored here. Aim-star is shader-drawn via `FovOverlay` uniforms.
 - `DroneMaterials` — material handles for laser pipe and ray
 - `HGrid` — Component, single entity parenting all HCells; wraps `HGridLayout`
 - `HGridLayout` — encapsulates `HexLayout` + per-hex heights/radii; `vertex()`, `interpolate_height()`
 
 ### Color Palettes
-- `FovPalette` — FoV highlight colors: Hex/Edge (bright green). Implements `From<T> for Color` and `From<T> for LinearRgba`.
+- `FovPalette` — FoV highlight colors: Hex (white tint + bloom), Gap (cyan tint), Edge (cyan emissive). Colors defined as `EDGE_COLOR`/`EDGE_EMISSIVE` consts in `materials.rs` and WGSL `const` in `fov_overlay.wgsl`.
 - `Mineral` — 8-variant enum (Granite, Basalt, Slate, Sandstone, Obsidian, Marble, Quartz, Copper). Each has `color()` (sRGB), `highlight_color()` (mixed toward white by `HIGHLIGHT_MIX`), `material()`, `highlight_material()` (with `HIGHLIGHT_EMISSIVE` glow). Deterministic per-hex via `from_hex(hex, seed)` using scarcity-weighted hashing.
 
 ### Lighting
@@ -119,7 +121,7 @@ Each plugin takes a named-struct config (e.g. `HTerrainPlugin { config: ..., ...
 - **DirectionalLight** — sun (illuminance 2000, shadows enabled), spawned in `setup_scene_lighting`
 - **Bloom** — additive, intensity 0.3 (`Bloom::NATURAL` base), on Camera3d. Only catches emissive materials.
 - **Tonemapping** — `TonyMcMapface`
-- **Emissive strategy** — only FoV `edge_highlight` and aim-star materials use emissive (bloom glow). Hex/gap faces are PBR-lit by scene lights, no emissive. Non-FoV edges use muted unlit cyan, no emissive.
+- **Emissive strategy** — only FoV `edge_highlight` material and hex-face FoV overlay (via shader) use emissive (bloom glow). Gap faces get cyan tint without bloom. Aim-star is shader-drawn (red-orange, no emissive). Non-FoV edges use muted unlit cyan, no emissive.
 - **Mineral reflectance** — `reflectance: 0.1` on all mineral materials (default 0.5 was too specular for matte terrain)
 
 ### Entity Hierarchy
@@ -150,7 +152,7 @@ LaserRay (root entity, world-space positioned cuboid, Visibility::Hidden until f
 - `update_ground_level` — sets `GroundLevel` by raycasting NEG_Y onto terrain surfaces (HexFace/Quad/Tri)
 - `track_player_fov` — adds/removes `InFov` on nearby HCells
 - `start_fov_transitions` / `animate_fov_transitions` — material color lerp for FoV reveal
-- `track_in_sight` — raycasts screen center, tags aimed HexFace with `InSight` + purple material
+- `track_in_sight` — raycasts screen center, tags aimed HexFace with `InSight`, sets `aim_mode` + `aim_params` uniforms on its `FovMaterial`
 - `extract_ore` — lowers HCell Y on laser fire (Space/LMB), realigns neighboring gap vertices via `GapMeshAccess`
 **Update** (Running only): `aim_pipe` (slerp with ease-out toward InSight target, eases back to armed when no target), `draw_crosshair`, `fire_laser` (after Sight phase), `fly` (after `recenter_cursor`)
 

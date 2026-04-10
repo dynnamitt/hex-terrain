@@ -114,6 +114,7 @@ pub(super) fn spawn_quad(
         base,
         extension: FovOverlay {
             data: Vec4::new(0.0, 0.0, 1.0, 0.0),
+            aim_params: Vec4::ZERO,
         },
     });
 
@@ -230,6 +231,7 @@ pub(super) fn spawn_tri(
         base,
         extension: FovOverlay {
             data: Vec4::new(0.0, 0.0, 2.0, 0.0),
+            aim_params: Vec4::ZERO,
         },
     });
 

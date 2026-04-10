@@ -12,6 +12,9 @@
 
 - **Project:** hex-terrain
 - **Description:** [![codecov](https://codecov.io/gh/dynnamitt/hex-terrain/graph/badge.svg)](https://codecov.io/gh/dynnamitt/hex-terrain)
+- **Bevy 0.18 ShaderRef:** `ShaderRef` moved from `bevy_render` to `bevy_shader`. Import via `bevy::shader::ShaderRef`. `AsBindGroup` stays at `bevy::render::render_resource::AsBindGroup`.
+- **Bevy 0.18 Material bind group:** Material uniforms use group 3 (`MATERIAL_BIND_GROUP_INDEX = 3`). In WGSL shaders, use `@group(#{MATERIAL_BIND_GROUP})` — never hardcode group index.
+- **Shared material clone-on-transition:** When multiple entities share the same `Handle<StandardMaterial>`, mutating the asset via `get_mut` changes it for ALL entities. Must clone the material per-entity before animating (QuadEdge pattern).
 
 ## Do-Not-Repeat
 
