@@ -193,3 +193,54 @@
 | 17:30 | Edited CLAUDE.md | inline fix | ~71 |
 | 17:30 | Edited CLAUDE.md | inline fix | ~38 |
 | 17:30 | Edited CLAUDE.md | 2→2 lines | ~47 |
+| 17:31 | Edited Makefile | inline fix | ~22 |
+| 17:31 | Edited Makefile | expanded (+10 lines) | ~218 |
+| 17:31 | Edited CLAUDE.md | 1→2 lines | ~46 |
+| 17:32 | Session end: 46 writes across 10 files (gaps.rs, fov_overlay.wgsl, systems.rs, tests.rs, h_terrain.rs) | 12 reads | ~40759 tok |
+| 17:43 | Edited Makefile | 6→7 lines | ~105 |
+| 17:43 | Session end: 47 writes across 10 files (gaps.rs, fov_overlay.wgsl, systems.rs, tests.rs, h_terrain.rs) | 13 reads | ~41970 tok |
+| 17:45 | Session end: 47 writes across 10 files (gaps.rs, fov_overlay.wgsl, systems.rs, tests.rs, h_terrain.rs) | 14 reads | ~42959 tok |
+
+## Session: 2026-04-10 17:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:50 | Created ../../../../../home/kdm/.claude/plans/hashed-wiggling-rainbow.md | — | ~438 |
+| 17:50 | Edited src/h_terrain/biomes.rs | modified mesa() | ~153 |
+| 17:50 | Edited src/h_terrain/mineral.rs | 0.05 → 0.08 | ~7 |
+| 17:50 | Edited src/h_terrain/flora_spawn.rs | 2→6 lines | ~53 |
+| 17:50 | Edited src/main.rs | inline fix | ~18 |
+| 17:50 | Edited src/main.rs | 2→3 lines | ~32 |
+| 17:50 | Edited src/h_terrain/biomes.rs | modified mesa_subset() | ~168 |
+| 17:51 | Edited src/h_terrain/biome.rs | 0.05 → 0.08 | ~17 |
+| 17:51 | Edited src/h_terrain/flora_spawn.rs | modified hash_cluster_size_range() | ~84 |
+| 17:51 | Session end: 9 writes across 6 files (hashed-wiggling-rainbow.md, biomes.rs, mineral.rs, flora_spawn.rs, main.rs) | 6 reads | ~9023 tok |
+| 17:58 | Session end: 9 writes across 6 files (hashed-wiggling-rainbow.md, biomes.rs, mineral.rs, flora_spawn.rs, main.rs) | 6 reads | ~9023 tok |
+| 18:00 | Edited src/h_terrain/mineral.rs | 16→16 lines | ~99 |
+| 18:00 | Edited src/h_terrain/flora_spawn.rs | no_flora_on_zero_freq() → flora_freq_ordering() | ~72 |
+| 18:00 | Edited src/h_terrain/biome.rs | 2→2 lines | ~34 |
+| 18:00 | Session end: 12 writes across 6 files (hashed-wiggling-rainbow.md, biomes.rs, mineral.rs, flora_spawn.rs, main.rs) | 6 reads | ~9242 tok |
+| 18:01 | Edited src/h_terrain/flora_spawn.rs | modified spawn_flora() | ~459 |
+| 18:02 | Edited src/h_terrain/startup_systems.rs | 8→9 lines | ~52 |
+| 18:02 | Session end: 14 writes across 7 files (hashed-wiggling-rainbow.md, biomes.rs, mineral.rs, flora_spawn.rs, main.rs) | 8 reads | ~13329 tok |
+| 18:13 | Session end: 14 writes across 7 files (hashed-wiggling-rainbow.md, biomes.rs, mineral.rs, flora_spawn.rs, main.rs) | 8 reads | ~13329 tok |
+| 18:18 | Created ../../../../../home/kdm/.claude/plans/hashed-wiggling-rainbow.md | — | ~1318 |
+| 18:22 | Created ../../../../../home/kdm/.claude/plans/hashed-wiggling-rainbow.md | — | ~1210 |
+| 18:24 | Edited src/h_terrain/entities.rs | expanded (+7 lines) | ~105 |
+| 18:24 | Edited src/h_terrain/startup_systems.rs | 6→5 lines | ~51 |
+| 18:24 | Edited src/h_terrain/startup_systems.rs | 5→4 lines | ~42 |
+| 18:24 | Edited src/h_terrain/startup_systems.rs | 10→8 lines | ~91 |
+| 18:24 | Edited src/h_terrain/startup_systems.rs | 5→4 lines | ~39 |
+| 18:25 | Edited src/h_terrain/gaps.rs | 43→41 lines | ~502 |
+| 18:25 | Edited src/h_terrain/gaps.rs | material() → BaseMaterial() | ~295 |
+| 18:25 | Edited src/h_terrain/gaps.rs | material() → BaseMaterial() | ~264 |
+| 18:25 | Edited src/h_terrain/materials.rs | 4→6 lines | ~58 |
+| 18:26 | Edited src/h_terrain/materials.rs | modified start_fov_transitions() | ~1455 |
+| 20:31 | Edited src/h_terrain/materials.rs | modified get() | ~233 |
+| 20:32 | Session end: 27 writes across 10 files (hashed-wiggling-rainbow.md, biomes.rs, mineral.rs, flora_spawn.rs, main.rs) | 15 reads | ~37977 tok |
+| 20:38 | Session end: 27 writes across 10 files (hashed-wiggling-rainbow.md, biomes.rs, mineral.rs, flora_spawn.rs, main.rs) | 15 reads | ~37977 tok |
+
+## Session: 2026-04-10 20:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

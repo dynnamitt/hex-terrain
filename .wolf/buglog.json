@@ -467,6 +467,70 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-10T15:30:47.414Z"
+    },
+    {
+      "id": "bug-030",
+      "timestamp": "2026-04-10T15:31:29.595Z",
+      "error_message": "Wrong reference: serve should be wasm",
+      "file": "Makefile",
+      "root_cause": "Used \"serve\" instead of \"wasm\"",
+      "fix": "Changed serve → wasm",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "unknown"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-10T15:31:29.595Z"
+    },
+    {
+      "id": "bug-031",
+      "timestamp": "2026-04-10T15:31:37.910Z",
+      "error_message": "Significant refactor of ",
+      "file": "Makefile",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→17 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "unknown"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-10T15:31:37.910Z"
+    },
+    {
+      "id": "bug-032",
+      "timestamp": "2026-04-10T15:50:53.763Z",
+      "error_message": "Wrong reference: other should be mesa",
+      "file": "src/main.rs",
+      "root_cause": "Used \"other\" instead of \"mesa\"",
+      "fix": "Changed other → mesa",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "rs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-10T15:50:53.763Z"
+    },
+    {
+      "id": "bug-033",
+      "timestamp": "2026-04-10T16:26:27.269Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/h_terrain/materials.rs",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 109→155 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "rs"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-10T16:26:27.269Z"
     }
   ]
 }

@@ -1,10 +1,11 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-10T15:30:47.405Z
-> Files: 66 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-10T18:31:54.783Z
+> Files: 67 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../home/kdm/.claude/plans/
 
+- `hashed-wiggling-rainbow.md` — Plan: Lazy FovMaterial — only FoV-ring faces get the custom shader (~1134 tok)
 - `humming-toasting-lagoon.md` — Plan: Extract Shader Magic Numbers to Config/Constants (~1644 tok)
 
 ## ./
@@ -12,9 +13,9 @@
 - `.gitignore` — Git ignore rules (~12 tok)
 - `.mcp.json` (~30 tok)
 - `Cargo.toml` — Rust package manifest (~439 tok)
-- `CLAUDE.md` — OpenWolf (~5495 tok)
+- `CLAUDE.md` — OpenWolf (~5517 tok)
 - `LICENSE` — Project license (~9374 tok)
-- `Makefile` — Make build targets (~336 tok)
+- `Makefile` (~484 tok)
 - `PLAN.md` — Plan: Hex Terrain Viewer (Bevy 0.18) (~3269 tok)
 - `README.md` — Project documentation (~581 tok)
 - `rust-analyzer.toml` (~9 tok)
@@ -109,7 +110,7 @@
 - `drone.rs` — First-person drone controller. (~1492 tok)
 - `h_terrain.rs` — Height-based terrain: pivot-point grid with per-hex corners. (~2498 tok)
 - `intro.rs` — Intro camera sequence played at startup. (~405 tok)
-- `main.rs` — Hex terrain viewer with neon edge lighting. (~2105 tok)
+- `main.rs` — Hex terrain viewer with neon edge lighting. (~1983 tok)
 - `math.rs` — Cross-module computation helpers. (~676 tok)
 
 ## src/drone/
@@ -121,16 +122,16 @@
 
 ## src/h_terrain/
 
-- `biome.rs` — Biome: configurable mineral distribution for terrain generation. (~1020 tok)
-- `biomes.rs` — Named biome presets built from the current mineral set. (~615 tok)
-- `entities.rs` — Entity types for height-based terrain. (~1451 tok)
-- `flora_spawn.rs` — Flora cluster spawning during terrain generation. (~524 tok)
+- `biome.rs` — Biome: configurable mineral distribution for terrain generation. (~952 tok)
+- `biomes.rs` — Named biome presets built from the current mineral set. (~738 tok)
+- `entities.rs` — Entity types for height-based terrain. (~1524 tok)
+- `flora_spawn.rs` — Flora cluster spawning during terrain generation. (~642 tok)
 - `fov_overlay.rs` — FoV shader overlay material extension. (~421 tok)
-- `gaps.rs` — Quad and Tri gap geometry: spawning, mesh construction, index math. (~7384 tok)
+- `gaps.rs` — Quad and Tri gap geometry: spawning, mesh construction, index math. (~7315 tok)
 - `h_grid_layout.rs` — Re-exports [`hex_grid::HGridLayout`] and bridges from h_terrain's [`HGridSettings`]. (~101 tok)
-- `materials.rs` — Centralized material definitions and FoV material systems for height-based terrain. (~2975 tok)
+- `materials.rs` — Centralized material definitions and FoV material systems for height-based terrain. (~3410 tok)
 - `mineral.rs` — Mineral types with per-variant visual properties and scarcity weights. (~1223 tok)
-- `startup_systems.rs` — Startup systems for height-based terrain. (~2339 tok)
+- `startup_systems.rs` — Startup systems for height-based terrain. (~2297 tok)
 - `systems.rs` — Runtime systems for height-based terrain. (~2363 tok)
 - `tests.rs` — ECS integration tests for h_terrain startup and runtime systems. (~3741 tok)
 
