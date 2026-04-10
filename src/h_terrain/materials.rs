@@ -7,8 +7,10 @@ use bevy::picking::mesh_picking::ray_cast::MeshRayCastSettings;
 use bevy::prelude::*;
 
 use super::HTerrainConfig;
-use super::entities::{FovTransition, HCell, HexFace, InFov, InSight, Quad, QuadEdge, Tri};
-use super::fov_overlay::FovMaterial;
+use super::entities::{
+    BaseMaterial, FovTransition, HCell, HexFace, InFov, InSight, Quad, QuadEdge, Tri,
+};
+use super::fov_overlay::{FovMaterial, FovOverlay};
 use crate::drone::Player;
 
 /// Edge highlight color (sRGB) — cyan.
@@ -72,15 +74,18 @@ pub(super) struct FovChanges<'w, 's> {
 
 /// Starts or reverses [`FovTransition`] on face and edge entities when [`InFov`] changes.
 ///
-/// Face entities (HexFace, Quad, Tri) get a simplified transition that drives
-/// the `FovOverlay` shader uniform. Edge entities (`QuadEdge`) keep the existing
-/// endpoint-based color lerp.
+/// Face entities (HexFace, Quad, Tri) are swapped from `StandardMaterial` to
+/// `FovMaterial` on FoV entry so the shader only runs on the visible ring.
+/// Edge entities (`QuadEdge`) keep the existing endpoint-based color lerp.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn start_fov_transitions(
     mut fov: FovChanges,
     mut transitions: Query<&mut FovTransition>,
+    base_mats: Query<&BaseMaterial>,
+    quads: Query<(), With<Quad>>,
     mut edge_materials: Query<&mut MeshMaterial3d<StandardMaterial>, With<QuadEdge>>,
     mut mat_assets: ResMut<Assets<StandardMaterial>>,
+    mut fov_assets: ResMut<Assets<FovMaterial>>,
     mut commands: Commands,
 ) {
     let mut targets: Vec<(Entity, bool)> = Vec::new();
@@ -148,6 +153,29 @@ pub(super) fn start_fov_transitions(
             }
         }
 
+        // Face entities entering FoV: swap StandardMaterial → FovMaterial
+        if fade_in && let Ok(base) = base_mats.get(entity) {
+            let shape_type = if fov.hex_faces.contains(entity) {
+                0.0
+            } else if quads.contains(entity) {
+                1.0
+            } else {
+                2.0
+            };
+            let std_mat = mat_assets.get(&base.0).cloned().unwrap_or_default();
+            let fov_handle = fov_assets.add(FovMaterial {
+                base: std_mat,
+                extension: FovOverlay {
+                    data: Vec4::new(0.0, 0.0, shape_type, 0.0),
+                    aim_params: Vec4::ZERO,
+                },
+            });
+            commands
+                .entity(entity)
+                .remove::<MeshMaterial3d<StandardMaterial>>()
+                .insert(MeshMaterial3d(fov_handle));
+        }
+
         let progress = if fade_in { 0.0 } else { 1.0 };
         commands.entity(entity).insert(FovTransition {
             progress,
@@ -157,8 +185,19 @@ pub(super) fn start_fov_transitions(
 }
 
 /// Animates [`FovTransition`] on face entities by updating the `FovOverlay` uniform.
+///
+/// When a fade-out completes (progress ≤ 0), swaps back to `StandardMaterial`
+/// from [`BaseMaterial`] so the custom shader no longer runs on that face.
 pub(super) fn animate_face_fov(
-    mut query: Query<(Entity, &mut FovTransition, &MeshMaterial3d<FovMaterial>), Without<QuadEdge>>,
+    mut query: Query<
+        (
+            Entity,
+            &mut FovTransition,
+            &MeshMaterial3d<FovMaterial>,
+            &BaseMaterial,
+        ),
+        Without<QuadEdge>,
+    >,
     mut fov_assets: ResMut<Assets<FovMaterial>>,
     cfg: Res<HTerrainConfig>,
     time: Res<Time>,
@@ -167,7 +206,7 @@ pub(super) fn animate_face_fov(
     let dt = time.delta_secs();
     let duration = cfg.fov_transition_secs;
 
-    for (entity, mut tr, mat_handle) in &mut query {
+    for (entity, mut tr, mat_handle, base) in &mut query {
         tr.progress = (tr.progress + tr.direction * dt / duration).clamp(0.0, 1.0);
 
         if let Some(mat) = fov_assets.get_mut(&mat_handle.0) {
@@ -176,6 +215,13 @@ pub(super) fn animate_face_fov(
 
         if tr.progress <= 0.0 || tr.progress >= 1.0 {
             commands.entity(entity).remove::<FovTransition>();
+            // Fade-out complete: swap FovMaterial → StandardMaterial
+            if tr.progress <= 0.0 {
+                commands
+                    .entity(entity)
+                    .remove::<MeshMaterial3d<FovMaterial>>()
+                    .insert(MeshMaterial3d(base.0.clone()));
+            }
         }
     }
 }

@@ -170,3 +170,10 @@ pub struct FovTransition {
 /// Marker on the single hex face the camera is looking directly at.
 #[derive(Component, Reflect)]
 pub struct InSight;
+
+/// Stores the shared [`StandardMaterial`] handle for non-FoV rendering.
+///
+/// Used to swap back from [`FovMaterial`](super::fov_overlay::FovMaterial)
+/// when a face entity leaves the FoV ring.
+#[derive(Component)]
+pub struct BaseMaterial(pub Handle<StandardMaterial>);

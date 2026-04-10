@@ -13,10 +13,9 @@ use hexx::{EdgeDirection, Hex, VertexDirection};
 use mesh_gradient::{BlendCfg, TriFalloff, blend_quad, blend_tri};
 
 use super::entities::{
-    HCell, Quad, QuadEdge, QuadOwner, QuadPos1Emitter, QuadPos2Emitter, QuadTail, Tri, TriOwner,
-    TriPos1Emitter, TriPos2Emitter,
+    BaseMaterial, HCell, Quad, QuadEdge, QuadOwner, QuadPos1Emitter, QuadPos2Emitter, QuadTail,
+    Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
-use super::fov_overlay::{FovMaterial, FovOverlay};
 use super::h_grid_layout::HGridLayout;
 use super::mineral::Mineral;
 use hex_grid::{edge_cuboid_transform, gap_vertex_data, quad_corner_indices};
@@ -25,8 +24,8 @@ pub(super) const EDGE_THICKNESS: f32 = 0.03;
 pub(super) const DBG_NORMAL_LEN: f32 = 0.3;
 pub(super) const DBG_NORMAL_THICKNESS: f32 = 0.02;
 
-/// Cached base gradient `StandardMaterial` for gap faces (cloned per entity into `FovMaterial`).
-type GradCache<K> = HashMap<K, StandardMaterial>;
+/// Cached gradient `Handle<StandardMaterial>` for gap faces (shared across same-mineral-pair gaps).
+type GradCache<K> = HashMap<K, Handle<StandardMaterial>>;
 
 /// Marker on debug normal-indicator lines (spawned when `--debug`).
 #[derive(Component)]
@@ -35,7 +34,6 @@ pub(super) struct NormalDbg;
 /// Shared state for gap mesh spawning during grid generation.
 pub(super) struct GapSpawnCtx<'a> {
     pub materials: &'a mut Assets<StandardMaterial>,
-    pub fov_materials: &'a mut Assets<FovMaterial>,
     pub meshes: &'a mut Assets<Mesh>,
     pub images: &'a mut Assets<Image>,
     /// Per-mineral base StandardMaterial handles (for blend_quad/blend_tri reads).
@@ -48,9 +46,9 @@ pub(super) struct GapSpawnCtx<'a> {
     pub corner_entities: &'a HashMap<(Hex, u8), Entity>,
     pub hex_entities: &'a HashMap<Hex, Entity>,
     pub hex_minerals: &'a HashMap<Hex, Mineral>,
-    /// Cached base gradient StandardMaterial by (owner, neighbor) mineral pair.
+    /// Cached gradient StandardMaterial handle by (owner, neighbor) mineral pair.
     pub quad_cache: GradCache<(Mineral, Mineral)>,
-    /// Cached base gradient StandardMaterial by (owner, n1, n2) mineral triple.
+    /// Cached gradient StandardMaterial handle by (owner, n1, n2) mineral triple.
     pub tri_cache: GradCache<(Mineral, Mineral, Mineral)>,
     /// Debug normal indicator material + mesh (only when `--debug`).
     pub dbg_normal: Option<(Handle<StandardMaterial>, Handle<Mesh>)>,
@@ -92,8 +90,8 @@ pub(super) fn spawn_quad(
     let v2 = ctx.terrain.vertex(neighbor, n1_idx)?;
     let v3 = ctx.terrain.vertex(hex, v1_idx)?;
 
-    let base = if mineral == neighbor_mineral {
-        mineral.material()
+    let mat_handle = if mineral == neighbor_mineral {
+        ctx.mineral_handles[mineral.idx()].clone()
     } else {
         ctx.quad_cache
             .entry((mineral, neighbor_mineral))
@@ -106,17 +104,11 @@ pub(super) fn spawn_quad(
                     .materials
                     .get(&ctx.mineral_handles[neighbor_mineral.idx()])
                     .unwrap();
-                blend_quad(a, b, ctx.blend_cfg, ctx.images)
+                ctx.materials
+                    .add(blend_quad(a, b, ctx.blend_cfg, ctx.images))
             })
             .clone()
     };
-    let fov_handle = ctx.fov_materials.add(FovMaterial {
-        base,
-        extension: FovOverlay {
-            data: Vec4::new(0.0, 0.0, 1.0, 0.0),
-            aim_params: Vec4::ZERO,
-        },
-    });
 
     // Build mesh in corner-local space
     let world_verts = [v0, v1, v2, v3];
@@ -127,7 +119,8 @@ pub(super) fn spawn_quad(
             mineral,
             RayCastBackfaces,
             Mesh3d(ctx.meshes.add(mesh)),
-            MeshMaterial3d(fov_handle),
+            MeshMaterial3d(mat_handle.clone()),
+            BaseMaterial(mat_handle),
             Transform::default(),
         ))
         .id();
@@ -215,25 +208,24 @@ pub(super) fn spawn_tri(
     let v1 = ctx.terrain.vertex(coords[1], idx1)?;
     let v2 = ctx.terrain.vertex(coords[2], idx2)?;
 
-    let base = if mineral == mineral1 && mineral == mineral2 {
-        mineral.material()
+    let mat_handle = if mineral == mineral1 && mineral == mineral2 {
+        ctx.mineral_handles[mineral.idx()].clone()
     } else {
         ctx.tri_cache
             .entry((mineral, mineral1, mineral2))
             .or_insert_with(|| {
                 let m = [mineral, mineral1, mineral2]
                     .map(|m| ctx.materials.get(&ctx.mineral_handles[m.idx()]).unwrap());
-                blend_tri(m, 0, TriFalloff::default(), ctx.blend_cfg, ctx.images)
+                ctx.materials.add(blend_tri(
+                    m,
+                    0,
+                    TriFalloff::default(),
+                    ctx.blend_cfg,
+                    ctx.images,
+                ))
             })
             .clone()
     };
-    let fov_handle = ctx.fov_materials.add(FovMaterial {
-        base,
-        extension: FovOverlay {
-            data: Vec4::new(0.0, 0.0, 2.0, 0.0),
-            aim_params: Vec4::ZERO,
-        },
-    });
 
     // Build mesh in corner-local space
     let world_verts = [v0, v1, v2];
@@ -244,7 +236,8 @@ pub(super) fn spawn_tri(
             mineral,
             RayCastBackfaces,
             Mesh3d(ctx.meshes.add(mesh)),
-            MeshMaterial3d(fov_handle),
+            MeshMaterial3d(mat_handle.clone()),
+            BaseMaterial(mat_handle),
             Transform::default(),
         ))
         .id();

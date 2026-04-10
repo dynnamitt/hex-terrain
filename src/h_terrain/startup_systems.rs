@@ -11,8 +11,7 @@ use flora::{FloraCfg, FloraMaterials};
 use mesh_gradient::BlendCfg;
 
 use super::HTerrainConfig;
-use super::entities::{Corner, HCell, HGrid, HexFace, Quad, Tri};
-use super::fov_overlay::{FovMaterial, FovOverlay};
+use super::entities::{BaseMaterial, Corner, HCell, HGrid, HexFace, Quad, Tri};
 use super::gaps;
 use super::materials::TerrainMaterials;
 use super::mineral::Mineral;
@@ -25,7 +24,6 @@ pub fn generate_h_grid(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut fov_materials: ResMut<Assets<FovMaterial>>,
     mut images: ResMut<Assets<Image>>,
     cfg: Res<HTerrainConfig>,
     debug: Res<DebugFlag>,
@@ -96,10 +94,8 @@ pub fn generate_h_grid(
                 HexFace,
                 mineral,
                 Mesh3d(hex_mesh.clone()),
-                MeshMaterial3d(fov_materials.add(FovMaterial {
-                    base: mineral.material(),
-                    extension: FovOverlay::default(),
-                })),
+                MeshMaterial3d(mineral_handles[mineral.idx()].clone()),
+                BaseMaterial(mineral_handles[mineral.idx()].clone()),
                 Transform::from_scale(Vec3::new(radius, 1.0, radius)),
             ))
             .id();
@@ -159,7 +155,6 @@ pub fn generate_h_grid(
         let edge_mesh = meshes.add(Cuboid::new(1.0, gaps::EDGE_THICKNESS, gaps::EDGE_THICKNESS));
         let mut ctx = gaps::GapSpawnCtx {
             materials: &mut materials,
-            fov_materials: &mut fov_materials,
             meshes: &mut meshes,
             images: &mut images,
             mineral_handles: &mineral_handles,
