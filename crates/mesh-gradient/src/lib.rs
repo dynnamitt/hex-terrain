@@ -124,24 +124,6 @@ pub fn blend_tri(
     }
 }
 
-/// Produces a FoV highlight variant of a gradient material.
-///
-/// Reuses the same `base_color_texture` but overbrightens `base_color` by
-/// `mix` (e.g. 0.15 → 1.15× tint) and sets `emissive` for glow.
-/// This works because Bevy multiplies `base_color × base_color_texture`.
-pub fn highlight(src: &StandardMaterial, mix: f32, emissive: LinearRgba) -> StandardMaterial {
-    let tint = 1.0 + mix;
-    StandardMaterial {
-        base_color: Color::from(LinearRgba::new(tint, tint, tint, 1.0)),
-        base_color_texture: src.base_color_texture.clone(),
-        metallic: src.metallic,
-        perceptual_roughness: src.perceptual_roughness,
-        emissive,
-        cull_mode: None,
-        ..default()
-    }
-}
-
 // ── Internal helpers ───────────────────────────────────────────────
 
 fn hotspot(t: f32, band: f32) -> f32 {

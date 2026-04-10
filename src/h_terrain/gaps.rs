@@ -10,10 +10,10 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use hexx::{EdgeDirection, Hex, VertexDirection};
 
-use mesh_gradient::{BlendCfg, TriFalloff, blend_quad, blend_tri, highlight};
+use mesh_gradient::{BlendCfg, TriFalloff, blend_quad, blend_tri};
 
 use super::entities::{
-    GapHighlight, HCell, Quad, QuadEdge, QuadOwner, QuadPos1Emitter, QuadPos2Emitter, QuadTail,
+    BaseMaterial, HCell, Quad, QuadEdge, QuadOwner, QuadPos1Emitter, QuadPos2Emitter, QuadTail,
     Tri, TriOwner, TriPos1Emitter, TriPos2Emitter,
 };
 use super::h_grid_layout::HGridLayout;
@@ -24,8 +24,8 @@ pub(super) const EDGE_THICKNESS: f32 = 0.03;
 pub(super) const DBG_NORMAL_LEN: f32 = 0.3;
 pub(super) const DBG_NORMAL_THICKNESS: f32 = 0.02;
 
-/// Normal + highlight handle pair for gradient gap materials.
-type GradPair = (Handle<StandardMaterial>, Handle<StandardMaterial>);
+/// Cached gradient `Handle<StandardMaterial>` for gap faces (shared across same-mineral-pair gaps).
+type GradCache<K> = HashMap<K, Handle<StandardMaterial>>;
 
 /// Marker on debug normal-indicator lines (spawned when `--debug`).
 #[derive(Component)]
@@ -36,22 +36,20 @@ pub(super) struct GapSpawnCtx<'a> {
     pub materials: &'a mut Assets<StandardMaterial>,
     pub meshes: &'a mut Assets<Mesh>,
     pub images: &'a mut Assets<Image>,
+    /// Per-mineral base StandardMaterial handles (for blend_quad/blend_tri reads).
     pub mineral_handles: &'a [Handle<StandardMaterial>; Mineral::COUNT],
-    pub highlight_handles: &'a [Handle<StandardMaterial>; Mineral::COUNT],
     pub edge_material: &'a Handle<StandardMaterial>,
     pub edge_mesh: &'a Handle<Mesh>,
     pub blend_cfg: &'a BlendCfg,
-    pub highlight_mix: f32,
-    pub highlight_emissive: LinearRgba,
     pub flat_normals: bool,
     pub terrain: &'a HGridLayout,
     pub corner_entities: &'a HashMap<(Hex, u8), Entity>,
     pub hex_entities: &'a HashMap<Hex, Entity>,
     pub hex_minerals: &'a HashMap<Hex, Mineral>,
-    /// Cached (normal, highlight) quad gradient materials by (owner, neighbor) pair.
-    pub quad_cache: HashMap<(Mineral, Mineral), GradPair>,
-    /// Cached (normal, highlight) tri gradient materials by (owner, n1, n2) triple.
-    pub tri_cache: HashMap<(Mineral, Mineral, Mineral), GradPair>,
+    /// Cached gradient StandardMaterial handle by (owner, neighbor) mineral pair.
+    pub quad_cache: GradCache<(Mineral, Mineral)>,
+    /// Cached gradient StandardMaterial handle by (owner, n1, n2) mineral triple.
+    pub tri_cache: GradCache<(Mineral, Mineral, Mineral)>,
     /// Debug normal indicator material + mesh (only when `--debug`).
     pub dbg_normal: Option<(Handle<StandardMaterial>, Handle<Mesh>)>,
 }
@@ -92,11 +90,8 @@ pub(super) fn spawn_quad(
     let v2 = ctx.terrain.vertex(neighbor, n1_idx)?;
     let v3 = ctx.terrain.vertex(hex, v1_idx)?;
 
-    let (mat_handle, hi_handle) = if mineral == neighbor_mineral {
-        (
-            ctx.mineral_handles[mineral.idx()].clone(),
-            ctx.highlight_handles[mineral.idx()].clone(),
-        )
+    let mat_handle = if mineral == neighbor_mineral {
+        ctx.mineral_handles[mineral.idx()].clone()
     } else {
         ctx.quad_cache
             .entry((mineral, neighbor_mineral))
@@ -109,9 +104,8 @@ pub(super) fn spawn_quad(
                     .materials
                     .get(&ctx.mineral_handles[neighbor_mineral.idx()])
                     .unwrap();
-                let normal = blend_quad(a, b, ctx.blend_cfg, ctx.images);
-                let hi = highlight(&normal, ctx.highlight_mix, ctx.highlight_emissive);
-                (ctx.materials.add(normal), ctx.materials.add(hi))
+                ctx.materials
+                    .add(blend_quad(a, b, ctx.blend_cfg, ctx.images))
             })
             .clone()
     };
@@ -123,10 +117,10 @@ pub(super) fn spawn_quad(
         .spawn((
             Quad,
             mineral,
-            GapHighlight(hi_handle),
             RayCastBackfaces,
             Mesh3d(ctx.meshes.add(mesh)),
-            MeshMaterial3d(mat_handle),
+            MeshMaterial3d(mat_handle.clone()),
+            BaseMaterial(mat_handle),
             Transform::default(),
         ))
         .id();
@@ -214,20 +208,21 @@ pub(super) fn spawn_tri(
     let v1 = ctx.terrain.vertex(coords[1], idx1)?;
     let v2 = ctx.terrain.vertex(coords[2], idx2)?;
 
-    let (mat_handle, hi_handle) = if mineral == mineral1 && mineral == mineral2 {
-        (
-            ctx.mineral_handles[mineral.idx()].clone(),
-            ctx.highlight_handles[mineral.idx()].clone(),
-        )
+    let mat_handle = if mineral == mineral1 && mineral == mineral2 {
+        ctx.mineral_handles[mineral.idx()].clone()
     } else {
         ctx.tri_cache
             .entry((mineral, mineral1, mineral2))
             .or_insert_with(|| {
                 let m = [mineral, mineral1, mineral2]
                     .map(|m| ctx.materials.get(&ctx.mineral_handles[m.idx()]).unwrap());
-                let normal = blend_tri(m, 0, TriFalloff::default(), ctx.blend_cfg, ctx.images);
-                let hi = highlight(&normal, ctx.highlight_mix, ctx.highlight_emissive);
-                (ctx.materials.add(normal), ctx.materials.add(hi))
+                ctx.materials.add(blend_tri(
+                    m,
+                    0,
+                    TriFalloff::default(),
+                    ctx.blend_cfg,
+                    ctx.images,
+                ))
             })
             .clone()
     };
@@ -239,10 +234,10 @@ pub(super) fn spawn_tri(
         .spawn((
             Tri,
             mineral,
-            GapHighlight(hi_handle),
             RayCastBackfaces,
             Mesh3d(ctx.meshes.add(mesh)),
-            MeshMaterial3d(mat_handle),
+            MeshMaterial3d(mat_handle.clone()),
+            BaseMaterial(mat_handle),
             Transform::default(),
         ))
         .id();

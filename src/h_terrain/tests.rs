@@ -8,6 +8,7 @@ use bevy::time::TimeUpdateStrategy;
 use hexx::{Hex, shapes};
 
 use super::entities::{Corner, FovTransition, HCell, HGrid, HexFace, InFov, Quad, QuadEdge, Tri};
+use super::fov_overlay::FovMaterial;
 use super::materials::TerrainMaterials;
 use super::{HTerrainConfig, HTerrainPhase, materials, startup_systems, systems};
 use crate::{DebugFlag, GameState, GroundLevel, PlayerMoved, PlayerPos};
@@ -34,7 +35,13 @@ fn test_config() -> HTerrainConfig {
         },
         biome: super::biome::Biome::default(),
         fov_transition_secs: 0.3,
-        alt_material_for_in_fov: true,
+        aim_star_rotate_pace: 1.0,
+        aim_star_fire_pace_factor: 4.0,
+        aim_star_radius: 0.35,
+        aim_star_fire_radius: 0.37,
+        aim_star_inner_cut: 0.08,
+        aim_star_fire_inner_cut: 0.12,
+        aim_star_thickness: 0.12,
     }
 }
 
@@ -49,6 +56,7 @@ fn test_app_with_config(cfg: HTerrainConfig) -> App {
         .add_plugins(StatesPlugin)
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
+        .init_asset::<FovMaterial>()
         .init_asset::<Image>()
         .insert_resource(cfg.clone())
         .insert_resource(DebugFlag(false))
@@ -87,7 +95,8 @@ fn test_app_with_config(cfg: HTerrainConfig) -> App {
             systems::update_ground_level.in_set(HTerrainPhase::UpdateGround),
             systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
             materials::start_fov_transitions.in_set(HTerrainPhase::Highlight),
-            materials::animate_fov_transitions.after(HTerrainPhase::Highlight),
+            materials::animate_face_fov.after(HTerrainPhase::Highlight),
+            materials::animate_edge_fov.after(HTerrainPhase::Highlight),
         )
             .run_if(in_state(GameState::Running)),
     );

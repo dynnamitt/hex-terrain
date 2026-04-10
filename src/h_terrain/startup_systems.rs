@@ -11,10 +11,10 @@ use flora::{FloraCfg, FloraMaterials};
 use mesh_gradient::BlendCfg;
 
 use super::HTerrainConfig;
-use super::entities::{Corner, HCell, HGrid, HexFace, Quad, Tri};
+use super::entities::{BaseMaterial, Corner, HCell, HGrid, HexFace, Quad, Tri};
 use super::gaps;
 use super::materials::TerrainMaterials;
-use super::mineral::{HIGHLIGHT_EMISSIVE, HIGHLIGHT_MIX, Mineral};
+use super::mineral::Mineral;
 use crate::DebugFlag;
 use hex_grid::{edge_cuboid_transform, gap_filler};
 
@@ -32,7 +32,7 @@ pub fn generate_h_grid(
     let terrain = g.build_layout();
 
     let edge_thickness = 0.02;
-    let fov = TerrainMaterials::new(&mut materials, &mut meshes, &mut images);
+    let fov = TerrainMaterials::new(&mut materials);
     let flora_cfg = FloraCfg::default();
     let flora_mat = FloraMaterials::new(&mut materials, &mut meshes, &flora_cfg);
     let debug_assets = debug.0.then(|| {
@@ -66,11 +66,9 @@ pub fn generate_h_grid(
         ))
         .id();
 
-    // Pre-create per-mineral normal + highlight material handles
+    // Pre-create per-mineral base StandardMaterials (for blend_quad/blend_tri reads)
     let mineral_handles: [Handle<StandardMaterial>; Mineral::COUNT] =
         Mineral::ALL.map(|m| materials.add(m.material()));
-    let highlight_handles: [Handle<StandardMaterial>; Mineral::COUNT] =
-        Mineral::ALL.map(|m| materials.add(m.highlight_material()));
 
     // ── Pass 1: Spawn HCells + Corners, build lookup maps ────────
     let mut corner_entities: HashMap<(Hex, u8), Entity> = HashMap::new();
@@ -97,6 +95,7 @@ pub fn generate_h_grid(
                 mineral,
                 Mesh3d(hex_mesh.clone()),
                 MeshMaterial3d(mineral_handles[mineral.idx()].clone()),
+                BaseMaterial(mineral_handles[mineral.idx()].clone()),
                 Transform::from_scale(Vec3::new(radius, 1.0, radius)),
             ))
             .id();
@@ -159,12 +158,9 @@ pub fn generate_h_grid(
             meshes: &mut meshes,
             images: &mut images,
             mineral_handles: &mineral_handles,
-            highlight_handles: &highlight_handles,
             edge_material: &fov.edge,
             edge_mesh: &edge_mesh,
             blend_cfg: &blend_cfg,
-            highlight_mix: HIGHLIGHT_MIX,
-            highlight_emissive: HIGHLIGHT_EMISSIVE,
             flat_normals: g.flat_gap_normals,
             terrain: &terrain,
             corner_entities: &corner_entities,
@@ -192,6 +188,7 @@ pub fn generate_h_grid(
         &flora_cfg,
         &hex_minerals,
         &hex_entities,
+        &terrain,
         g.flora_seed,
     );
 

@@ -1,4 +1,4 @@
-.PHONY: clean build test coverage coverage-xml inject-updates wasm serve
+.PHONY: clean build test coverage coverage-xml inject-updates wasm wasm-deps serve
 
 WASM_OUT = target/wasm
 
@@ -28,11 +28,22 @@ inject-updates:
 	@test -s /tmp/updates.html || { echo "UPDATES.md missing notes for '$(TAG)'"; exit 1; }
 	sed -i -e '/__UPDATES__/r /tmp/updates.html' -e '/__UPDATES__/d' web/index.html
 
+wasm-deps:
+	rustup target add wasm32-unknown-unknown
+	cargo install wasm-bindgen-cli
+
 wasm:
 	cargo build --release --target wasm32-unknown-unknown \
-		--no-default-features --features web
+		--no-default-features --features web \
+		|| { echo "Build failed — installing wasm deps and retrying..."; \
+		     $(MAKE) wasm-deps && cargo build --release --target wasm32-unknown-unknown \
+		     --no-default-features --features web; }
 	wasm-bindgen --out-dir $(WASM_OUT) --target web \
-		target/wasm32-unknown-unknown/release/hex-terrain.wasm
+		target/wasm32-unknown-unknown/release/hex-terrain.wasm \
+		|| { echo "wasm-bindgen not found — installing and retrying..."; \
+		     cargo install wasm-bindgen-cli && wasm-bindgen --out-dir $(WASM_OUT) --target web \
+		     target/wasm32-unknown-unknown/release/hex-terrain.wasm; }
+	cp -r assets $(WASM_OUT)/
 	cp web/index.html $(WASM_OUT)/
 	sed -i 's/__VERSION__/$(VERSION)/' $(WASM_OUT)/index.html
 

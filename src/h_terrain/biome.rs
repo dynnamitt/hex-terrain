@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn flora_freq_delegates() {
         let biome = Biome::default();
-        assert_eq!(biome.flora_freq(Mineral::Sandstone), 0.05);
-        assert_eq!(biome.flora_freq(Mineral::Granite), 0.0);
+        assert_eq!(biome.flora_freq(Mineral::Sandstone), 0.08);
+        assert_eq!(biome.flora_freq(Mineral::Granite), 0.12);
     }
 }

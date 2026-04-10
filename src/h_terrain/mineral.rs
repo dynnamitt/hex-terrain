@@ -1,6 +1,5 @@
 //! Mineral types with per-variant visual properties and scarcity weights.
 
-use bevy::color::Mix;
 use bevy::prelude::*;
 use hexx::Hex;
 
@@ -34,7 +33,7 @@ const PROPS: [Props; Mineral::COUNT] = [
         roughness: 0.8,
         metallic: 0.1,
         scarcity: 30.0,
-        flora_freq: 0.0,
+        flora_freq: 0.12,
     },
     // Basalt — dark volcanic
     Props {
@@ -42,7 +41,7 @@ const PROPS: [Props; Mineral::COUNT] = [
         roughness: 0.85,
         metallic: 0.05,
         scarcity: 25.0,
-        flora_freq: 0.0,
+        flora_freq: 0.12,
     },
     // Slate — blue-grey layered
     Props {
@@ -58,7 +57,7 @@ const PROPS: [Props; Mineral::COUNT] = [
         roughness: 0.9,
         metallic: 0.0,
         scarcity: 20.0,
-        flora_freq: 0.05,
+        flora_freq: 0.08,
     },
     // Obsidian — glassy volcanic
     Props {
@@ -93,12 +92,6 @@ const PROPS: [Props; Mineral::COUNT] = [
         flora_freq: 0.0,
     },
 ];
-
-/// Mix factor for FoV highlight (base_color toward white).
-pub(crate) const HIGHLIGHT_MIX: f32 = 0.15;
-
-/// Tiny emissive glow applied to FoV-highlighted hex faces and gaps.
-pub const HIGHLIGHT_EMISSIVE: LinearRgba = LinearRgba::new(0.03, 0.03, 0.03, 1.0);
 
 /// Low specular reflectance for matte rock surfaces (default 0.5 is too shiny).
 pub(crate) const REFLECTANCE: f32 = 0.1;
@@ -148,24 +141,6 @@ impl Mineral {
             ..default()
         }
     }
-
-    /// FoV highlight: base color mixed toward white.
-    pub fn highlight_color(self) -> Color {
-        let o = LinearRgba::from(self.color());
-        Color::from(o.mix(&LinearRgba::WHITE, HIGHLIGHT_MIX))
-    }
-
-    pub fn highlight_material(self) -> StandardMaterial {
-        StandardMaterial {
-            base_color: self.highlight_color(),
-            perceptual_roughness: 0.5,
-            metallic: 0.0,
-            reflectance: REFLECTANCE,
-            emissive: HIGHLIGHT_EMISSIVE,
-            cull_mode: None,
-            ..default()
-        }
-    }
 }
 
 pub(super) fn hash_hex(hex: Hex, seed: u32) -> u32 {
@@ -211,17 +186,5 @@ mod tests {
         let minerals: Vec<Mineral> = (0..50).map(|i| biome.pick(Hex::new(i, 0), 42)).collect();
         let unique: std::collections::HashSet<_> = minerals.into_iter().collect();
         assert!(unique.len() > 1, "should produce multiple mineral types");
-    }
-
-    #[test]
-    fn highlight_at_least_as_bright() {
-        for &m in &Mineral::ALL {
-            let orig = LinearRgba::from(m.color());
-            let hi = LinearRgba::from(m.highlight_color());
-            assert!(
-                hi.red + hi.green + hi.blue >= orig.red + orig.green + orig.blue - 1e-6,
-                "{m:?}: highlight should be at least as bright as original"
-            );
-        }
     }
 }
