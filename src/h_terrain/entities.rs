@@ -154,42 +154,22 @@ pub struct Tri;
 #[derive(Component, Reflect)]
 pub struct HexFace;
 
-/// Stores the FoV highlight material handle for gradient-textured gap entities.
-/// The FoV system reads endpoints from this handle instead of computing them.
-#[derive(Component, Reflect)]
-pub struct GapHighlight(pub Handle<StandardMaterial>);
-
 /// Marker on edge-line cuboid entities (child of a [`Quad`]).
 #[derive(Component, Reflect)]
 pub struct QuadEdge;
 
-/// Tracks an in-progress color transition between original and highlight materials.
-///
-/// Stores both endpoint color pairs so the animate system is self-contained
-/// and mineral-agnostic.
+/// Tracks an in-progress FoV overlay transition (drives `FovOverlay.data.x`).
 #[derive(Component, Reflect)]
 pub struct FovTransition {
-    /// 0.0 = original colors, 1.0 = highlight colors.
+    /// 0.0 = original, 1.0 = fully highlighted.
     pub progress: f32,
     /// +1.0 when fading toward highlight, -1.0 when fading toward original.
     pub direction: f32,
-    /// Base color at original (non-FoV) state (linear; avoids per-frame sRGB→linear).
-    pub orig_base: LinearRgba,
-    /// Emissive at original state.
-    pub orig_emissive: LinearRgba,
-    /// Base color at highlight (in-FoV) state (linear).
-    pub hi_base: LinearRgba,
-    /// Emissive at highlight state.
-    pub hi_emissive: LinearRgba,
 }
 
 /// Marker on the single hex face the camera is looking directly at.
 #[derive(Component, Reflect)]
 pub struct InSight;
-
-/// Stashed material handle from before [`InSight`] was applied.
-#[derive(Component, Reflect)]
-pub struct PreSightMaterial(pub Handle<StandardMaterial>);
 
 /// Marker on aim-star line entities spawned on the [`InSight`] hex face.
 #[derive(Component, Reflect)]

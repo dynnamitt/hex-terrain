@@ -12,6 +12,7 @@ use super::DroneConfig;
 use super::entities::{CursorRecentered, Elbow, LaserPipe, LaserRay, Player};
 use super::systems;
 use crate::h_terrain::InSight;
+use crate::h_terrain::fov_overlay::FovMaterial;
 use crate::h_terrain::materials::TerrainMaterials;
 use crate::intro::IntroConfig;
 use crate::{GameState, GroundLevel, PlayerMoved, PlayerPos};
@@ -29,6 +30,7 @@ fn test_app() -> App {
         .add_plugins(AnimationPlugin)
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
+        .init_asset::<FovMaterial>()
         .init_asset::<Image>()
         .insert_resource(DroneConfig::default())
         .insert_resource(IntroConfig {
@@ -55,9 +57,8 @@ fn test_app() -> App {
         Startup,
         |mut cmd: Commands,
          mut mats: ResMut<Assets<StandardMaterial>>,
-         mut meshes: ResMut<Assets<Mesh>>,
-         mut images: ResMut<Assets<Image>>| {
-            cmd.insert_resource(TerrainMaterials::new(&mut mats, &mut meshes, &mut images));
+         mut meshes: ResMut<Assets<Mesh>>| {
+            cmd.insert_resource(TerrainMaterials::new(&mut mats, &mut meshes));
         },
     );
     app.add_systems(Startup, systems::create_drone_materials);
@@ -225,7 +226,7 @@ fn laser_tip_at_pipe_front() {
     app.world_mut().spawn((
         InSight,
         Transform::from_translation(target_pos),
-        MeshMaterial3d(Handle::<StandardMaterial>::default()),
+        MeshMaterial3d(Handle::<FovMaterial>::default()),
     ));
     app.update();
 
@@ -285,6 +286,7 @@ fn intro_animation_tilts_camera() {
         .add_plugins(AnimationPlugin)
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
+        .init_asset::<FovMaterial>()
         .init_asset::<Image>()
         .insert_resource(DroneConfig::default())
         .insert_resource(IntroConfig {

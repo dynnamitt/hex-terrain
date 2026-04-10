@@ -4,6 +4,7 @@ use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 
 use super::DroneConfig;
+use crate::h_terrain::fov_overlay::FovMaterial;
 use crate::h_terrain::materials::TerrainMaterials;
 use crate::h_terrain::{AimStar, InSight};
 use crate::{GroundLevel, PlayerMoved, PlayerPos};
@@ -52,10 +53,11 @@ pub struct LaserFx<'w, 's> {
         's,
         (
             &'static GlobalTransform,
-            &'static mut MeshMaterial3d<StandardMaterial>,
+            &'static MeshMaterial3d<FovMaterial>,
         ),
         (With<InSight>, Without<AimStar>),
     >,
+    pub fov_assets: ResMut<'w, Assets<FovMaterial>>,
     pub mats: Res<'w, TerrainMaterials>,
 }
 

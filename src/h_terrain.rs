@@ -4,6 +4,7 @@ pub(crate) mod biome;
 pub(crate) mod biomes;
 mod entities;
 mod flora_spawn;
+pub(crate) mod fov_overlay;
 mod gaps;
 mod h_grid_layout;
 pub(crate) mod materials;
@@ -14,9 +15,11 @@ mod systems;
 mod tests;
 
 use bevy::ecs::schedule::InternedSystemSet;
+use bevy::pbr::MaterialPlugin;
 use bevy::prelude::*;
 
 use crate::{DebugFlag, GameState};
+use fov_overlay::FovMaterial;
 
 pub use entities::{AimStar, InSight};
 pub use hex_grid::edge_cuboid_transform;
@@ -65,9 +68,6 @@ pub struct HTerrainConfig {
     pub biome: biome::Biome,
     /// Duration of the fov highlight fade in seconds.
     pub fov_transition_secs: f32,
-    /// Swap HexFace/Quad/Tri materials on FoV entry (highlight colors).
-    /// When false, only QuadEdge materials change. Default: false.
-    pub alt_material_for_in_fov: bool,
 }
 
 /// Grid layout and noise parameters.
@@ -146,7 +146,6 @@ impl Default for HTerrainConfig {
             },
             biome: biome::Biome::default(),
             fov_transition_secs: 0.5,
-            alt_material_for_in_fov: false,
         }
     }
 }
@@ -163,7 +162,8 @@ pub struct HTerrainPlugin {
 
 impl Plugin for HTerrainPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<LaserStrength>()
+        app.add_plugins(MaterialPlugin::<FovMaterial>::default())
+            .init_resource::<LaserStrength>()
             .register_type::<LaserStrength>()
             .register_type::<HTerrainConfig>()
             .register_type::<entities::HCell>()
@@ -178,12 +178,10 @@ impl Plugin for HTerrainPlugin {
             .register_type::<entities::Quad>()
             .register_type::<entities::QuadEdge>()
             .register_type::<entities::Tri>()
-            .register_type::<entities::GapHighlight>()
             .register_type::<entities::InFov>()
             .register_type::<entities::HexFace>()
             .register_type::<entities::FovTransition>()
             .register_type::<entities::InSight>()
-            .register_type::<entities::PreSightMaterial>()
             .register_type::<entities::AimStar>()
             .register_type::<mineral::Mineral>()
             .insert_resource(self.config.clone())
@@ -223,7 +221,10 @@ impl Plugin for HTerrainPlugin {
                 systems::update_ground_level.in_set(HTerrainPhase::UpdateGround),
                 systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
                 materials::start_fov_transitions.in_set(HTerrainPhase::Highlight),
-                materials::animate_fov_transitions
+                materials::animate_face_fov
+                    .after(HTerrainPhase::Highlight)
+                    .before(HTerrainPhase::Sight),
+                materials::animate_edge_fov
                     .after(HTerrainPhase::Highlight)
                     .before(HTerrainPhase::Sight),
                 materials::track_in_sight.in_set(HTerrainPhase::Sight),
