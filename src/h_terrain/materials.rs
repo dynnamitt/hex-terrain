@@ -13,10 +13,10 @@ use super::entities::{
 use super::fov_overlay::FovMaterial;
 use crate::drone::Player;
 
-/// Edge highlight color (sRGB).
-const EDGE_COLOR: Color = Color::srgb(0.2, 0.9, 0.3);
-/// Edge highlight emissive (linear).
-const EDGE_EMISSIVE: LinearRgba = LinearRgba::rgb(0.04, 0.18, 0.06);
+/// Edge highlight color (sRGB) — cyan.
+const EDGE_COLOR: Color = Color::srgb(0.2, 0.9, 0.9);
+/// Edge highlight emissive (linear) — cyan.
+const EDGE_EMISSIVE: LinearRgba = LinearRgba::rgb(0.04, 0.18, 0.18);
 
 /// Material handles for terrain rendering.
 ///

@@ -23,12 +23,19 @@ struct FovOverlayData {
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> fov_overlay: FovOverlayData;
 
-// Band intensity pattern: 0001112232211000 (16 steps, symmetric)
-const BANDS: array<f32, 16> = array<f32, 16>(
+// Hex face band pattern: symmetric ring (16 steps, center → edge)
+const HEX_BANDS: array<f32, 16> = array<f32, 16>(
     0.0, 0.0, 0.0, 1.0,
-    1.0, 1.0, 2.0, 2,
+    1.0, 1.0, 2.0, 2.0,
     3.0, 2.0, 2.0, 1.0,
     1.0, 0.0, 0.0, 0.0,
+);
+
+// Gap face band pattern: edge-concentrated (23 steps, center → edge)
+const GAP_BANDS: array<f32, 23> = array<f32, 23>(
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+    1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 4.0,
 );
 
 // Flat-top hexagonal distance (L∞ hex norm) from UV center
@@ -36,15 +43,15 @@ fn hex_band(uv: vec2<f32>) -> f32 {
     let p = abs(uv - vec2<f32>(0.5, 0.5));
     let d = max(p.y * 2.0 / sqrt(3.0), p.x + p.y / sqrt(3.0)) / 0.5;
     let idx = clamp(u32(d * 16.0), 0u, 15u);
-    return BANDS[idx] / 3.0;
+    return HEX_BANDS[idx] / 3.0;
 }
 
 // Chebyshev distance — rectangular contours matching quad shape
 fn quad_band(uv: vec2<f32>) -> f32 {
     let p = abs(uv - vec2<f32>(0.5, 0.5));
     let d = max(p.x, p.y) / 0.5;
-    let idx = clamp(u32(d * 16.0), 0u, 15u);
-    return BANDS[idx] / 3.0;
+    let idx = clamp(u32(d * 23.0), 0u, 22u);
+    return GAP_BANDS[idx] / 4.0;
 }
 
 // Barycentric minimum — triangular contours for UV layout [0,0],[1,0],[0.5,1]
@@ -53,8 +60,8 @@ fn tri_band(uv: vec2<f32>) -> f32 {
     let l1 = uv.x - 0.5 * uv.y;
     let l2 = uv.y;
     let d = 1.0 - min(l0, min(l1, l2)) * 3.0;
-    let idx = clamp(u32(d * 16.0), 0u, 15u);
-    return BANDS[idx] / 3.0;
+    let idx = clamp(u32(d * 23.0), 0u, 22u);
+    return GAP_BANDS[idx] / 4.0;
 }
 
 fn shape_band(uv: vec2<f32>, shape_type: f32) -> f32 {
@@ -75,12 +82,21 @@ fn fragment(
     let shape_type = fov_overlay.data.z;
     let band = shape_band(in.uv, shape_type);
 
-    // FoV overlay: white tint rings, scaled by progress
+    // FoV overlay, scaled by progress
     if progress > 0.0 {
-        let intensity = band * progress * 0.05;
-        pbr_input.material.base_color += vec4<f32>(intensity, intensity, intensity, 0.0);
-        let em = band * progress * 0.01;
-        pbr_input.material.emissive += vec4<f32>(em, em, em, 0.0);
+        if shape_type < 0.5 {
+            // Hex: white tint with bloom
+            let intensity = band * progress * 0.05;
+            pbr_input.material.base_color += vec4<f32>(intensity, intensity, intensity, 0.0);
+            let em = band * progress * 0.01;
+            pbr_input.material.emissive += vec4<f32>(em, em, em, 0.0);
+        } else {
+            // Quad/Tri: light cyan tint, no bloom
+            let intensity = band * progress * 0.06;
+            pbr_input.material.base_color += vec4<f32>(
+                0.3 * intensity, 1.0 * intensity, 1.0 * intensity, 0.0
+            );
+        }
     }
 
     // Aim overlay: green rings (overrides FoV tint on base_color)
