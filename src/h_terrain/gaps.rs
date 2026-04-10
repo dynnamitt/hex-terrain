@@ -112,7 +112,9 @@ pub(super) fn spawn_quad(
     };
     let fov_handle = ctx.fov_materials.add(FovMaterial {
         base,
-        extension: FovOverlay::default(),
+        extension: FovOverlay {
+            data: Vec4::new(0.0, 0.0, 1.0, 0.0),
+        },
     });
 
     // Build mesh in corner-local space
@@ -226,7 +228,9 @@ pub(super) fn spawn_tri(
     };
     let fov_handle = ctx.fov_materials.add(FovMaterial {
         base,
-        extension: FovOverlay::default(),
+        extension: FovOverlay {
+            data: Vec4::new(0.0, 0.0, 2.0, 0.0),
+        },
     });
 
     // Build mesh in corner-local space

@@ -16,14 +16,14 @@
 }
 #endif
 
-// FovOverlay uniform: x=fov_progress, y=aim_mode (0/1/2), zw=reserved
+// FovOverlay uniform: x=fov_progress, y=aim_mode (0/1/2), z=shape_type (0/1/2), w=reserved
 struct FovOverlayData {
     data: vec4<f32>,
 }
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> fov_overlay: FovOverlayData;
 
-// Radial ring band pattern: 0001112232211000 (16 steps, symmetric)
+// Band intensity pattern: 0001112232211000 (16 steps, symmetric)
 const BANDS: array<f32, 16> = array<f32, 16>(
     0.0, 0.0, 0.0, 1.0,
     1.0, 1.0, 2.0, 2,
@@ -31,11 +31,36 @@ const BANDS: array<f32, 16> = array<f32, 16>(
     1.0, 0.0, 0.0, 0.0,
 );
 
-fn ring_band(uv: vec2<f32>) -> f32 {
-    let center = vec2<f32>(0.5, 0.5);
-    let d = length(uv - center) * 2.0; // 0..1 from center to edge
+// Flat-top hexagonal distance (L∞ hex norm) from UV center
+fn hex_band(uv: vec2<f32>) -> f32 {
+    let p = abs(uv - vec2<f32>(0.5, 0.5));
+    let d = max(p.y * 2.0 / sqrt(3.0), p.x + p.y / sqrt(3.0)) / 0.5;
     let idx = clamp(u32(d * 16.0), 0u, 15u);
-    return BANDS[idx] / 3.0; // normalize to 0..1
+    return BANDS[idx] / 3.0;
+}
+
+// Chebyshev distance — rectangular contours matching quad shape
+fn quad_band(uv: vec2<f32>) -> f32 {
+    let p = abs(uv - vec2<f32>(0.5, 0.5));
+    let d = max(p.x, p.y) / 0.5;
+    let idx = clamp(u32(d * 16.0), 0u, 15u);
+    return BANDS[idx] / 3.0;
+}
+
+// Barycentric minimum — triangular contours for UV layout [0,0],[1,0],[0.5,1]
+fn tri_band(uv: vec2<f32>) -> f32 {
+    let l0 = 1.0 - uv.x - 0.5 * uv.y;
+    let l1 = uv.x - 0.5 * uv.y;
+    let l2 = uv.y;
+    let d = 1.0 - min(l0, min(l1, l2)) * 3.0;
+    let idx = clamp(u32(d * 16.0), 0u, 15u);
+    return BANDS[idx] / 3.0;
+}
+
+fn shape_band(uv: vec2<f32>, shape_type: f32) -> f32 {
+    if shape_type < 0.5 { return hex_band(uv); }
+    else if shape_type < 1.5 { return quad_band(uv); }
+    else { return tri_band(uv); }
 }
 
 @fragment
@@ -47,7 +72,8 @@ fn fragment(
 
     let progress = fov_overlay.data.x;
     let aim_mode = fov_overlay.data.y;
-    let band = ring_band(in.uv);
+    let shape_type = fov_overlay.data.z;
+    let band = shape_band(in.uv, shape_type);
 
     // FoV overlay: white tint rings, scaled by progress
     if progress > 0.0 {

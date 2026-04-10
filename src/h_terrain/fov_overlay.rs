@@ -12,7 +12,8 @@ use bevy::shader::ShaderRef;
 ///
 /// - `data.x` = `fov_progress` (0.0..1.0): FoV highlight intensity
 /// - `data.y` = `aim_mode` (0 = none, 1 = aim, 2 = firing)
-/// - `data.zw` = reserved
+/// - `data.z` = `shape_type` (0 = hex, 1 = quad, 2 = tri)
+/// - `data.w` = reserved
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 pub struct FovOverlay {
     #[uniform(100)]
