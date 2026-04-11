@@ -64,7 +64,7 @@ jobs:
           workspaces: src
 
       - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.108
+        run: cargo install wasm-bindgen-cli --version 0.2.117
 
       - name: Build WASM
         working-directory: src
