@@ -1,6 +1,7 @@
 .PHONY: clean build test coverage coverage-xml inject-updates wasm wasm-deps serve
 
 WASM_OUT = target/wasm
+WASM_BINDGEN_VER := $(shell grep -A1 '^name = "wasm-bindgen"$$' Cargo.lock | grep version | head -1 | cut -d'"' -f2)
 
 LATEST_TAG := $(shell git tag --sort=-v:refname | grep -m1 '^v[0-9]' || echo "")
 VERSION ?= $(if $(LATEST_TAG),$(shell echo $(LATEST_TAG) | awk -F. '{print $$1"."$$2"."$$3+1}'),v0.0.0)
@@ -30,7 +31,7 @@ inject-updates:
 
 wasm-deps:
 	rustup target add wasm32-unknown-unknown
-	cargo install wasm-bindgen-cli
+	cargo install wasm-bindgen-cli --version $(WASM_BINDGEN_VER)
 
 wasm:
 	cargo build --release --target wasm32-unknown-unknown \
@@ -41,7 +42,7 @@ wasm:
 	wasm-bindgen --out-dir $(WASM_OUT) --target web \
 		target/wasm32-unknown-unknown/release/hex-terrain.wasm \
 		|| { echo "wasm-bindgen not found — installing and retrying..."; \
-		     cargo install wasm-bindgen-cli && wasm-bindgen --out-dir $(WASM_OUT) --target web \
+		     cargo install wasm-bindgen-cli --version $(WASM_BINDGEN_VER) && wasm-bindgen --out-dir $(WASM_OUT) --target web \
 		     target/wasm32-unknown-unknown/release/hex-terrain.wasm; }
 	cp -r assets $(WASM_OUT)/
 	cp web/index.html $(WASM_OUT)/
