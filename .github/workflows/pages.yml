@@ -64,7 +64,10 @@ jobs:
           workspaces: src
 
       - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.108
+        working-directory: src
+        run: |
+          VER=$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | grep version | head -1 | cut -d'"' -f2)
+          cargo install wasm-bindgen-cli --version "$VER"
 
       - name: Build WASM
         working-directory: src
