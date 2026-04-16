@@ -1,5 +1,5 @@
-// Bubble dissolve overlay for InFov gap faces (Quad/Tri).
-// Bubbles spawn at edge band, drift inward, shrink + fade.
+// Animated Voronoi overlay for InFov gap faces (Quad/Tri).
+// Cyan cell borders, 3-tier base-material brightness in interiors.
 
 #import bevy_pbr::{
     pbr_fragment::pbr_input_from_standard_material,
@@ -22,7 +22,7 @@
 
 // ── Uniforms ───────────────────────────────────────────────────
 struct FovOverlayData { data: vec4<f32>, }
-struct AimParamsData  { aim_params: vec4<f32>, } // unused — layout compat with FovOverlay
+struct AimParamsData  { aim_params: vec4<f32>, } // layout compat with FovOverlay
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> fov_overlay: FovOverlayData;
 @group(#{MATERIAL_BIND_GROUP}) @binding(101) var<uniform> aim_data: AimParamsData;
@@ -31,39 +31,35 @@ struct AimParamsData  { aim_params: vec4<f32>, } // unused — layout compat wit
 const EDGE_THRESHOLD: f32 = 0.7;
 const EDGE_DIM_STRENGTH: f32 = 1.0 / 9.0;
 
-const GRID_SCALE: f32 = 4.0;
-const DRIFT_SPEED: f32 = 0.25;
-const BUBBLE_START_R: f32 = 0.18;
-const AA_WIDTH: f32 = 0.004;
-const TINT_STRENGTH: f32 = 0.18;
-const EMISSIVE_STRENGTH: f32 = 0.05;
-const CYAN: vec3<f32> = vec3<f32>(0.3, 1.0, 1.0);
+const VORONOI_COLS: f32 = 5.0;
+const QUAD_ROWS: f32 = 2.0;
+const TRI_ROWS: f32 = 5.0;
+const ANIM_SPEED: f32 = 0.3;
+const BORDER_WIDTH: f32 = 0.1;
+const BORDER_CYAN: vec3<f32> = vec3<f32>(0.3, 1.0, 1.0);
+const BORDER_TINT: f32 = 0.01;
+const BORDER_EMISSIVE: f32 = 0.18;
+const CELL_ALPHAS: array<f32, 3> = array<f32, 3>(0.0, 0.04, 0.08);
 
-// Stepped band: 4 opacity steps from edge inward
-const BAND_STEPS: array<f32, 4> = array<f32, 4>(1.0, 0.76, 0.41, 0.13);
-const BAND_WIDTH: f32 = 0.3;
-const SPAWN_D: f32 = 0.925; // EDGE_THRESHOLD + 0.75 * BAND_WIDTH
-
-// ── Hashing ────────────────────────────────────────────────────
+// ── Sin-free hashing (portable across GPUs) ────────────────────
 fn hash21(p: vec2<f32>) -> f32 {
-    let s = dot(p, vec2<f32>(127.1, 311.7));
-    return fract(sin(s) * 43758.5453);
+    var p3 = fract(vec3<f32>(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
 fn hash22(p: vec2<f32>) -> vec2<f32> {
-    let x = dot(p, vec2<f32>(127.1, 311.7));
-    let y = dot(p, vec2<f32>(269.5, 183.3));
-    return fract(sin(vec2<f32>(x, y)) * 43758.5453);
+    var p3 = fract(vec3<f32>(p.xyx) * vec3<f32>(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.xx + p3.yz) * p3.zy);
 }
 
 // ── Shape distance: 0 at center, 1 at edge ─────────────────────
 fn shape_dist(uv: vec2<f32>, shape_type: f32) -> f32 {
     if shape_type < 1.5 {
-        // Quad
         let p = abs(uv - vec2<f32>(0.5, 0.5));
         return max(p.x, p.y) / 0.5;
     } else {
-        // Tri (barycentric)
         let l0 = 1.0 - uv.x - 0.5 * uv.y;
         let l1 = uv.x - 0.5 * uv.y;
         let l2 = uv.y;
@@ -71,43 +67,47 @@ fn shape_dist(uv: vec2<f32>, shape_type: f32) -> f32 {
     }
 }
 
-// ── Stepped band opacity ───────────────────────────────────────
-fn band_opacity(d: f32) -> f32 {
-    if d < EDGE_THRESHOLD { return 0.0; }
-    let t = (d - EDGE_THRESHOLD) / BAND_WIDTH;
-    let idx = clamp(i32(t * 4.0), 0, 3);
-    return BAND_STEPS[3 - idx]; // outermost = highest
+// ── Animated Voronoi ───────────────────────────────────────────
+struct VoronoiResult {
+    border: f32,
+    cell_alpha: f32,
 }
 
-// ── Bubble field ───────────────────────────────────────────────
-fn bubble_field(uv: vec2<f32>, shape_type: f32, time: f32, progress: f32) -> f32 {
-    let grid_uv = uv * GRID_SCALE;
+fn voronoi(uv: vec2<f32>, time: f32, shape_type: f32) -> VoronoiResult {
+    let rows = select(TRI_ROWS, QUAD_ROWS, shape_type < 1.5);
+    let grid_uv = uv * vec2<f32>(VORONOI_COLS, rows);
     let cell = floor(grid_uv);
-    let center = vec2<f32>(0.5, 0.5);
-    let start_r = BUBBLE_START_R / GRID_SCALE;
-    var result: f32 = 0.0;
+    let frac = fract(grid_uv);
 
-    for (var dy: i32 = -2; dy <= 2; dy++) {
-        for (var dx: i32 = -2; dx <= 2; dx++) {
-            let neighbor = cell + vec2<f32>(f32(dx), f32(dy));
-            let h_pos = hash22(neighbor);
+    var d1: f32 = 8.0; // nearest
+    var d2: f32 = 8.0; // second nearest
+    var nearest_cell: vec2<f32>;
 
-            let raw_origin = (neighbor + 0.2 + h_pos * 0.6) / GRID_SCALE;
-            let d_raw = shape_dist(raw_origin, shape_type);
-            let origin = center + (raw_origin - center) * SPAWN_D / max(d_raw, 0.001);
+    for (var dy: i32 = -1; dy <= 1; dy++) {
+        for (var dx: i32 = -1; dx <= 1; dx++) {
+            let neighbor = vec2<f32>(f32(dx), f32(dy));
+            let n_cell = cell + neighbor;
+            let h = hash22(n_cell);
 
-            let phase = hash21(neighbor + vec2<f32>(7.0, 13.0));
-            let life = fract(time * DRIFT_SPEED + phase);
-            let pos = mix(origin, center, life);
-            let radius = start_r * (1.0 - life);
-            let alpha = 1.0 - life;
+            // Animated center: oscillates around cell center
+            let center = neighbor + 0.5 + 0.4 * sin(time * ANIM_SPEED + h * 6.2831) - frac;
+            let dist = dot(center, center);
 
-            let mask = 1.0 - smoothstep(radius - AA_WIDTH, radius, length(uv - pos));
-            result = max(result, mask * alpha);
+            if dist < d1 {
+                d2 = d1;
+                d1 = dist;
+                nearest_cell = n_cell;
+            } else if dist < d2 {
+                d2 = dist;
+            }
         }
     }
 
-    return result * progress;
+    let border = 1.0 - smoothstep(0.0, BORDER_WIDTH, sqrt(d2) - sqrt(d1));
+    let tier = i32(hash21(nearest_cell) * 3.0);
+    let cell_alpha = CELL_ALPHAS[clamp(tier, 0, 2)];
+
+    return VoronoiResult(border, cell_alpha);
 }
 
 @fragment
@@ -121,7 +121,6 @@ fn fragment(
     let shape_type = fov_overlay.data.z;
     let d = shape_dist(in.uv, shape_type);
 
-    // Edge darkening (opaque, no alpha sorting)
     let edge_dim = 1.0 - smoothstep(EDGE_THRESHOLD, 1.0, d) * EDGE_DIM_STRENGTH;
     pbr_input.material.base_color = vec4<f32>(
         pbr_input.material.base_color.rgb * edge_dim,
@@ -129,11 +128,15 @@ fn fragment(
     );
 
     if progress > 0.0 {
-        let band = band_opacity(d) * progress * TINT_STRENGTH;
-        let bubble = bubble_field(in.uv, shape_type, globals.time, progress);
-        let tint = max(band, bubble * TINT_STRENGTH);
-        pbr_input.material.base_color += vec4<f32>(CYAN * tint, 0.0);
-        pbr_input.material.emissive += vec4<f32>(CYAN * bubble * EMISSIVE_STRENGTH, 0.0);
+        let v = voronoi(in.uv, globals.time, shape_type);
+
+        // Cell borders → cyan tint + emissive glow
+        let border_tint = v.border * progress;
+        pbr_input.material.base_color += vec4<f32>(BORDER_CYAN * border_tint * BORDER_TINT, 0.0);
+        pbr_input.material.emissive += vec4<f32>(BORDER_CYAN * border_tint * BORDER_EMISSIVE, 0.0);
+
+        // Cell interiors → subtle brightness variation
+        pbr_input.material.base_color += vec4<f32>(vec3<f32>(v.cell_alpha * progress), 0.0);
     }
 
     pbr_input.material.base_color = alpha_discard(
