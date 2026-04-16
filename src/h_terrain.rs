@@ -19,7 +19,7 @@ use bevy::pbr::MaterialPlugin;
 use bevy::prelude::*;
 
 use crate::{DebugFlag, GameState};
-use fov_overlay::FovMaterial;
+use fov_overlay::{BubbleFovMaterial, FovMaterial};
 
 pub use entities::InSight;
 pub use hex_grid::edge_cuboid_transform;
@@ -184,6 +184,7 @@ pub struct HTerrainPlugin {
 impl Plugin for HTerrainPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MaterialPlugin::<FovMaterial>::default())
+            .add_plugins(MaterialPlugin::<BubbleFovMaterial>::default())
             .init_resource::<LaserStrength>()
             .register_type::<LaserStrength>()
             .register_type::<HTerrainConfig>()
@@ -242,6 +243,9 @@ impl Plugin for HTerrainPlugin {
                 systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
                 materials::start_fov_transitions.in_set(HTerrainPhase::Highlight),
                 materials::animate_face_fov
+                    .after(HTerrainPhase::Highlight)
+                    .before(HTerrainPhase::Sight),
+                materials::animate_gap_fov
                     .after(HTerrainPhase::Highlight)
                     .before(HTerrainPhase::Sight),
                 materials::animate_edge_fov

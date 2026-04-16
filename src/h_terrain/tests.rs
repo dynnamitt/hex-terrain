@@ -8,7 +8,7 @@ use bevy::time::TimeUpdateStrategy;
 use hexx::{Hex, shapes};
 
 use super::entities::{Corner, FovTransition, HCell, HGrid, HexFace, InFov, Quad, QuadEdge, Tri};
-use super::fov_overlay::FovMaterial;
+use super::fov_overlay::{BubbleFovMaterial, FovMaterial};
 use super::materials::TerrainMaterials;
 use super::{HTerrainConfig, HTerrainPhase, materials, startup_systems, systems};
 use crate::{DebugFlag, GameState, GroundLevel, PlayerMoved, PlayerPos};
@@ -57,6 +57,7 @@ fn test_app_with_config(cfg: HTerrainConfig) -> App {
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
         .init_asset::<FovMaterial>()
+        .init_asset::<BubbleFovMaterial>()
         .init_asset::<Image>()
         .insert_resource(cfg.clone())
         .insert_resource(DebugFlag(false))
@@ -96,6 +97,7 @@ fn test_app_with_config(cfg: HTerrainConfig) -> App {
             systems::track_player_fov.in_set(HTerrainPhase::TrackFov),
             materials::start_fov_transitions.in_set(HTerrainPhase::Highlight),
             materials::animate_face_fov.after(HTerrainPhase::Highlight),
+            materials::animate_gap_fov.after(HTerrainPhase::Highlight),
             materials::animate_edge_fov.after(HTerrainPhase::Highlight),
         )
             .run_if(in_state(GameState::Running)),

@@ -10,7 +10,7 @@ use super::HTerrainConfig;
 use super::entities::{
     BaseMaterial, FovTransition, HCell, HexFace, InFov, InSight, Quad, QuadEdge, Tri,
 };
-use super::fov_overlay::{FovMaterial, FovOverlay};
+use super::fov_overlay::{BubbleFovMaterial, BubbleFovOverlay, FovMaterial, FovOverlay};
 use crate::drone::Player;
 
 /// Edge highlight color (sRGB) — cyan.
@@ -86,6 +86,7 @@ pub(super) fn start_fov_transitions(
     mut edge_materials: Query<&mut MeshMaterial3d<StandardMaterial>, With<QuadEdge>>,
     mut mat_assets: ResMut<Assets<StandardMaterial>>,
     mut fov_assets: ResMut<Assets<FovMaterial>>,
+    mut bubble_assets: ResMut<Assets<BubbleFovMaterial>>,
     mut commands: Commands,
 ) {
     let mut targets: Vec<(Entity, bool)> = Vec::new();
@@ -153,27 +154,37 @@ pub(super) fn start_fov_transitions(
             mat.0 = mat_assets.add(current);
         }
 
-        // Face entities entering FoV: swap StandardMaterial → FovMaterial
+        // Face entities entering FoV: swap StandardMaterial → shader material
         if fade_in && let Ok(base) = base_mats.get(entity) {
-            let shape_type = if fov.hex_faces.contains(entity) {
-                0.0
-            } else if quads.contains(entity) {
-                1.0
-            } else {
-                2.0
-            };
             let std_mat = mat_assets.get(&base.0).cloned().unwrap_or_default();
-            let fov_handle = fov_assets.add(FovMaterial {
-                base: std_mat,
-                extension: FovOverlay {
-                    data: Vec4::new(0.0, 0.0, shape_type, 0.0),
-                    aim_params: Vec4::ZERO,
-                },
-            });
-            commands
-                .entity(entity)
-                .remove::<MeshMaterial3d<StandardMaterial>>()
-                .insert(MeshMaterial3d(fov_handle));
+            if fov.hex_faces.contains(entity) {
+                // HexFace → FovMaterial (aiming_overlay.wgsl)
+                let h = fov_assets.add(FovMaterial {
+                    base: std_mat,
+                    extension: FovOverlay {
+                        data: Vec4::new(0.0, 0.0, 0.0, 0.0),
+                        aim_params: Vec4::ZERO,
+                    },
+                });
+                commands
+                    .entity(entity)
+                    .remove::<MeshMaterial3d<StandardMaterial>>()
+                    .insert(MeshMaterial3d(h));
+            } else {
+                // Quad/Tri → BubbleFovMaterial (fov_bubbles.wgsl)
+                let shape_type = if quads.contains(entity) { 1.0 } else { 2.0 };
+                let h = bubble_assets.add(BubbleFovMaterial {
+                    base: std_mat,
+                    extension: BubbleFovOverlay {
+                        data: Vec4::new(0.0, 0.0, shape_type, 0.0),
+                        aim_params: Vec4::ZERO,
+                    },
+                });
+                commands
+                    .entity(entity)
+                    .remove::<MeshMaterial3d<StandardMaterial>>()
+                    .insert(MeshMaterial3d(h));
+            }
         }
 
         let progress = if fade_in { 0.0 } else { 1.0 };
@@ -220,6 +231,46 @@ pub(super) fn animate_face_fov(
                 commands
                     .entity(entity)
                     .remove::<MeshMaterial3d<FovMaterial>>()
+                    .insert(MeshMaterial3d(base.0.clone()));
+            }
+        }
+    }
+}
+
+/// Animates [`FovTransition`] on gap face entities by updating [`BubbleFovOverlay`] progress.
+///
+/// Mirrors [`animate_face_fov`] but for gap faces using [`BubbleFovMaterial`].
+pub(super) fn animate_gap_fov(
+    mut query: Query<
+        (
+            Entity,
+            &mut FovTransition,
+            &MeshMaterial3d<BubbleFovMaterial>,
+            &BaseMaterial,
+        ),
+        Without<QuadEdge>,
+    >,
+    mut bubble_assets: ResMut<Assets<BubbleFovMaterial>>,
+    cfg: Res<HTerrainConfig>,
+    time: Res<Time>,
+    mut commands: Commands,
+) {
+    let dt = time.delta_secs();
+    let duration = cfg.fov_transition_secs;
+
+    for (entity, mut tr, mat_handle, base) in &mut query {
+        tr.progress = (tr.progress + tr.direction * dt / duration).clamp(0.0, 1.0);
+
+        if let Some(mat) = bubble_assets.get_mut(&mat_handle.0) {
+            mat.extension.data.x = tr.progress;
+        }
+
+        if tr.progress <= 0.0 || tr.progress >= 1.0 {
+            commands.entity(entity).remove::<FovTransition>();
+            if tr.progress <= 0.0 {
+                commands
+                    .entity(entity)
+                    .remove::<MeshMaterial3d<BubbleFovMaterial>>()
                     .insert(MeshMaterial3d(base.0.clone()));
             }
         }
