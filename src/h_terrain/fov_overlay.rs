@@ -9,75 +9,46 @@ use bevy::prelude::*;
 use bevy::render::render_resource::AsBindGroup;
 use bevy::shader::ShaderRef;
 
-/// Shader overlay for hex face entities (FoV tint + aim star).
+/// Stamps out a `MaterialExtension` struct with uniform bindings 100/101.
 ///
-/// - `data.x` = `fov_progress` (0.0..1.0)
-/// - `data.y` = `aim_mode` (0 = none, 1 = aim, 2 = firing)
-/// - `data.z` = `shape_type` (0 = hex)
-/// - `data.w` = `aim_star_rotate_pace` (rad/s)
-///
-/// `aim_params` (binding 101):
-/// - x = outer radius, y = inner cut, z = thickness, w = reserved
-#[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
-pub struct FovOverlay {
-    #[uniform(100)]
-    pub data: Vec4,
-    #[uniform(101)]
-    pub aim_params: Vec4,
-}
-
-impl Default for FovOverlay {
-    fn default() -> Self {
-        Self {
-            data: Vec4::ZERO,
-            aim_params: Vec4::ZERO,
+/// - `data.x` = fov_progress, `data.y` = aim_mode, `data.z` = shape_type, `data.w` = rotate_pace
+/// - `aim_params`: x = radius, y = inner_cut, z = thickness, w = reserved
+macro_rules! fov_overlay {
+    ($name:ident, $shader:expr) => {
+        #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
+        pub struct $name {
+            #[uniform(100)]
+            pub data: Vec4,
+            #[uniform(101)]
+            pub aim_params: Vec4,
         }
-    }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self {
+                    data: Vec4::ZERO,
+                    aim_params: Vec4::ZERO,
+                }
+            }
+        }
+
+        impl MaterialExtension for $name {
+            fn fragment_shader() -> ShaderRef {
+                $shader.into()
+            }
+
+            fn deferred_fragment_shader() -> ShaderRef {
+                $shader.into()
+            }
+        }
+    };
 }
 
-impl MaterialExtension for FovOverlay {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/aiming_overlay.wgsl".into()
-    }
-
-    fn deferred_fragment_shader() -> ShaderRef {
-        "shaders/aiming_overlay.wgsl".into()
-    }
-}
+fov_overlay!(FovOverlay, "shaders/aiming_overlay.wgsl");
+fov_overlay!(BubbleFovOverlay, "shaders/fov_bubbles.wgsl");
 
 /// Hex face material: `StandardMaterial` + FoV tint + aim star.
 pub type FovMaterial = ExtendedMaterial<StandardMaterial, FovOverlay>;
-
-/// Shader overlay for gap face entities (bubble dissolve).
-///
-/// Same uniform layout as [`FovOverlay`] — `data.x` drives bubble intensity,
-/// `data.z` holds shape_type (1 = quad, 2 = tri). Aim fields are unused.
-#[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
-pub struct BubbleFovOverlay {
-    #[uniform(100)]
-    pub data: Vec4,
-    #[uniform(101)]
-    pub aim_params: Vec4,
-}
-
-impl Default for BubbleFovOverlay {
-    fn default() -> Self {
-        Self {
-            data: Vec4::ZERO,
-            aim_params: Vec4::ZERO,
-        }
-    }
-}
-
-impl MaterialExtension for BubbleFovOverlay {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/fov_bubbles.wgsl".into()
-    }
-
-    fn deferred_fragment_shader() -> ShaderRef {
-        "shaders/fov_bubbles.wgsl".into()
-    }
-}
 
 /// Gap face material: `StandardMaterial` + bubble dissolve.
 pub type BubbleFovMaterial = ExtendedMaterial<StandardMaterial, BubbleFovOverlay>;

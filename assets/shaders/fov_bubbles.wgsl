@@ -1,6 +1,5 @@
 // Bubble dissolve overlay for InFov gap faces (Quad/Tri).
-// Bubbles spawn at edges, drift inward, shrink + fade.
-// Center shows untouched base material.
+// Bubbles spawn at edge band, drift inward, shrink + fade.
 
 #import bevy_pbr::{
     pbr_fragment::pbr_input_from_standard_material,
@@ -21,31 +20,33 @@
 }
 #endif
 
-// ── Uniforms (same layout as aiming_overlay) ───────────────────
-// data (binding 100): x=fov_progress, y=unused, z=shape_type (1=quad, 2=tri), w=unused
+// ── Uniforms ───────────────────────────────────────────────────
 struct FovOverlayData { data: vec4<f32>, }
-struct AimParamsData  { aim_params: vec4<f32>, }
+struct AimParamsData  { aim_params: vec4<f32>, } // unused — layout compat with FovOverlay
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> fov_overlay: FovOverlayData;
 @group(#{MATERIAL_BIND_GROUP}) @binding(101) var<uniform> aim_data: AimParamsData;
 
-// ── Gap edge darkening ─────────────────────────────────────────
-const EDGE_DIM_START: f32 = 0.7;
+// ── Constants ──────────────────────────────────────────────────
+const EDGE_THRESHOLD: f32 = 0.7;
 const EDGE_DIM_STRENGTH: f32 = 1.0 / 9.0;
 
-// ── Bubble tuning ──────────────────────────────────────────────
-const GRID_SCALE: f32 = 5.0;
-const DRIFT_SPEED: f32 = 0.6;
-const BUBBLE_MIN_R: f32 = 0.06;
-const BUBBLE_MAX_R: f32 = 0.22;
-const SHRINK_FACTOR: f32 = 0.7;
-const AA_WIDTH: f32 = 0.003;
-const BUBBLE_TINT: f32 = 0.12;
-const BUBBLE_EMISSIVE: f32 = 0.03;
+const GRID_SCALE: f32 = 4.0;
+const DRIFT_SPEED: f32 = 0.25;
+const BUBBLE_START_R: f32 = 0.18;
+const AA_WIDTH: f32 = 0.004;
+const TINT_STRENGTH: f32 = 0.18;
+const EMISSIVE_STRENGTH: f32 = 0.05;
+const CYAN: vec3<f32> = vec3<f32>(0.3, 1.0, 1.0);
+
+// Stepped band: 4 opacity steps from edge inward
+const BAND_STEPS: array<f32, 4> = array<f32, 4>(1.0, 0.76, 0.41, 0.13);
+const BAND_WIDTH: f32 = 0.3;
+const SPAWN_D: f32 = 0.925; // EDGE_THRESHOLD + 0.75 * BAND_WIDTH
 
 // ── Hashing ────────────────────────────────────────────────────
 fn hash21(p: vec2<f32>) -> f32 {
-    var s = dot(p, vec2<f32>(127.1, 311.7));
+    let s = dot(p, vec2<f32>(127.1, 311.7));
     return fract(sin(s) * 43758.5453);
 }
 
@@ -58,11 +59,11 @@ fn hash22(p: vec2<f32>) -> vec2<f32> {
 // ── Shape distance: 0 at center, 1 at edge ─────────────────────
 fn shape_dist(uv: vec2<f32>, shape_type: f32) -> f32 {
     if shape_type < 1.5 {
-        // Quad: box distance
+        // Quad
         let p = abs(uv - vec2<f32>(0.5, 0.5));
         return max(p.x, p.y) / 0.5;
     } else {
-        // Tri: barycentric distance
+        // Tri (barycentric)
         let l0 = 1.0 - uv.x - 0.5 * uv.y;
         let l1 = uv.x - 0.5 * uv.y;
         let l2 = uv.y;
@@ -70,54 +71,38 @@ fn shape_dist(uv: vec2<f32>, shape_type: f32) -> f32 {
     }
 }
 
+// ── Stepped band opacity ───────────────────────────────────────
+fn band_opacity(d: f32) -> f32 {
+    if d < EDGE_THRESHOLD { return 0.0; }
+    let t = (d - EDGE_THRESHOLD) / BAND_WIDTH;
+    let idx = clamp(i32(t * 4.0), 0, 3);
+    return BAND_STEPS[3 - idx]; // outermost = highest
+}
+
 // ── Bubble field ───────────────────────────────────────────────
 fn bubble_field(uv: vec2<f32>, shape_type: f32, time: f32, progress: f32) -> f32 {
-    let d = shape_dist(uv, shape_type);
     let grid_uv = uv * GRID_SCALE;
     let cell = floor(grid_uv);
+    let center = vec2<f32>(0.5, 0.5);
+    let start_r = BUBBLE_START_R / GRID_SCALE;
     var result: f32 = 0.0;
 
-    // 3x3 neighbor scan
-    for (var dy: i32 = -1; dy <= 1; dy++) {
-        for (var dx: i32 = -1; dx <= 1; dx++) {
+    for (var dy: i32 = -2; dy <= 2; dy++) {
+        for (var dx: i32 = -2; dx <= 2; dx++) {
             let neighbor = cell + vec2<f32>(f32(dx), f32(dy));
             let h_pos = hash22(neighbor);
-            let h_val = hash21(neighbor + vec2<f32>(42.0, 17.0));
 
-            // Bubble center within cell
-            let bubble_center = (neighbor + 0.3 + h_pos * 0.4) / GRID_SCALE;
+            let raw_origin = (neighbor + 0.2 + h_pos * 0.6) / GRID_SCALE;
+            let d_raw = shape_dist(raw_origin, shape_type);
+            let origin = center + (raw_origin - center) * SPAWN_D / max(d_raw, 0.001);
 
-            // Birth distance from edge (0.4..0.95)
-            let birth_d = 0.4 + h_val * 0.55;
-
-            // Phase offset per bubble for staggered drift
             let phase = hash21(neighbor + vec2<f32>(7.0, 13.0));
-
-            // Lifecycle: wraps with fract for seamless loop
             let life = fract(time * DRIFT_SPEED + phase);
+            let pos = mix(origin, center, life);
+            let radius = start_r * (1.0 - life);
+            let alpha = 1.0 - life;
 
-            // Current distance from edge: drifts from birth_d toward 0
-            let current_d = birth_d * (1.0 - life);
-
-            // Only draw if bubble is within the solid zone (near edges)
-            if current_d > d { continue; }
-
-            // Life progress: 0 = just born at edge, 1 = at center
-            let life_t = life;
-
-            // Radius: shrinks as bubble ages
-            let base_r = (BUBBLE_MIN_R + h_val * (BUBBLE_MAX_R - BUBBLE_MIN_R)) / GRID_SCALE;
-            let radius = base_r * (1.0 - life_t * SHRINK_FACTOR);
-
-            // Fade as bubble approaches center
-            let alpha = 1.0 - life_t;
-
-            // Distance from fragment to bubble center
-            let dist = length(uv - bubble_center);
-
-            // Sharp circle with slight AA
-            let mask = 1.0 - smoothstep(radius - AA_WIDTH, radius, dist);
-
+            let mask = 1.0 - smoothstep(radius - AA_WIDTH, radius, length(uv - pos));
             result = max(result, mask * alpha);
         }
     }
@@ -136,20 +121,19 @@ fn fragment(
     let shape_type = fov_overlay.data.z;
     let d = shape_dist(in.uv, shape_type);
 
-    // Gap edge darkening (keeps opaque batching, no alpha sorting)
-    let edge_dim = 1.0 - smoothstep(EDGE_DIM_START, 1.0, d) * EDGE_DIM_STRENGTH;
+    // Edge darkening (opaque, no alpha sorting)
+    let edge_dim = 1.0 - smoothstep(EDGE_THRESHOLD, 1.0, d) * EDGE_DIM_STRENGTH;
     pbr_input.material.base_color = vec4<f32>(
         pbr_input.material.base_color.rgb * edge_dim,
         pbr_input.material.base_color.a
     );
 
-    // Bubble dissolve overlay
     if progress > 0.0 {
+        let band = band_opacity(d) * progress * TINT_STRENGTH;
         let bubble = bubble_field(in.uv, shape_type, globals.time, progress);
-        let tint = bubble * BUBBLE_TINT;
-        pbr_input.material.base_color += vec4<f32>(tint, tint, tint, 0.0);
-        let em = bubble * BUBBLE_EMISSIVE;
-        pbr_input.material.emissive += vec4<f32>(em, em, em, 0.0);
+        let tint = max(band, bubble * TINT_STRENGTH);
+        pbr_input.material.base_color += vec4<f32>(CYAN * tint, 0.0);
+        pbr_input.material.emissive += vec4<f32>(CYAN * bubble * EMISSIVE_STRENGTH, 0.0);
     }
 
     pbr_input.material.base_color = alpha_discard(
