@@ -3,8 +3,7 @@
 # 3d geometric play with rust,bevy & mrOpus
 
 [![Play in browser](https://img.shields.io/badge/Play_in_browser-654FF0?style=for-the-badge&logo=webassembly&logoColor=white)](https://dynnamitt.github.io/hex-terrain/)
-
-![hex-grid preview](https://dynnamitt.github.io/hex-terrain/svg/hex-grid.svg)
+![screen](Screenshot007.png)
 
 ## Usage
 
@@ -18,14 +17,14 @@ make wasm && make serve                # WASM build on localhost:8080
 
 ### Controls
 
-| Input | Action |
-|---|---|
-| WASD | Move |
-| Mouse | Look |
-| Q / E | Lower / raise altitude |
-| Scroll | Adjust altitude |
-| Space / LMB | Fire laser (mine ore) |
-| Escape | Quit |
+| Input       | Action                 |
+| ----------- | ---------------------- |
+| WASD        | Move                   |
+| Mouse       | Look                   |
+| Q / E       | Lower / raise altitude |
+| Scroll      | Adjust altitude        |
+| Space / LMB | Fire laser (mine ore)  |
+| Escape      | Quit                   |
 
 ### Feature flags
 
@@ -107,3 +106,5 @@ graph LR
         extract_ore
     end
 ```
+
+![hex-grid preview](https://dynnamitt.github.io/hex-terrain/svg/hex-grid.svg)
