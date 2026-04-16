@@ -45,7 +45,7 @@ macro_rules! fov_overlay {
 }
 
 fov_overlay!(FovOverlay, "shaders/aiming_overlay.wgsl");
-fov_overlay!(BubbleFovOverlay, "shaders/fov_bubbles.wgsl");
+fov_overlay!(BubbleFovOverlay, "shaders/fov_flaming.wgsl");
 
 /// Hex face material: `StandardMaterial` + FoV tint + aim star.
 pub type FovMaterial = ExtendedMaterial<StandardMaterial, FovOverlay>;
