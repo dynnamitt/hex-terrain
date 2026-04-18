@@ -73,8 +73,10 @@ fn main() {
         })
         .collect();
 
+    let long_edges = layout.quad_long_edges();
+
     if json {
-        let entries: Vec<String> = hex_data
+        let hex_entries: Vec<String> = hex_data
             .iter()
             .map(|hd| {
                 let corners: Vec<String> = hd
@@ -91,7 +93,20 @@ fn main() {
                 )
             })
             .collect();
-        println!("[{}]", entries.join(","));
+        let edge_entries: Vec<String> = long_edges
+            .iter()
+            .map(|(a, b)| {
+                format!(
+                    r#"[[{:.4},{:.4},{:.4}],[{:.4},{:.4},{:.4}]]"#,
+                    a.x, a.y, a.z, b.x, b.y, b.z,
+                )
+            })
+            .collect();
+        println!(
+            "{{\"hexes\":[{}],\"edges\":[{}]}}",
+            hex_entries.join(","),
+            edge_entries.join(","),
+        );
         return;
     }
 
@@ -174,28 +189,26 @@ fn main() {
         }
     }
 
-    // ── Quad gap long edges ─────────────────────────────────────
-
-    let long_edges = layout.quad_long_edges();
+    // ── Quad gap long edges (projected to XZ plane) ─────────────
 
     if rich {
         for (from, to) in &long_edges {
             println!(
                 r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="white" stroke-width="{outline:.2}" stroke-linecap="round"/>"##,
-                from.x, from.y, to.x, to.y,
+                from.x, from.z, to.x, to.z,
             );
         }
         for (from, to) in &long_edges {
             println!(
                 r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="black" stroke-width="{stroke:.2}" stroke-linecap="round"/>"##,
-                from.x, from.y, to.x, to.y,
+                from.x, from.z, to.x, to.z,
             );
         }
     } else {
         for (from, to) in &long_edges {
             println!(
                 r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="gray" stroke-width="{stroke:.2}" stroke-linecap="round"/>"##,
-                from.x, from.y, to.x, to.y,
+                from.x, from.z, to.x, to.z,
             );
         }
     }

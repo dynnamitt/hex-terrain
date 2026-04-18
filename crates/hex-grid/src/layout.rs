@@ -161,7 +161,7 @@ impl HGridLayout {
     ///
     /// "Long sides" are the edges that bridge hex→neighbor (v0→n0 and v1→n1),
     /// not the short edges running along each hex's perimeter.
-    pub fn quad_long_edges(&self) -> Vec<(Vec2, Vec2)> {
+    pub fn quad_long_edges(&self) -> Vec<(Vec3, Vec3)> {
         let hexes: Vec<Hex> = shapes::hexagon(Hex::ZERO, self.grid_radius).collect();
         let mut edges = Vec::new();
         for &hex in &hexes {
@@ -178,8 +178,8 @@ impl HGridLayout {
                     self.vertex(hex, v1_idx),
                     self.vertex(neighbor, n1_idx),
                 ) {
-                    edges.push((Vec2::new(a.x, a.z), Vec2::new(b.x, b.z)));
-                    edges.push((Vec2::new(c.x, c.z), Vec2::new(d.x, d.z)));
+                    edges.push((a, b));
+                    edges.push((c, d));
                 }
             }
         }
