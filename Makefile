@@ -1,4 +1,4 @@
-.PHONY: clean build test coverage coverage-xml inject-updates wasm serve
+.PHONY: clean build test coverage coverage-xml inject-updates wasm serve svg-preview
 
 WASM_OUT = target/wasm
 
@@ -38,3 +38,6 @@ wasm:
 
 serve: wasm
 	python3 -m http.server 8080 --directory $(WASM_OUT)
+
+svg-preview:
+	cargo run --example svg_preview -- --rich
