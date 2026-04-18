@@ -22,14 +22,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
 
-      - name: Generate SVG
-        run: cargo run -p hex-grid --example svg --release -- 2 0.6 > hex-grid.svg
+      - name: Generate SVGs
+        run: |
+          cargo run -p hex-grid --example svg --release -- 2 0.6 > hex-grid.svg
+          cargo run -p hex-grid --example svg --release -- 2 0.6 --rich > hex-grid-rich.svg
 
       - name: Prepare page
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
           mkdir -p deploy
-          cp hex-grid.svg deploy/
+          cp hex-grid.svg hex-grid-rich.svg deploy/
           sed "s|__SHA__|${SHORT_SHA}|g" web/svg-preview.html > deploy/index.html
 
       - name: Deploy to gh-pages/svg
