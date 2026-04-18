@@ -1,10 +1,16 @@
-.PHONY: clean build test coverage coverage-xml inject-updates wasm wasm-deps serve
+.PHONY: clean build test coverage coverage-xml inject-updates wasm wasm-deps serve \
+	svg-preview svg-plain svg-rich svg-json svg-html svg-prep
 
 WASM_OUT = target/wasm
 WASM_BINDGEN_VER := $(shell grep -A1 '^name = "wasm-bindgen"$$' Cargo.lock | grep version | head -1 | cut -d'"' -f2)
 
 LATEST_TAG := $(shell git tag --sort=-v:refname | grep -m1 '^v[0-9]' || echo "")
 VERSION ?= $(if $(LATEST_TAG),$(shell echo $(LATEST_TAG) | awk -F. '{print $$1"."$$2"."$$3+1}'),v0.0.0)
+
+SVG_OUT ?= target/svg-preview
+SVG_RADIUS ?= 2
+SVG_PAD ?= 0.6
+SHORT_SHA ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo local)
 
 clean:
 	cargo clean
@@ -50,3 +56,21 @@ wasm:
 
 serve: wasm
 	python3 -m http.server 8080 --directory $(WASM_OUT)
+
+svg-prep:
+	@mkdir -p $(SVG_OUT)
+
+svg-plain: svg-prep
+	cargo run -q -p hex-grid --example svg --release -- $(SVG_RADIUS) $(SVG_PAD) > $(SVG_OUT)/hex-grid.svg
+
+svg-rich: svg-prep
+	cargo run -q -p hex-grid --example svg --release -- $(SVG_RADIUS) $(SVG_PAD) --rich > $(SVG_OUT)/hex-grid-rich.svg
+
+svg-json: svg-prep
+	cargo run -q -p hex-grid --example svg --release -- $(SVG_RADIUS) $(SVG_PAD) --json > $(SVG_OUT)/hex-grid.json
+
+svg-html: svg-prep
+	sed "s|__SHA__|$(SHORT_SHA)|g" web/svg-preview.html > $(SVG_OUT)/index.html
+
+svg-preview: svg-plain svg-rich svg-json svg-html
+	@echo "svg preview built in $(SVG_OUT)/"

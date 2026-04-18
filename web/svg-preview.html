@@ -9,12 +9,143 @@
   h1 { margin: 1.5rem 0 0.5rem; font-size: 1.2rem; font-weight: normal; }
   .meta { font-size: 0.8rem; color: #666; margin-bottom: 1rem; }
   .meta a { color: #6a8; }
-  object { width: min(90vw, 800px); height: min(90vw, 800px); }
+  .terrain-wrap { width: min(95vw, 1000px); margin-bottom: 1.5rem; }
+  #terrain { display: block; width: 100%; height: min(55vh, 520px); background: #0a0e1a; border-radius: 4px; }
+  .hint { font-size: 0.75rem; color: #556; margin-top: 0.4rem; text-align: center; }
+  .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; padding: 0 1rem 2rem; }
+  figure { margin: 0; display: flex; flex-direction: column; align-items: center; }
+  figcaption { font-size: 0.8rem; margin-top: 0.5rem; color: #888; }
+  figcaption a { color: #6a8; }
+  object { width: min(45vw, 500px); height: min(45vw, 500px); }
+  @media (max-width: 720px) { object { width: 90vw; height: 90vw; } }
 </style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
 </head>
 <body>
   <h1>hex-grid terrain preview</h1>
   <p class="meta">generated from <a href="https://github.com/dynnamitt/hex-terrain">dynnamitt/hex-terrain</a> &mdash; <span id="sha">__SHA__</span></p>
-  <object data="hex-grid.svg" type="image/svg+xml">SVG not available</object>
+  <div class="terrain-wrap">
+    <canvas id="terrain"></canvas>
+    <p class="hint">drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
+  </div>
+  <div class="grid">
+    <figure>
+      <object data="hex-grid.svg" type="image/svg+xml">SVG not available</object>
+      <figcaption>plain &mdash; <a href="hex-grid.svg">hex-grid.svg</a></figcaption>
+    </figure>
+    <figure>
+      <object data="hex-grid-rich.svg" type="image/svg+xml">SVG not available</object>
+      <figcaption>rich &mdash; <a href="hex-grid-rich.svg">hex-grid-rich.svg</a></figcaption>
+    </figure>
+  </div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const canvas = document.getElementById('terrain');
+
+const showError = (msg) => {
+  canvas.insertAdjacentHTML('afterend',
+    `<p style="color:#f77;text-align:center;padding:0.6rem">${msg}</p>`);
+};
+
+try {
+  const res = await fetch('hex-grid.json');
+  if (!res.ok) throw new Error(`hex-grid.json ${res.status}`);
+  const { hexes, edges } = await res.json();
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0e1a);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+
+  const camera = new THREE.PerspectiveCamera(
+    45, canvas.clientWidth / canvas.clientHeight, 0.1, 500,
+  );
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+  sun.position.set(15, 25, 10);
+  scene.add(sun);
+
+  const maxH = hexes.reduce((m, h) => Math.max(m, h.height), 0);
+
+  const positions = [];
+  const colors = [];
+  const tmp = new THREE.Color();
+
+  for (const h of hexes) {
+    const t = maxH > 0 ? h.height / maxH : 0;
+    tmp.setHSL(0.30 - t * 0.18, 0.55, 0.30 + t * 0.38);
+    const [cx, cz] = h.center;
+    const y = h.height;
+    for (let i = 0; i < 6; i++) {
+      const [ax, az] = h.corners[i];
+      const [bx, bz] = h.corners[(i + 1) % 6];
+      positions.push(cx, y, cz, bx, y, bz, ax, y, az);
+      for (let k = 0; k < 3; k++) colors.push(tmp.r, tmp.g, tmp.b);
+    }
+  }
+
+  const faceGeom = new THREE.BufferGeometry();
+  faceGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  faceGeom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  faceGeom.computeVertexNormals();
+  faceGeom.computeBoundingBox();
+
+  scene.add(new THREE.Mesh(faceGeom, new THREE.MeshStandardMaterial({
+    vertexColors: true, flatShading: true, side: THREE.DoubleSide,
+    roughness: 0.85, metalness: 0.05,
+  })));
+
+  const edgePos = new Float32Array(edges.length * 6);
+  edges.forEach(([a, b], i) => {
+    edgePos.set(a, i * 6);
+    edgePos.set(b, i * 6 + 3);
+  });
+  const edgeGeom = new THREE.BufferGeometry();
+  edgeGeom.setAttribute('position', new THREE.BufferAttribute(edgePos, 3));
+  scene.add(new THREE.LineSegments(edgeGeom, new THREE.LineBasicMaterial({
+    color: 0x7fc8ff, transparent: true, opacity: 0.8,
+  })));
+
+  const bb = faceGeom.boundingBox;
+  const target = bb.getCenter(new THREE.Vector3());
+  const span = bb.getSize(new THREE.Vector3()).length();
+  camera.position.set(target.x + span * 0.8, target.y + span * 0.6, target.z + span * 0.8);
+
+  const controls = new OrbitControls(camera, canvas);
+  controls.target.copy(target);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (canvas.width !== w || canvas.height !== h) {
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+} catch (e) {
+  console.error(e);
+  showError(`terrain load failed: ${e.message}`);
+}
+</script>
 </body>
 </html>
