@@ -51,107 +51,101 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const canvas = document.getElementById('terrain');
-const data = await fetch('hex-grid.json').then(r => r.json());
-const { hexes, edges } = data;
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0e1a);
-scene.fog = new THREE.Fog(0x0a0e1a, 40, 140);
+const showError = (msg) => {
+  canvas.insertAdjacentHTML('afterend',
+    `<p style="color:#f77;text-align:center;padding:0.6rem">${msg}</p>`);
+};
 
-const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
+try {
+  const res = await fetch('hex-grid.json');
+  if (!res.ok) throw new Error(`hex-grid.json ${res.status}`);
+  const { hexes, edges } = await res.json();
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0e1a);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.45));
-const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-sun.position.set(15, 25, 10);
-scene.add(sun);
-const fill = new THREE.DirectionalLight(0x6ab0ff, 0.3);
-fill.position.set(-10, 8, -10);
-scene.add(fill);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 
-let maxH = 0;
-for (const h of hexes) if (h.height > maxH) maxH = h.height;
+  const camera = new THREE.PerspectiveCamera(
+    45, canvas.clientWidth / canvas.clientHeight, 0.1, 500,
+  );
 
-// ── Hex face mesh (top face only, one triangle fan per hex) ──
-const positions = [];
-const colors = [];
-const tmp = new THREE.Color();
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+  sun.position.set(15, 25, 10);
+  scene.add(sun);
 
-for (const h of hexes) {
-  const t = maxH > 0 ? h.height / maxH : 0;
-  tmp.setHSL(0.30 - t * 0.18, 0.55, 0.30 + t * 0.38);
-  const [cx, cz] = h.center;
-  const y = h.height;
-  for (let i = 0; i < 6; i++) {
-    const [ax, az] = h.corners[i];
-    const [bx, bz] = h.corners[(i + 1) % 6];
-    positions.push(cx, y, cz, bx, y, bz, ax, y, az);
-    for (let k = 0; k < 3; k++) colors.push(tmp.r, tmp.g, tmp.b);
+  const maxH = hexes.reduce((m, h) => Math.max(m, h.height), 0);
+
+  const positions = [];
+  const colors = [];
+  const tmp = new THREE.Color();
+
+  for (const h of hexes) {
+    const t = maxH > 0 ? h.height / maxH : 0;
+    tmp.setHSL(0.30 - t * 0.18, 0.55, 0.30 + t * 0.38);
+    const [cx, cz] = h.center;
+    const y = h.height;
+    for (let i = 0; i < 6; i++) {
+      const [ax, az] = h.corners[i];
+      const [bx, bz] = h.corners[(i + 1) % 6];
+      positions.push(cx, y, cz, bx, y, bz, ax, y, az);
+      for (let k = 0; k < 3; k++) colors.push(tmp.r, tmp.g, tmp.b);
+    }
   }
-}
 
-const faceGeom = new THREE.BufferGeometry();
-faceGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-faceGeom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-faceGeom.computeVertexNormals();
-faceGeom.computeBoundingBox();
+  const faceGeom = new THREE.BufferGeometry();
+  faceGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  faceGeom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  faceGeom.computeVertexNormals();
+  faceGeom.computeBoundingBox();
 
-scene.add(new THREE.Mesh(
-  faceGeom,
-  new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    flatShading: true,
-    side: THREE.DoubleSide,
-    roughness: 0.85,
-    metalness: 0.05,
-  }),
-));
+  scene.add(new THREE.Mesh(faceGeom, new THREE.MeshStandardMaterial({
+    vertexColors: true, flatShading: true, side: THREE.DoubleSide,
+    roughness: 0.85, metalness: 0.05,
+  })));
 
-// ── Quad gap long edges as line segments ─────────────────────
-const edgePositions = new Float32Array(edges.length * 6);
-for (let i = 0; i < edges.length; i++) {
-  const [a, b] = edges[i];
-  edgePositions.set(a, i * 6);
-  edgePositions.set(b, i * 6 + 3);
-}
-const edgeGeom = new THREE.BufferGeometry();
-edgeGeom.setAttribute('position', new THREE.BufferAttribute(edgePositions, 3));
-scene.add(new THREE.LineSegments(
-  edgeGeom,
-  new THREE.LineBasicMaterial({ color: 0x7fc8ff, transparent: true, opacity: 0.8 }),
-));
+  const edgePos = new Float32Array(edges.length * 6);
+  edges.forEach(([a, b], i) => {
+    edgePos.set(a, i * 6);
+    edgePos.set(b, i * 6 + 3);
+  });
+  const edgeGeom = new THREE.BufferGeometry();
+  edgeGeom.setAttribute('position', new THREE.BufferAttribute(edgePos, 3));
+  scene.add(new THREE.LineSegments(edgeGeom, new THREE.LineBasicMaterial({
+    color: 0x7fc8ff, transparent: true, opacity: 0.8,
+  })));
 
-// ── Camera + controls ────────────────────────────────────────
-const bb = faceGeom.boundingBox;
-const center = bb.getCenter(new THREE.Vector3());
-const size = bb.getSize(new THREE.Vector3()).length();
-camera.position.set(center.x + size * 0.8, center.y + size * 0.6, center.z + size * 0.8);
+  const bb = faceGeom.boundingBox;
+  const target = bb.getCenter(new THREE.Vector3());
+  const span = bb.getSize(new THREE.Vector3()).length();
+  camera.position.set(target.x + span * 0.8, target.y + span * 0.6, target.z + span * 0.8);
 
-const controls = new OrbitControls(camera, canvas);
-controls.target.copy(center);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.update();
+  const controls = new OrbitControls(camera, canvas);
+  controls.target.copy(target);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
 
-function resize() {
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
-  if (canvas.width !== w || canvas.height !== h) {
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+  function animate() {
+    requestAnimationFrame(animate);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (canvas.width !== w || canvas.height !== h) {
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    controls.update();
+    renderer.render(scene, camera);
   }
+  animate();
+} catch (e) {
+  console.error(e);
+  showError(`terrain load failed: ${e.message}`);
 }
-
-function animate() {
-  requestAnimationFrame(animate);
-  resize();
-  controls.update();
-  renderer.render(scene, camera);
-}
-animate();
 </script>
 </body>
 </html>

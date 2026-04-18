@@ -34,10 +34,8 @@ fn main() {
     };
     let layout = HGridLayout::from_settings(&settings);
 
-    // Collect hex data for bounds calculation.
     let hexes: Vec<Hex> = shapes::hexagon(Hex::ZERO, settings.radius).collect();
 
-    // World-space bounds (XZ plane, Y is height).
     let mut min_x = f32::MAX;
     let mut max_x = f32::MIN;
     let mut min_z = f32::MAX;
@@ -119,12 +117,17 @@ fn main() {
     let stroke = 0.12;
     let outline = stroke * 3.0;
 
-    // SVG header — transparent background.
+    let points_of = |corners: &[(f32, f32); 6]| {
+        corners
+            .iter()
+            .map(|(x, z)| format!("{x:.2},{z:.2}"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
     println!(
         r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb_x:.1} {vb_z:.1} {vb_w:.1} {vb_h:.1}" width="800" height="800">"##,
     );
-
-    // ── Hex faces with height-based fill ────────────────────────
 
     for hd in &hex_data {
         let t = if max_h > 0.0 { hd.height / max_h } else { 0.0 };
@@ -138,82 +141,34 @@ fn main() {
             let v = (60.0 + t * 160.0) as u8;
             (v, v, v)
         };
-
-        let points: String = hd
-            .corners
-            .iter()
-            .map(|(x, z)| format!("{x:.2},{z:.2}"))
-            .collect::<Vec<_>>()
-            .join(" ");
+        let points = points_of(&hd.corners);
         println!(
             r##"  <polygon points="{points}" fill="rgb({r},{g},{b})" stroke="none" opacity="0.9"/>"##,
         );
     }
 
-    // ── Hex face outlines ───────────────────────────────────────
-
-    if rich {
-        for hd in &hex_data {
-            let points: String = hd
-                .corners
-                .iter()
-                .map(|(x, z)| format!("{x:.2},{z:.2}"))
-                .collect::<Vec<_>>()
-                .join(" ");
-            println!(
-                r##"  <polygon points="{points}" fill="none" stroke="white" stroke-width="{outline:.2}" stroke-linejoin="round"/>"##,
-            );
-        }
-        for hd in &hex_data {
-            let points: String = hd
-                .corners
-                .iter()
-                .map(|(x, z)| format!("{x:.2},{z:.2}"))
-                .collect::<Vec<_>>()
-                .join(" ");
-            println!(
-                r##"  <polygon points="{points}" fill="none" stroke="black" stroke-width="{stroke:.2}" stroke-linejoin="round"/>"##,
-            );
-        }
+    let hex_strokes: &[(&str, f32)] = if rich {
+        &[("white", outline), ("black", stroke)]
     } else {
+        &[("gray", stroke)]
+    };
+    for (color, width) in hex_strokes {
         for hd in &hex_data {
-            let points: String = hd
-                .corners
-                .iter()
-                .map(|(x, z)| format!("{x:.2},{z:.2}"))
-                .collect::<Vec<_>>()
-                .join(" ");
+            let points = points_of(&hd.corners);
             println!(
-                r##"  <polygon points="{points}" fill="none" stroke="gray" stroke-width="{stroke:.2}" stroke-linejoin="round"/>"##,
+                r##"  <polygon points="{points}" fill="none" stroke="{color}" stroke-width="{width:.2}" stroke-linejoin="round"/>"##,
             );
         }
     }
 
-    // ── Quad gap long edges (projected to XZ plane) ─────────────
-
-    if rich {
+    for (color, width) in hex_strokes {
         for (from, to) in &long_edges {
             println!(
-                r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="white" stroke-width="{outline:.2}" stroke-linecap="round"/>"##,
-                from.x, from.z, to.x, to.z,
-            );
-        }
-        for (from, to) in &long_edges {
-            println!(
-                r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="black" stroke-width="{stroke:.2}" stroke-linecap="round"/>"##,
-                from.x, from.z, to.x, to.z,
-            );
-        }
-    } else {
-        for (from, to) in &long_edges {
-            println!(
-                r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="gray" stroke-width="{stroke:.2}" stroke-linecap="round"/>"##,
+                r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="{color}" stroke-width="{width:.2}" stroke-linecap="round"/>"##,
                 from.x, from.z, to.x, to.z,
             );
         }
     }
-
-    // ── Height labels (rich only) ───────────────────────────────
 
     if rich {
         let font = settings.point_spacing * 0.22;
