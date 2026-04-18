@@ -1,9 +1,10 @@
-//! Renders the hex grid as an SVG file to stdout.
+//! Renders the hex grid as an SVG file to stdout, or as JSON with `--json`.
 //!
 //! ```sh
 //! cargo run -p hex-grid --example svg > grid.svg
 //! cargo run -p hex-grid --example svg -- 5 2.0 > grid.svg
 //! cargo run -p hex-grid --example svg -- 5 2.0 --rich > grid.svg
+//! cargo run -p hex-grid --example svg -- 5 2.0 --json > grid.json
 //! ```
 
 use hex_grid::{HGridLayout, HGridSettings};
@@ -12,11 +13,12 @@ use hexx::{Hex, shapes};
 fn main() {
     let mut positional: Vec<String> = Vec::new();
     let mut rich = false;
+    let mut json = false;
     for arg in std::env::args().skip(1) {
-        if arg == "--rich" {
-            rich = true;
-        } else {
-            positional.push(arg);
+        match arg.as_str() {
+            "--rich" => rich = true,
+            "--json" => json = true,
+            _ => positional.push(arg),
         }
     }
     let radius: u32 = positional.first().and_then(|s| s.parse().ok()).unwrap_or(3);
@@ -70,6 +72,28 @@ fn main() {
             })
         })
         .collect();
+
+    if json {
+        let entries: Vec<String> = hex_data
+            .iter()
+            .map(|hd| {
+                let corners: Vec<String> = hd
+                    .corners
+                    .iter()
+                    .map(|(x, z)| format!("[{x:.4},{z:.4}]"))
+                    .collect();
+                format!(
+                    r#"{{"center":[{:.4},{:.4}],"corners":[{}],"height":{:.4}}}"#,
+                    hd.center.x,
+                    hd.center.y,
+                    corners.join(","),
+                    hd.height,
+                )
+            })
+            .collect();
+        println!("[{}]", entries.join(","));
+        return;
+    }
 
     let padding = pad;
     let vb_x = min_x - padding;
