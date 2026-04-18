@@ -3,15 +3,27 @@
 //! ```sh
 //! cargo run -p hex-grid --example svg > grid.svg
 //! cargo run -p hex-grid --example svg -- 5 2.0 > grid.svg
+//! cargo run -p hex-grid --example svg -- 5 2.0 --rich > grid.svg
 //! ```
 
 use hex_grid::{HGridLayout, HGridSettings};
 use hexx::{Hex, shapes};
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let radius: u32 = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(3);
-    let pad: f32 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(4.0);
+    let mut positional: Vec<String> = Vec::new();
+    let mut rich = false;
+    for arg in std::env::args().skip(1) {
+        if arg == "--rich" {
+            rich = true;
+        } else {
+            positional.push(arg);
+        }
+    }
+    let radius: u32 = positional.first().and_then(|s| s.parse().ok()).unwrap_or(3);
+    let pad: f32 = positional
+        .get(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(4.0);
 
     let settings = HGridSettings {
         radius,
@@ -77,9 +89,16 @@ fn main() {
 
     for hd in &hex_data {
         let t = if max_h > 0.0 { hd.height / max_h } else { 0.0 };
-        let r = (40.0 + t * 80.0) as u8;
-        let g = (60.0 + t * 180.0) as u8;
-        let b = (30.0 + t * 40.0) as u8;
+        let (r, g, b) = if rich {
+            (
+                (40.0 + t * 80.0) as u8,
+                (60.0 + t * 180.0) as u8,
+                (30.0 + t * 40.0) as u8,
+            )
+        } else {
+            let v = (60.0 + t * 160.0) as u8;
+            (v, v, v)
+        };
 
         let points: String = hd
             .corners
@@ -92,56 +111,81 @@ fn main() {
         );
     }
 
-    // ── Hex face outlines (white outline, then black stroke) ────
+    // ── Hex face outlines ───────────────────────────────────────
 
-    for hd in &hex_data {
-        let points: String = hd
-            .corners
-            .iter()
-            .map(|(x, z)| format!("{x:.2},{z:.2}"))
-            .collect::<Vec<_>>()
-            .join(" ");
-        println!(
-            r##"  <polygon points="{points}" fill="none" stroke="white" stroke-width="{outline:.2}" stroke-linejoin="round"/>"##,
-        );
-    }
-    for hd in &hex_data {
-        let points: String = hd
-            .corners
-            .iter()
-            .map(|(x, z)| format!("{x:.2},{z:.2}"))
-            .collect::<Vec<_>>()
-            .join(" ");
-        println!(
-            r##"  <polygon points="{points}" fill="none" stroke="black" stroke-width="{stroke:.2}" stroke-linejoin="round"/>"##,
-        );
+    if rich {
+        for hd in &hex_data {
+            let points: String = hd
+                .corners
+                .iter()
+                .map(|(x, z)| format!("{x:.2},{z:.2}"))
+                .collect::<Vec<_>>()
+                .join(" ");
+            println!(
+                r##"  <polygon points="{points}" fill="none" stroke="white" stroke-width="{outline:.2}" stroke-linejoin="round"/>"##,
+            );
+        }
+        for hd in &hex_data {
+            let points: String = hd
+                .corners
+                .iter()
+                .map(|(x, z)| format!("{x:.2},{z:.2}"))
+                .collect::<Vec<_>>()
+                .join(" ");
+            println!(
+                r##"  <polygon points="{points}" fill="none" stroke="black" stroke-width="{stroke:.2}" stroke-linejoin="round"/>"##,
+            );
+        }
+    } else {
+        for hd in &hex_data {
+            let points: String = hd
+                .corners
+                .iter()
+                .map(|(x, z)| format!("{x:.2},{z:.2}"))
+                .collect::<Vec<_>>()
+                .join(" ");
+            println!(
+                r##"  <polygon points="{points}" fill="none" stroke="gray" stroke-width="{stroke:.2}" stroke-linejoin="round"/>"##,
+            );
+        }
     }
 
-    // ── Quad gap long edges (white outline, then black stroke) ──
+    // ── Quad gap long edges ─────────────────────────────────────
 
     let long_edges = layout.quad_long_edges();
 
-    for (from, to) in &long_edges {
-        println!(
-            r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="white" stroke-width="{outline:.2}" stroke-linecap="round"/>"##,
-            from.x, from.y, to.x, to.y,
-        );
-    }
-    for (from, to) in &long_edges {
-        println!(
-            r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="black" stroke-width="{stroke:.2}" stroke-linecap="round"/>"##,
-            from.x, from.y, to.x, to.y,
-        );
+    if rich {
+        for (from, to) in &long_edges {
+            println!(
+                r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="white" stroke-width="{outline:.2}" stroke-linecap="round"/>"##,
+                from.x, from.y, to.x, to.y,
+            );
+        }
+        for (from, to) in &long_edges {
+            println!(
+                r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="black" stroke-width="{stroke:.2}" stroke-linecap="round"/>"##,
+                from.x, from.y, to.x, to.y,
+            );
+        }
+    } else {
+        for (from, to) in &long_edges {
+            println!(
+                r##"  <line x1="{:.2}" y1="{:.2}" x2="{:.2}" y2="{:.2}" stroke="gray" stroke-width="{stroke:.2}" stroke-linecap="round"/>"##,
+                from.x, from.y, to.x, to.y,
+            );
+        }
     }
 
-    // ── Height labels ───────────────────────────────────────────
+    // ── Height labels (rich only) ───────────────────────────────
 
-    let font = settings.point_spacing * 0.22;
-    for hd in &hex_data {
-        println!(
-            r##"  <text x="{:.2}" y="{:.2}" font-size="{font:.2}" font-family="monospace" fill="black" text-anchor="middle" dominant-baseline="central">{:.1}</text>"##,
-            hd.center.x, hd.center.y, hd.height,
-        );
+    if rich {
+        let font = settings.point_spacing * 0.22;
+        for hd in &hex_data {
+            println!(
+                r##"  <text x="{:.2}" y="{:.2}" font-size="{font:.2}" font-family="monospace" fill="black" text-anchor="middle" dominant-baseline="central">{:.1}</text>"##,
+                hd.center.x, hd.center.y, hd.height,
+            );
+        }
     }
 
     println!("</svg>");
