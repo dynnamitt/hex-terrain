@@ -9,12 +9,26 @@
   h1 { margin: 1.5rem 0 0.5rem; font-size: 1.2rem; font-weight: normal; }
   .meta { font-size: 0.8rem; color: #666; margin-bottom: 1rem; }
   .meta a { color: #6a8; }
-  object { width: min(90vw, 800px); height: min(90vw, 800px); }
+  .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; padding: 0 1rem 2rem; }
+  figure { margin: 0; display: flex; flex-direction: column; align-items: center; }
+  figcaption { font-size: 0.8rem; margin-top: 0.5rem; color: #888; }
+  figcaption a { color: #6a8; }
+  object { width: min(45vw, 500px); height: min(45vw, 500px); }
+  @media (max-width: 720px) { object { width: 90vw; height: 90vw; } }
 </style>
 </head>
 <body>
   <h1>hex-grid terrain preview</h1>
-  <p class="meta">generated from <a href="https://github.com/dynnamitt/hex-terrain">dynnamitt/hex-terrain</a> &mdash; <span id="sha">5135ea2</span></p>
-  <object data="hex-grid.svg" type="image/svg+xml">SVG not available</object>
+  <p class="meta">generated from <a href="https://github.com/dynnamitt/hex-terrain">dynnamitt/hex-terrain</a> &mdash; <span id="sha">b5d3488</span></p>
+  <div class="grid">
+    <figure>
+      <object data="hex-grid.svg" type="image/svg+xml">SVG not available</object>
+      <figcaption>plain &mdash; <a href="hex-grid.svg">hex-grid.svg</a></figcaption>
+    </figure>
+    <figure>
+      <object data="hex-grid-rich.svg" type="image/svg+xml">SVG not available</object>
+      <figcaption>rich &mdash; <a href="hex-grid-rich.svg">hex-grid-rich.svg</a></figcaption>
+    </figure>
+  </div>
 </body>
 </html>
