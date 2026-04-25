@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>welded hex terrain</title>
+<style>
+  body { margin: 0; background: #050810; display: flex; flex-direction: column; align-items: center; min-height: 100vh; font-family: monospace; color: #aaa; }
+  h1 { margin: 1.5rem 0 0.25rem; font-size: 1.2rem; font-weight: normal; }
+  .meta { font-size: 0.8rem; color: #666; margin-bottom: 1rem; }
+  .meta a { color: #6a8; }
+  .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin: 0 0 0.6rem; }
+  .controls button {
+    background: #1a2030; color: #9bd; border: 1px solid #2a3550;
+    padding: 0.5rem 0.9rem; font-family: monospace; font-size: 0.85rem;
+    border-radius: 4px; cursor: pointer; min-width: 44px; min-height: 44px;
+  }
+  .controls button.on { background: #2d4470; border-color: #4a6fb0; color: #cde; }
+  .controls button:hover, .controls button:focus { background: #243250; outline: none; }
+  .controls button:active { background: #324570; }
+  .stats { font-size: 0.75rem; color: #667; margin: 0 0 0.6rem; }
+  .stage { width: min(95vw, 1100px); }
+  #stage { display: block; width: 100%; height: min(70vh, 600px); background: #0a0e1a; border-radius: 4px; }
+  .hint { font-size: 0.75rem; color: #556; margin: 0.4rem 0 1.5rem; text-align: center; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <h1>welded hex terrain &mdash; one mesh, vec3-deduped</h1>
+  <p class="meta">generated from <a href="https://github.com/dynnamitt/hex-terrain">dynnamitt/hex-terrain</a> &mdash; <span id="sha">382dffc</span> &middot; <a href="index.html">grid preview</a> &middot; <a href="hex-tessellate.html">single-hex strategies</a></p>
+
+  <div class="controls">
+    <button id="btn-fill" type="button" class="on">filled</button>
+    <button id="btn-wire" type="button">wireframe</button>
+    <button id="btn-flat" type="button" class="on">flat shading</button>
+    <button id="btn-faces" type="button" class="on">hex faces</button>
+    <button id="btn-quads" type="button" class="on">gap quads</button>
+    <button id="btn-tris" type="button" class="on">gap tris</button>
+  </div>
+  <p class="stats" id="stats">loading…</p>
+  <div class="stage"><canvas id="stage"></canvas></div>
+  <p class="hint">drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { weldedMeshFromQuads, hexFaceTris, vertexCount, triangleCount } from './hex-terrain.js';
+
+const canvas = document.getElementById('stage');
+const stats = document.getElementById('stats');
+
+const showError = (msg) => {
+  canvas.insertAdjacentHTML('afterend',
+    `<p style="color:#f77;text-align:center;padding:0.6rem">${msg}</p>`);
+};
+
+try {
+  const res = await fetch('hex-grid.json');
+  if (!res.ok) throw new Error(`hex-grid.json ${res.status}`);
+  const { hexes, quads, tris } = await res.json();
+
+  if (!quads) {
+    throw new Error('hex-grid.json is missing the "quads" field — rebuild via `make svg-preview`');
+  }
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0e1a);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+
+  const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 500);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+  sun.position.set(15, 25, 10);
+  scene.add(sun);
+
+  const state = {
+    fill: true,
+    wire: false,
+    flat: true,
+    faces: true,
+    gapQuads: true,
+    gapTris: true,
+  };
+
+  let mesh = null;
+  let wireOverlay = null;
+
+  const dispose = (obj) => {
+    if (!obj) return;
+    scene.remove(obj);
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) obj.material.dispose();
+  };
+
+  const rebuild = () => {
+    dispose(mesh); mesh = null;
+    dispose(wireOverlay); wireOverlay = null;
+
+    const inputQuads = state.gapQuads ? quads : [];
+    const inputTris = [
+      ...(state.gapTris ? tris : []),
+      ...(state.faces ? hexFaceTris(hexes) : []),
+    ];
+    const geom = weldedMeshFromQuads(inputQuads, inputTris);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x6c9,
+      flatShading: state.flat,
+      side: THREE.DoubleSide,
+      roughness: 0.85,
+      metalness: 0.05,
+      wireframe: false,
+      visible: state.fill,
+    });
+    mesh = new THREE.Mesh(geom, mat);
+    scene.add(mesh);
+
+    if (state.wire) {
+      const wireGeom = new THREE.WireframeGeometry(geom);
+      wireOverlay = new THREE.LineSegments(wireGeom, new THREE.LineBasicMaterial({
+        color: 0x9bd, transparent: true, opacity: 0.5,
+      }));
+      scene.add(wireOverlay);
+    }
+
+    stats.textContent =
+      `welded vertices: ${vertexCount(geom)} · triangles: ${triangleCount(geom)} ` +
+      `· source quads: ${inputQuads.length} · source tris: ${inputTris.length}`;
+  };
+
+  const wire = (id, key) => {
+    const btn = document.getElementById(id);
+    btn.addEventListener('click', () => {
+      state[key] = !state[key];
+      btn.classList.toggle('on', state[key]);
+      rebuild();
+    });
+  };
+  wire('btn-fill', 'fill');
+  wire('btn-wire', 'wire');
+  wire('btn-flat', 'flat');
+  wire('btn-faces', 'faces');
+  wire('btn-quads', 'gapQuads');
+  wire('btn-tris', 'gapTris');
+
+  rebuild();
+
+  const bb = mesh.geometry.boundingBox;
+  const target = bb.getCenter(new THREE.Vector3());
+  const span = bb.getSize(new THREE.Vector3()).length();
+  camera.position.set(target.x + span * 0.7, target.y + span * 0.5, target.z + span * 0.7);
+
+  const controls = new OrbitControls(camera, canvas);
+  controls.target.copy(target);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (canvas.width !== w || canvas.height !== h) {
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+} catch (e) {
+  console.error(e);
+  showError(`terrain load failed: ${e.message}`);
+}
+</script>
+</body>
+</html>
