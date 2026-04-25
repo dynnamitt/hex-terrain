@@ -100,10 +100,23 @@ fn main() {
                 )
             })
             .collect();
+        let v3 = |v: glam::Vec3| format!("[{:.4},{:.4},{:.4}]", v.x, v.y, v.z);
+        let quad_entries: Vec<String> = layout
+            .gap_quads()
+            .iter()
+            .map(|q| format!("[{},{},{},{}]", v3(q[0]), v3(q[1]), v3(q[2]), v3(q[3])))
+            .collect();
+        let tri_entries: Vec<String> = layout
+            .gap_tris()
+            .iter()
+            .map(|t| format!("[{},{},{}]", v3(t[0]), v3(t[1]), v3(t[2])))
+            .collect();
         println!(
-            "{{\"hexes\":[{}],\"edges\":[{}]}}",
+            "{{\"hexes\":[{}],\"edges\":[{}],\"quads\":[{}],\"tris\":[{}]}}",
             hex_entries.join(","),
             edge_entries.join(","),
+            quad_entries.join(","),
+            tri_entries.join(","),
         );
         return;
     }

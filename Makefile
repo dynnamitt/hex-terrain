@@ -1,5 +1,5 @@
 .PHONY: clean build test coverage coverage-xml inject-updates wasm wasm-deps serve \
-	svg-preview svg-plain svg-rich svg-json svg-html svg-prep
+	svg-preview svg-plain svg-rich svg-json svg-html svg-prep hex-terrain
 
 WASM_OUT = target/wasm
 WASM_BINDGEN_VER := $(shell grep -A1 '^name = "wasm-bindgen"$$' Cargo.lock | grep version | head -1 | cut -d'"' -f2)
@@ -72,5 +72,9 @@ svg-json: svg-prep
 svg-html: svg-prep
 	sed "s|__SHA__|$(SHORT_SHA)|g" web/svg-preview.html > $(SVG_OUT)/index.html
 
-svg-preview: svg-plain svg-rich svg-json svg-html
+hex-terrain: svg-prep
+	sed "s|__SHA__|$(SHORT_SHA)|g" web/hex-terrain.html > $(SVG_OUT)/hex-terrain.html
+	cp web/hex-terrain.js $(SVG_OUT)/hex-terrain.js
+
+svg-preview: svg-plain svg-rich svg-json svg-html hex-terrain
 	@echo "svg preview built in $(SVG_OUT)/"
