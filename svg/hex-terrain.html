@@ -34,11 +34,11 @@
 </head>
 <body>
   <h1>welded hex terrain &mdash; one mesh, vec3-deduped</h1>
-  <p class="meta">generated from <a href="https://github.com/dynnamitt/hex-terrain">dynnamitt/hex-terrain</a> &mdash; <span id="sha">13cc039</span> &middot; <a href="index.html">grid preview</a></p>
+  <p class="meta">generated from <a href="https://github.com/dynnamitt/hex-terrain">dynnamitt/hex-terrain</a> &mdash; <span id="sha">eac0ceb</span> &middot; <a href="index.html">grid preview</a></p>
 
   <div class="controls">
     <button id="btn-fill" type="button" class="on">filled</button>
-    <button id="btn-wire" type="button">wireframe</button>
+    <button id="btn-wire" type="button" class="on">wireframe</button>
     <button id="btn-flat" type="button" class="on">flat shading</button>
     <button id="btn-faces" type="button" class="on">hex faces</button>
     <button id="btn-quads" type="button" class="on">gap quads</button>
@@ -86,7 +86,7 @@ try {
 
   const state = {
     fill: true,
-    wire: false,
+    wire: true,
     flat: true,
     faces: true,
     gapQuads: true,
@@ -129,7 +129,7 @@ try {
     if (state.wire) {
       const wireGeom = new THREE.WireframeGeometry(geom);
       wireOverlay = new THREE.LineSegments(wireGeom, new THREE.LineBasicMaterial({
-        color: 0x9bd, transparent: true, opacity: 0.5,
+        color: 0xffee44, transparent: true, opacity: 0.5,
       }));
       scene.add(wireOverlay);
     }
