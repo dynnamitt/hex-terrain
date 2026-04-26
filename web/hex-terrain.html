@@ -51,7 +51,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { weldedMeshFromQuads, hexFaceTris, vertexCount, triangleCount } from './hex-terrain.js';
+import { weldedMesh, hexFaceTris, vertexCount, triangleCount } from './hex-terrain.js';
 
 const canvas = document.getElementById('stage');
 const stats = document.getElementById('stats');
@@ -112,7 +112,7 @@ try {
       ...(state.gapTris ? tris : []),
       ...(state.faces ? hexFaceTris(hexes) : []),
     ];
-    const geom = weldedMeshFromQuads(inputQuads, inputTris);
+    const geom = weldedMesh(inputQuads, inputTris);
 
     const mat = new THREE.MeshStandardMaterial({
       color: 0x6c9,
