@@ -34,7 +34,7 @@
 </head>
 <body>
   <h1>welded hex terrain &mdash; one mesh, vec3-deduped</h1>
-  <p class="meta">generated from <a href="https://github.com/dynnamitt/hex-terrain">dynnamitt/hex-terrain</a> &mdash; <span id="sha">382dffc</span> &middot; <a href="index.html">grid preview</a> &middot; <a href="hex-tessellate.html">single-hex strategies</a></p>
+  <p class="meta">generated from <a href="https://github.com/dynnamitt/hex-terrain">dynnamitt/hex-terrain</a> &mdash; <span id="sha">13cc039</span> &middot; <a href="index.html">grid preview</a></p>
 
   <div class="controls">
     <button id="btn-fill" type="button" class="on">filled</button>
@@ -51,7 +51,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { weldedMeshFromQuads, hexFaceTris, vertexCount, triangleCount } from './hex-terrain.js';
+import { weldedMesh, hexFaceTris, vertexCount, triangleCount } from './hex-terrain.js';
 
 const canvas = document.getElementById('stage');
 const stats = document.getElementById('stats');
@@ -112,7 +112,7 @@ try {
       ...(state.gapTris ? tris : []),
       ...(state.faces ? hexFaceTris(hexes) : []),
     ];
-    const geom = weldedMeshFromQuads(inputQuads, inputTris);
+    const geom = weldedMesh(inputQuads, inputTris);
 
     const mat = new THREE.MeshStandardMaterial({
       color: 0x6c9,
