@@ -1,6 +1,6 @@
 # Vertex deduplication in `hex-terrain.js`
 
-`weldedMeshFromQuads` (in `hex-terrain.js`) hashes every `[x, y, z]` and
+`weldedMesh` (in `hex-terrain.js`) hashes every `[x, y, z]` and
 reuses the index for any exact match, building an indexed
 `THREE.BufferGeometry` instead of a triangle soup. This document explains
 what that buys at the project's current scale and when it would start to
