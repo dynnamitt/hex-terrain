@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use glam::{Vec2, Vec3};
-use hexx::{EdgeDirection, Hex, HexLayout, shapes};
+use hexx::{EdgeDirection, GridVertex, Hex, HexLayout, VertexDirection, shapes};
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
 use crate::math;
@@ -186,6 +186,68 @@ impl HGridLayout {
         edges
     }
 
+    /// Returns the four world-space corners `[hex.v0, neighbor.n0, neighbor.n1, hex.v1]`
+    /// of every gap quad, in CCW order ready for triangulation `[0,1,2,0,2,3]`.
+    /// Same `[0,2,4]` even-edge ownership as [`quad_long_edges`].
+    pub fn gap_quads(&self) -> Vec<[Vec3; 4]> {
+        let hexes: Vec<Hex> = shapes::hexagon(Hex::ZERO, self.grid_radius).collect();
+        let mut quads = Vec::new();
+        for &hex in &hexes {
+            for edge_index in [0u8, 2, 4] {
+                let dir = EdgeDirection::ALL_DIRECTIONS[edge_index as usize];
+                let neighbor = hex.neighbor(dir);
+                if !self.heights.contains_key(&neighbor) {
+                    continue;
+                }
+                let (v0_idx, v1_idx, n0_idx, n1_idx) = math::quad_corner_indices(edge_index);
+                if let (Some(a), Some(b), Some(c), Some(d)) = (
+                    self.vertex(hex, v0_idx),
+                    self.vertex(neighbor, n0_idx),
+                    self.vertex(neighbor, n1_idx),
+                    self.vertex(hex, v1_idx),
+                ) {
+                    quads.push([a, b, c, d]);
+                }
+            }
+        }
+        quads
+    }
+
+    /// Returns the three world-space corners of every 3-hex junction gap tri.
+    /// Canonical ownership: tri emitted only when the origin hex is `coordinates()[0]`.
+    pub fn gap_tris(&self) -> Vec<[Vec3; 3]> {
+        let hexes: Vec<Hex> = shapes::hexagon(Hex::ZERO, self.grid_radius).collect();
+        let mut tris = Vec::new();
+        for &hex in &hexes {
+            for v_idx in [0u8, 1] {
+                let dir = VertexDirection::ALL_DIRECTIONS[v_idx as usize];
+                let gv = GridVertex {
+                    origin: hex,
+                    direction: dir,
+                };
+                let coords = gv.coordinates();
+                if coords[0] != hex {
+                    continue;
+                }
+                if !coords.iter().all(|c| self.heights.contains_key(c)) {
+                    continue;
+                }
+                let idx1 = corner_index_for_vertex(coords[1], &gv);
+                let idx2 = corner_index_for_vertex(coords[2], &gv);
+                if let (Some(i1), Some(i2)) = (idx1, idx2)
+                    && let (Some(v0), Some(v1), Some(v2)) = (
+                        self.vertex(coords[0], v_idx),
+                        self.vertex(coords[1], i1),
+                        self.vertex(coords[2], i2),
+                    )
+                {
+                    tris.push([v0, v1, v2]);
+                }
+            }
+        }
+        tris
+    }
+
     /// Grid radius (number of hex rings around the origin).
     pub fn grid_radius(&self) -> u32 {
         self.grid_radius
@@ -201,6 +263,16 @@ impl HGridLayout {
         math::idw_interpolate_height(pos, &vertices)
             .unwrap_or_else(|| self.heights.get(&hex).copied().unwrap_or(0.0))
     }
+}
+
+fn corner_index_for_vertex(hex: Hex, target: &GridVertex) -> Option<u8> {
+    VertexDirection::ALL_DIRECTIONS.iter().find_map(|&dir| {
+        let candidate = GridVertex {
+            origin: hex,
+            direction: dir,
+        };
+        candidate.equivalent(target).then_some(dir.index())
+    })
 }
 
 #[cfg(test)]

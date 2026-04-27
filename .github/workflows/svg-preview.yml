@@ -5,6 +5,8 @@ on:
     paths:
       - "crates/hex-grid/**"
       - "web/svg-preview.html"
+      - "web/hex-terrain.html"
+      - "web/hex-terrain.js"
       - ".github/workflows/svg-preview.yml"
   workflow_dispatch:
 
