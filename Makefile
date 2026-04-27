@@ -1,5 +1,5 @@
 .PHONY: clean build test coverage coverage-xml inject-updates wasm wasm-deps serve \
-	svg-preview svg-plain svg-rich svg-json svg-html svg-prep hex-terrain
+	svg-preview svg-plain svg-rich svg-json svg-json-v2 svg-html svg-prep hex-terrain
 
 WASM_OUT = target/wasm
 WASM_BINDGEN_VER := $(shell grep -A1 '^name = "wasm-bindgen"$$' Cargo.lock | grep version | head -1 | cut -d'"' -f2)
@@ -61,13 +61,16 @@ svg-prep:
 	@mkdir -p $(SVG_OUT)
 
 svg-plain: svg-prep
-	cargo run -q -p hex-grid --example svg --release -- $(SVG_RADIUS) $(SVG_PAD) > $(SVG_OUT)/hex-grid.svg
+	cargo run -q -p hex-grid --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) > $(SVG_OUT)/hex-grid.svg
 
 svg-rich: svg-prep
-	cargo run -q -p hex-grid --example svg --release -- $(SVG_RADIUS) $(SVG_PAD) --rich > $(SVG_OUT)/hex-grid-rich.svg
+	cargo run -q -p hex-grid --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) --format svg-rich > $(SVG_OUT)/hex-grid-rich.svg
 
 svg-json: svg-prep
-	cargo run -q -p hex-grid --example svg --release -- $(SVG_RADIUS) $(SVG_PAD) --json > $(SVG_OUT)/hex-grid.json
+	cargo run -q -p hex-grid --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) --format json-v1 > $(SVG_OUT)/hex-grid.json
+
+svg-json-v2: svg-prep
+	cargo run -q -p hex-grid --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) --format json-v2 > $(SVG_OUT)/hex-terrain.json
 
 svg-html: svg-prep
 	sed "s|__SHA__|$(SHORT_SHA)|g" web/svg-preview.html > $(SVG_OUT)/index.html
@@ -76,5 +79,5 @@ hex-terrain: svg-prep
 	sed "s|__SHA__|$(SHORT_SHA)|g" web/hex-terrain.html > $(SVG_OUT)/hex-terrain.html
 	cp web/hex-terrain.js $(SVG_OUT)/hex-terrain.js
 
-svg-preview: svg-plain svg-rich svg-json svg-html hex-terrain
+svg-preview: svg-plain svg-rich svg-json svg-json-v2 svg-html hex-terrain
 	@echo "svg preview built in $(SVG_OUT)/"

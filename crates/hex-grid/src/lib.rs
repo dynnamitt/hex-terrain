@@ -5,9 +5,11 @@
 
 pub mod layout;
 pub mod math;
+pub mod serialize;
 
 pub use layout::{HGridLayout, HGridSettings};
 pub use math::{
     edge_cuboid_transform, gap_filler, gap_vertex_data, idw_interpolate_height, map_noise_to_range,
     quad_corner_indices,
 };
+pub use serialize::{JsonV1, JsonV2, SerializeGeo, SvgPlain, SvgRich};

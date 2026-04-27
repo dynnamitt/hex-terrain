@@ -40,9 +40,6 @@
     <button id="btn-fill" type="button" class="on">filled</button>
     <button id="btn-wire" type="button" class="on">wireframe</button>
     <button id="btn-flat" type="button" class="on">flat shading</button>
-    <button id="btn-faces" type="button" class="on">hex faces</button>
-    <button id="btn-quads" type="button" class="on">gap quads</button>
-    <button id="btn-tris" type="button" class="on">gap tris</button>
   </div>
   <p class="stats" id="stats">loading…</p>
   <div class="stage"><canvas id="stage"></canvas></div>
@@ -51,7 +48,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { weldedMesh, hexFaceTris, vertexCount, triangleCount } from './hex-terrain.js';
+import { weldedMesh, vertexCount, triangleCount } from './hex-terrain.js';
 
 const canvas = document.getElementById('stage');
 const stats = document.getElementById('stats');
@@ -62,13 +59,13 @@ const showError = (msg) => {
 };
 
 try {
-  const res = await fetch('hex-grid.json');
-  if (!res.ok) throw new Error(`hex-grid.json ${res.status}`);
-  const { hexes, quads, tris } = await res.json();
-
-  if (!quads) {
-    throw new Error('hex-grid.json is missing the "quads" field — rebuild via `make svg-preview`');
+  const res = await fetch('hex-terrain.json');
+  if (!res.ok) throw new Error(`hex-terrain.json ${res.status}`);
+  const payload = await res.json();
+  if (payload.version !== 2 || !Array.isArray(payload.tris)) {
+    throw new Error('hex-terrain.json is not a v2 payload — rebuild via `make svg-preview`');
   }
+  const { tris } = payload;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0e1a);
@@ -88,9 +85,6 @@ try {
     fill: true,
     wire: true,
     flat: true,
-    faces: true,
-    gapQuads: true,
-    gapTris: true,
   };
 
   let mesh = null;
@@ -103,16 +97,11 @@ try {
     if (obj.material) obj.material.dispose();
   };
 
+  const geom = weldedMesh([], tris);
+
   const rebuild = () => {
     dispose(mesh); mesh = null;
     dispose(wireOverlay); wireOverlay = null;
-
-    const inputQuads = state.gapQuads ? quads : [];
-    const inputTris = [
-      ...(state.gapTris ? tris : []),
-      ...(state.faces ? hexFaceTris(hexes) : []),
-    ];
-    const geom = weldedMesh(inputQuads, inputTris);
 
     const mat = new THREE.MeshStandardMaterial({
       color: 0x6c9,
@@ -136,7 +125,7 @@ try {
 
     stats.textContent =
       `welded vertices: ${vertexCount(geom)} · triangles: ${triangleCount(geom)} ` +
-      `· source quads: ${inputQuads.length} · source tris: ${inputTris.length}`;
+      `· source tris: ${tris.length}`;
   };
 
   const wire = (id, key) => {
@@ -150,9 +139,6 @@ try {
   wire('btn-fill', 'fill');
   wire('btn-wire', 'wire');
   wire('btn-flat', 'flat');
-  wire('btn-faces', 'faces');
-  wire('btn-quads', 'gapQuads');
-  wire('btn-tris', 'gapTris');
 
   rebuild();
 
