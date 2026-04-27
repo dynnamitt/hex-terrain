@@ -61,16 +61,16 @@ svg-prep:
 	@mkdir -p $(SVG_OUT)
 
 svg-plain: svg-prep
-	cargo run -q -p hex-grid --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) > $(SVG_OUT)/hex-grid.svg
+	cargo run -q -p apicult-desigual --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) > $(SVG_OUT)/apicult-desigual.svg
 
 svg-rich: svg-prep
-	cargo run -q -p hex-grid --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) --format svg-rich > $(SVG_OUT)/hex-grid-rich.svg
+	cargo run -q -p apicult-desigual --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) --format svg-rich > $(SVG_OUT)/apicult-desigual-rich.svg
 
 svg-json: svg-prep
-	cargo run -q -p hex-grid --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) --format json-v1 > $(SVG_OUT)/hex-grid.json
+	cargo run -q -p apicult-desigual --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) --format json-v1 > $(SVG_OUT)/apicult-desigual.json
 
 svg-json-v2: svg-prep
-	cargo run -q -p hex-grid --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) --format json-v2 > $(SVG_OUT)/hex-terrain.json
+	cargo run -q -p apicult-desigual --example geo_export --release -- $(SVG_RADIUS) $(SVG_PAD) --format json-v2 > $(SVG_OUT)/hex-terrain.json
 
 svg-html: svg-prep
 	sed "s|__SHA__|$(SHORT_SHA)|g" web/svg-preview.html > $(SVG_OUT)/index.html

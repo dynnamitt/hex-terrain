@@ -12,7 +12,7 @@ use super::fov_overlay::FovMaterial;
 use super::materials::TerrainMaterials;
 use super::{HTerrainConfig, HTerrainPhase, materials, startup_systems, systems};
 use crate::{DebugFlag, GameState, GroundLevel, PlayerMoved, PlayerPos};
-use hex_grid::gap_filler;
+use apicult_desigual::gap_filler;
 
 fn test_config() -> HTerrainConfig {
     HTerrainConfig {

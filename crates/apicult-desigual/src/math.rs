@@ -1,4 +1,4 @@
-//! Pure computation helpers for hex-grid geometry.
+//! Pure computation helpers for apicult-desigual geometry.
 //!
 //! All functions operate on plain numeric / `glam` inputs with no ECS dependencies.
 
@@ -12,7 +12,7 @@ use hexx::{EdgeDirection, GridVertex, Hex, VertexDirection};
 ///
 /// # Examples
 /// ```
-/// # use hex_grid::math::map_noise_to_range;
+/// # use apicult_desigual::math::map_noise_to_range;
 /// assert_eq!(map_noise_to_range(-1.0, 0.0, 10.0), 0.0);
 /// assert_eq!(map_noise_to_range( 1.0, 0.0, 10.0), 10.0);
 /// assert_eq!(map_noise_to_range( 0.0, 2.0, 6.0),  4.0);
@@ -41,7 +41,7 @@ pub fn gap_vertex_data(world_verts: &[Vec3], flat: bool) -> (Vec<[f32; 3]>, [f32
 }
 
 /// Count total (quads, tris) for a grid using the same ownership rules
-/// as hex-grid generation: quads on even edges \[0,2,4\] where neighbor exists,
+/// as apicult-desigual generation: quads on even edges \[0,2,4\] where neighbor exists,
 /// tris on vertices \[0,1\] with canonical ownership and all 3 coords in grid.
 pub fn gap_filler(grid: &[Hex]) -> (usize, usize) {
     let quads = grid

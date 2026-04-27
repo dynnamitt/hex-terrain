@@ -107,4 +107,4 @@ graph LR
     end
 ```
 
-![hex-grid preview](https://dynnamitt.github.io/hex-terrain/svg/hex-grid.svg)
+![apicult-desigual preview](https://dynnamitt.github.io/hex-terrain/svg/apicult-desigual.svg)

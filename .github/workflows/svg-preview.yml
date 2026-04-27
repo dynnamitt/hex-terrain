@@ -3,7 +3,7 @@ name: SVG Preview
 on:
   push:
     paths:
-      - "crates/hex-grid/**"
+      - "crates/apicult-desigual/**"
       - "web/svg-preview.html"
       - "web/hex-terrain.html"
       - "web/hex-terrain.js"
