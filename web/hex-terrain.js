@@ -59,36 +59,6 @@ export function weldedMesh(quads, tris = []) {
   return geom;
 }
 
-export function hexFaceQuads(hexes) {
-  const quads = [];
-  for (const h of hexes) {
-    const [cx, cz] = h.center;
-    const y = h.height;
-    const C = [cx, y, cz];
-    for (const [i, j] of [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]]) {
-      const [ax, az] = h.corners[i];
-      const [bx, bz] = h.corners[j];
-      quads.push([C, [ax, y, az], [bx, y, bz], C]);
-    }
-  }
-  return quads;
-}
-
-export function hexFaceTris(hexes) {
-  const tris = [];
-  for (const h of hexes) {
-    const [cx, cz] = h.center;
-    const y = h.height;
-    const C = [cx, y, cz];
-    for (let i = 0; i < 6; i++) {
-      const [ax, az] = h.corners[i];
-      const [bx, bz] = h.corners[(i + 1) % 6];
-      tris.push([C, [ax, y, az], [bx, y, bz]]);
-    }
-  }
-  return tris;
-}
-
 export function vertexCount(geom) {
   return geom.attributes.position.count;
 }

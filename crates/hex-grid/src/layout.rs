@@ -213,6 +213,44 @@ impl HGridLayout {
         quads
     }
 
+    /// Returns the six center-fan triangles of every hex's flat top face,
+    /// in world-space. Each hex contributes 6 tris from the centroid to
+    /// consecutive corner pairs (CCW). Hard-coded fan — no earcut needed
+    /// for the flat-top case.
+    pub fn hex_face_tris(&self) -> Vec<[Vec3; 3]> {
+        let hexes: Vec<Hex> = shapes::hexagon(Hex::ZERO, self.grid_radius).collect();
+        let mut tris = Vec::new();
+        for &hex in &hexes {
+            let Some(&height) = self.heights.get(&hex) else {
+                continue;
+            };
+            let center2 = self.layout.hex_to_world_pos(hex);
+            let center = Vec3::new(center2.x, height, center2.y);
+            for i in 0..6u8 {
+                let j = (i + 1) % 6;
+                if let (Some(a), Some(b)) = (self.vertex(hex, i), self.vertex(hex, j)) {
+                    tris.push([center, a, b]);
+                }
+            }
+        }
+        tris
+    }
+
+    /// Unified triangle stream: gap quads (split along the rust-canonical
+    /// `[v0, v2]` diagonal), gap junction tris, and hex face fan tris.
+    /// All tessellation decisions owned here so clients consume one flat
+    /// list with no per-source branching.
+    pub fn all_tris(&self) -> Vec<[Vec3; 3]> {
+        let mut out = Vec::new();
+        for [a, b, c, d] in self.gap_quads() {
+            out.push([a, b, c]);
+            out.push([a, c, d]);
+        }
+        out.extend(self.gap_tris());
+        out.extend(self.hex_face_tris());
+        out
+    }
+
     /// Returns the three world-space corners of every 3-hex junction gap tri.
     /// Canonical ownership: tri emitted only when the origin hex is `coordinates()[0]`.
     pub fn gap_tris(&self) -> Vec<[Vec3; 3]> {
@@ -251,6 +289,11 @@ impl HGridLayout {
     /// Grid radius (number of hex rings around the origin).
     pub fn grid_radius(&self) -> u32 {
         self.grid_radius
+    }
+
+    /// World-units between adjacent hex centers (the layout `scale.x`).
+    pub fn point_spacing(&self) -> f32 {
+        self.layout.scale.x
     }
 
     /// Inverse-distance-weighted height interpolation from nearby hex vertices.
@@ -339,6 +382,65 @@ mod tests {
             for j in (i + 1)..6 {
                 assert_ne!(corners[i], corners[j], "corners {i} and {j} are identical");
             }
+        }
+    }
+
+    #[test]
+    fn hex_face_tris_count_is_six_per_hex() {
+        for r in [0u32, 1, 2, 4] {
+            let g = HGridSettings {
+                radius: r,
+                ..default_settings()
+            };
+            let layout = HGridLayout::from_settings(&g);
+            let hex_count = shapes::hexagon(Hex::ZERO, r).count();
+            let tris = layout.hex_face_tris();
+            assert_eq!(
+                tris.len(),
+                hex_count * 6,
+                "radius {r}: expected {} fan tris, got {}",
+                hex_count * 6,
+                tris.len()
+            );
+        }
+    }
+
+    #[test]
+    fn hex_face_tris_share_height_per_hex() {
+        let g = HGridSettings {
+            radius: 1,
+            ..default_settings()
+        };
+        let layout = HGridLayout::from_settings(&g);
+        let tris = layout.hex_face_tris();
+        for (i, tri) in tris.iter().enumerate() {
+            let y0 = tri[0].y;
+            let y1 = tri[1].y;
+            let y2 = tri[2].y;
+            assert!(
+                (y0 - y1).abs() < 1e-4 && (y0 - y2).abs() < 1e-4,
+                "tri {i}: heights differ ({y0}, {y1}, {y2}) — face should be flat"
+            );
+        }
+    }
+
+    #[test]
+    fn all_tris_count_matches_components() {
+        for r in [1u32, 2, 4] {
+            let g = HGridSettings {
+                radius: r,
+                ..default_settings()
+            };
+            let layout = HGridLayout::from_settings(&g);
+            let quads = layout.gap_quads().len();
+            let gap_tris = layout.gap_tris().len();
+            let face_tris = layout.hex_face_tris().len();
+            let total = layout.all_tris().len();
+            assert_eq!(
+                total,
+                quads * 2 + gap_tris + face_tris,
+                "radius {r}: all_tris should equal quads*2 + gap_tris + face_tris"
+            );
         }
     }
 
