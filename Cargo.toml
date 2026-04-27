@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/mesh-gradient", "crates/apicult-desigual", "crates/flora"]
+members = ["crates/mesh-gradient", "crates/flora"]
 
 [package]
 name = "hex-terrain"
@@ -54,7 +54,7 @@ bevy-inspector-egui = { version = "0.36", optional = true }
 bevy_egui = "0.39"
 hexx = { version = "0.24.0", features = ["bevy"] }
 mesh-gradient = { path = "crates/mesh-gradient" }
-apicult-desigual = { path = "crates/apicult-desigual" }
+apicult-desigual = { git = "https://github.com/dynnamitt/apicult-desigual-rs.git", tag = "v0.1.0" }
 flora = { path = "crates/flora" }
 
 [lints.rust]
