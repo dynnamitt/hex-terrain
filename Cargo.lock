@@ -205,6 +205,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 [[package]]
 name = "apicult-desigual"
 version = "0.1.0"
+source = "git+https://github.com/dynnamitt/apicult-desigual-rs.git?tag=v0.1.0#84985d3dcba3772dee5b45c026714c0f768fd4de"
 dependencies = [
  "glam",
  "hexx",
