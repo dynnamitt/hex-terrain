@@ -16,7 +16,7 @@ use super::gaps;
 use super::materials::TerrainMaterials;
 use super::mineral::Mineral;
 use crate::DebugFlag;
-use hex_grid::{edge_cuboid_transform, gap_filler};
+use apicult_desigual::{edge_cuboid_transform, gap_filler};
 
 /// Spawns the [`HGrid`] entity with [`HCell`] children, [`Corner`] grandchildren,
 /// and Quad/Tri gap geometry with distributed emitter markers.

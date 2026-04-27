@@ -11,7 +11,7 @@ use hexx::{Hex, shapes};
 
 use crate::HGridLayout;
 
-/// Streamed serialization of a hex-grid layout to bytes.
+/// Streamed serialization of an apicult-desigual layout to bytes.
 pub trait SerializeGeo {
     fn write(&self, layout: &HGridLayout, out: &mut dyn io::Write) -> io::Result<()>;
 }

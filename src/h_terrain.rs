@@ -21,8 +21,8 @@ use bevy::prelude::*;
 use crate::{DebugFlag, GameState};
 use fov_overlay::FovMaterial;
 
+pub use apicult_desigual::edge_cuboid_transform;
 pub use entities::InSight;
-pub use hex_grid::edge_cuboid_transform;
 
 /// Pipeline ordering for h_terrain update systems.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -120,7 +120,7 @@ pub struct HGridSettings {
     pub flat_gap_normals: bool,
 }
 
-impl From<&HGridSettings> for hex_grid::HGridSettings {
+impl From<&HGridSettings> for apicult_desigual::HGridSettings {
     fn from(s: &HGridSettings) -> Self {
         Self {
             radius: s.radius,

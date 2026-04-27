@@ -18,7 +18,7 @@ use super::entities::{
 };
 use super::h_grid_layout::HGridLayout;
 use super::mineral::Mineral;
-use hex_grid::{edge_cuboid_transform, gap_vertex_data, quad_corner_indices};
+use apicult_desigual::{edge_cuboid_transform, gap_vertex_data, quad_corner_indices};
 
 pub(super) const EDGE_THICKNESS: f32 = 0.03;
 pub(super) const DBG_NORMAL_LEN: f32 = 0.3;

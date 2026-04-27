@@ -4,9 +4,9 @@ use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use hexx::Hex;
 
+use apicult_desigual::HGridLayout;
 use flora::cluster::shimeji_cluster;
 use flora::{FloraCfg, FloraMaterials};
-use hex_grid::HGridLayout;
 
 use super::mineral::{Mineral, hash_hex};
 

@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/mesh-gradient", "crates/hex-grid", "crates/flora"]
+members = ["crates/mesh-gradient", "crates/apicult-desigual", "crates/flora"]
 
 [package]
 name = "hex-terrain"
@@ -54,7 +54,7 @@ bevy-inspector-egui = { version = "0.36", optional = true }
 bevy_egui = "0.39"
 hexx = { version = "0.24.0", features = ["bevy"] }
 mesh-gradient = { path = "crates/mesh-gradient" }
-hex-grid = { path = "crates/hex-grid" }
+apicult-desigual = { path = "crates/apicult-desigual" }
 flora = { path = "crates/flora" }
 
 [lints.rust]

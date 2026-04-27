@@ -110,7 +110,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Generate SVG
-        run: cargo run -p hex-grid --example svg --release -- 3 2.0 > hex-grid.svg
+        run: cargo run -p apicult-desigual --example svg --release -- 3 2.0 > apicult-desigual.svg
 
       - name: Create release and attach SVG
         env:
@@ -118,4 +118,4 @@ jobs:
         run: |
           TAG="${{ inputs.tag || github.ref_name }}"
           gh release create "$TAG" --generate-notes || true
-          gh release upload "$TAG" hex-grid.svg --clobber
+          gh release upload "$TAG" apicult-desigual.svg --clobber

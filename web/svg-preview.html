@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>hex-grid preview</title>
+<title>apicult-desigual preview</title>
 <style>
   body { margin: 0; background: #050810; display: flex; flex-direction: column; align-items: center; min-height: 100vh; font-family: monospace; color: #aaa; }
   h1 { margin: 1.5rem 0 0.5rem; font-size: 1.2rem; font-weight: normal; }
@@ -29,7 +29,7 @@
 </script>
 </head>
 <body>
-  <h1>hex-grid terrain preview</h1>
+  <h1>apicult-desigual terrain preview</h1>
   <p class="meta">generated from <a href="https://github.com/dynnamitt/hex-terrain">dynnamitt/hex-terrain</a> &mdash; <span id="sha">__SHA__</span> &middot; <a href="hex-terrain.html">welded terrain</a></p>
   <div class="terrain-wrap">
     <canvas id="terrain"></canvas>
@@ -37,12 +37,12 @@
   </div>
   <div class="grid">
     <figure>
-      <object data="hex-grid.svg" type="image/svg+xml">SVG not available</object>
-      <figcaption>plain &mdash; <a href="hex-grid.svg">hex-grid.svg</a></figcaption>
+      <object data="apicult-desigual.svg" type="image/svg+xml">SVG not available</object>
+      <figcaption>plain &mdash; <a href="apicult-desigual.svg">apicult-desigual.svg</a></figcaption>
     </figure>
     <figure>
-      <object data="hex-grid-rich.svg" type="image/svg+xml">SVG not available</object>
-      <figcaption>rich &mdash; <a href="hex-grid-rich.svg">hex-grid-rich.svg</a></figcaption>
+      <object data="apicult-desigual-rich.svg" type="image/svg+xml">SVG not available</object>
+      <figcaption>rich &mdash; <a href="apicult-desigual-rich.svg">apicult-desigual-rich.svg</a></figcaption>
     </figure>
   </div>
 
@@ -58,8 +58,8 @@ const showError = (msg) => {
 };
 
 try {
-  const res = await fetch('hex-grid.json');
-  if (!res.ok) throw new Error(`hex-grid.json ${res.status}`);
+  const res = await fetch('apicult-desigual.json');
+  if (!res.ok) throw new Error(`apicult-desigual.json ${res.status}`);
   const { hexes, edges } = await res.json();
 
   const scene = new THREE.Scene();

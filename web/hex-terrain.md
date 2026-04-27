@@ -38,7 +38,7 @@ not a performance term.
    seams, you'd get hairline cracks where a hex face meets a gap quad —
    not from rendering artifacts but from floating-point drift if positions
    were re-emitted from different code paths. The Rust crate's
-   `HGridLayout::vertex(hex, i)` (`crates/hex-grid/src/layout.rs:143-150`)
+   `HGridLayout::vertex(hex, i)` (`crates/apicult-desigual/src/layout.rs:143-150`)
    returning identical `Vec3` for shared corners is what makes the weld
    watertight.
 2. **Free smooth shading at seams** — when `computeVertexNormals()` runs
